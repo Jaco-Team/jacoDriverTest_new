@@ -1,0 +1,122 @@
+{
+  "project_info": {
+    "project_number": "989415800368",
+    "firebase_url": "https://macro-thinker-288611.firebaseio.com",
+    "project_id": "macro-thinker-288611",
+    "storage_bucket": "macro-thinker-288611.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:989415800368:android:ca52ead82b328d4d3177f5",
+        "android_client_info": {
+          "package_name": "com.jacoapp1"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "989415800368-b2gk1em14f9hjd0kadgilqog4gl8jorl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcdVBTmXRpWq1mVG85KyeeC1GowNecIlM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "989415800368-b2gk1em14f9hjd0kadgilqog4gl8jorl.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "989415800368-3snu8u6o8rt1eqf0s9j5etdhjqcq27ge.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "org.reactjs.native.example.JacoApp1",
+                "app_store_id": "1535337459"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:989415800368:android:30df85004531792b3177f5",
+        "android_client_info": {
+          "package_name": "com.jacoapp2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "989415800368-b2gk1em14f9hjd0kadgilqog4gl8jorl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcdVBTmXRpWq1mVG85KyeeC1GowNecIlM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "989415800368-b2gk1em14f9hjd0kadgilqog4gl8jorl.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "989415800368-3snu8u6o8rt1eqf0s9j5etdhjqcq27ge.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "org.reactjs.native.example.JacoApp1",
+                "app_store_id": "1535337459"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:989415800368:android:0b4eb741ca729dea3177f5",
+        "android_client_info": {
+          "package_name": "com.jacodrivertest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "989415800368-b2gk1em14f9hjd0kadgilqog4gl8jorl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcdVBTmXRpWq1mVG85KyeeC1GowNecIlM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "989415800368-b2gk1em14f9hjd0kadgilqog4gl8jorl.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "989415800368-3snu8u6o8rt1eqf0s9j5etdhjqcq27ge.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "org.reactjs.native.example.JacoApp1",
+                "app_store_id": "1535337459"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

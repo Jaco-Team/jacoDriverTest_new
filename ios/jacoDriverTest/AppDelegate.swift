@@ -3,6 +3,9 @@ import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
 
+import YandexMapsMobile
+import Firebase
+
 @main
 class AppDelegate: RCTAppDelegate {
   override func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
@@ -13,6 +16,11 @@ class AppDelegate: RCTAppDelegate {
     // They will be passed down to the ViewController used by React Native.
     self.initialProps = [:]
 
+    YMKMapKit.setLocale("ru_RU")
+    YMKMapKit.setApiKey("c7ad032b-5368-4449-9e21-c50d73ea0026")
+    
+    FirebaseApp.configure()
+    
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

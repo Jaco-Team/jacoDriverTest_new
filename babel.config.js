@@ -1,3 +1,23 @@
 module.exports = {
-  presets: ['module:@react-native/babel-preset'],
+  presets: ['module:@react-native/babel-preset', 'nativewind/babel'],
+  plugins: [
+    [
+      'module-resolver',
+      {
+        root: ['./src'],
+        alias: {
+          '@': './src',
+        },
+      },
+      'react-native-reanimated/plugin',
+      
+    ],
+  ],
+  env: {
+    production: {
+      plugins: [
+        'transform-remove-console'
+      ]
+    }
+  }
 };

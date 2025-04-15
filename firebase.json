@@ -1,0 +1,8 @@
+{
+  "react-native": {
+    "messaging_ios_foreground_presentation_options": ["badge", "sound", "list", "banner"],
+    "crashlytics_debug_enabled": true,
+    "analytics_auto_collection_enabled": true,
+    "google_analytics_automatic_screen_reporting_enabled": false
+  }
+}

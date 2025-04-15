@@ -1,5 +1,6 @@
 package com.jacodrivertest
 
+import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -12,6 +13,11 @@ class MainActivity : ReactActivity() {
    * rendering of the component.
    */
   override fun getMainComponentName(): String = "jacoDriverTest"
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(null) // Передайте null вместо savedInstanceState
+        // Остальной код onCreate...
+    }
 
   /**
    * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]
