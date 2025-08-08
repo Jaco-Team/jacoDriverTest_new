@@ -219,5 +219,3 @@ module.exports = {
   },
   plugins: [gluestackPlugin],
 };
-
- 
