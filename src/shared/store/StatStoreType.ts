@@ -171,6 +171,7 @@ export interface StatTypes {
   FormatPrice: (price: number) => string,
   FormatDate: (date: ConfigType) => string,
   getStatPrice: (date: string) => Promise<void>,
+  getStatBetween: (dateStart: string, dateEnd: string) => Promise<void>,
   getGraph: (date?: string | null) => Promise<void>,
   showModalErrCam: (is_show: boolean, err?: GraphErrCam | null) => void,
   showModalErrOrder: (is_show: boolean, err?: GraphErrOrder | null) => void,

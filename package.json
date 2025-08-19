@@ -64,7 +64,7 @@
     "react-native-mask-text": "^0.15.0",
     "react-native-modal-datetime-picker": "^18.0.0",
     "react-native-permissions": "^5.4.1",
-    "react-native-reanimated": "^3.18.0",
+    "react-native-reanimated": "3.16.7",
     "react-native-reanimated-table": "^0.0.2",
     "react-native-safe-area-context": "^5.5.1",
     "react-native-screens": "^4.11.1",

@@ -284,6 +284,35 @@ export const useStatStore = create<StatTypes>()((set, get) => ({
     }, 500 )
   },
 
+   getStatBetween: async (dateStart, dateEnd) => {
+    useGlobalStore.getState().setSpinner(true);
+
+    const token = await useGlobalStore.getState().getAuthToken();
+
+    const data = {
+      token: token,
+      type: 'get_my_price_between',
+      dateStart,
+      dateEnd,
+    };
+
+    const response = await api<PriceResponse>('price', data);
+
+     if(response.st === false){
+      useGlobalStore.getState().setSpinner(false);
+      return ;
+    }
+
+    set({
+      statPrice: response.data?.stat,
+      give_history: response.data?.give_hist,
+    });
+
+    setTimeout( () => {
+      useGlobalStore.getState().setSpinner(false);
+    }, 500 )
+  },
+
   setGraphDate: (date: string): void => {
     set({dateGraph: date})
   },

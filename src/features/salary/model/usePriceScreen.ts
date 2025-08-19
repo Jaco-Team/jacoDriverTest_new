@@ -6,9 +6,9 @@ import dayjs, { ConfigType } from 'dayjs'
 export function usePriceScreen() {
   const [globalFontSize] = useGlobalStore(useShallow((state) => [state.globalFontSize]))
 
-  const [getStatPrice, statPrice, give_history, FormatPrice, FormatDate] = useStatStore(
+  const [getStatBetween, statPrice, give_history, FormatPrice, FormatDate] = useStatStore(
     useShallow((state) => [
-      state.getStatPrice,
+      state.getStatBetween,
       state.statPrice,
       state.give_history,
       state.FormatPrice,
@@ -16,35 +16,76 @@ export function usePriceScreen() {
     ])
   )
 
-  const [date, setDate] = useState(dayjs(new Date()).format('YYYY-MM-DD'))
-  const [showDate, setShowDate] = useState( FormatDate( new Date() ) )
-  const [showCalendar, setShowCalendar] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const todayIso = dayjs().format('YYYY-MM-DD')
 
-  const chooseDate = (data: ConfigType) => {
-    setShowCalendar(false)
-    const newDate = dayjs(data).format('YYYY-MM-DD')
-    setDate( newDate )
-    setShowDate( FormatDate( data ) )
-    getStatPrice(newDate)
+  const [dateStart, setDateStart] = useState<string>(todayIso)
+  const [dateEnd, setDateEnd] = useState<string>(todayIso)
+
+  const [showDateStart, setShowDateStart] = useState<string>(FormatDate(new Date()))
+  const [showDateEnd, setShowDateEnd] = useState<string>(FormatDate(new Date()))
+
+  const [showStartCalendar, setShowStartCalendar] = useState<boolean>(false)
+  const [showEndCalendar, setShowEndCalendar] = useState<boolean>(false)
+
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false)
+
+  const fetchRange = (start: string, end: string) => {
+    getStatBetween(start, end)
+  }
+
+  const chooseStartDate = (data: ConfigType) => {
+    const newStart = dayjs(data).format('YYYY-MM-DD')
+    const endSafe = dayjs(newStart).isAfter(dateEnd) ? newStart : dateEnd
+
+    setDateStart(newStart)
+    setDateEnd(endSafe)
+
+    setShowDateStart(FormatDate(data))
+    if (endSafe === newStart) setShowDateEnd(FormatDate(data))
+
+    fetchRange(newStart, endSafe)
+  }
+
+  const chooseEndDate = (data: ConfigType) => {
+    const newEnd = dayjs(data).format('YYYY-MM-DD')
+    const startSafe = dayjs(newEnd).isBefore(dateStart) ? newEnd : dateStart
+
+    setDateEnd(newEnd)
+    setDateStart(startSafe)
+
+    setShowDateEnd(FormatDate(data))
+    if (startSafe === newEnd) setShowDateStart(FormatDate(data))
+
+    fetchRange(startSafe, newEnd)
+  }
+
+  const refresh = async () => {
+    setIsRefreshing(true)
+    fetchRange(dateStart, dateEnd)
+    setIsRefreshing(false)
   }
 
   useEffect(() => {
-    getStatPrice(date)
+    fetchRange(dateStart, dateEnd)
   }, [])
 
   return {
     statPrice,
     give_history,
     FormatPrice,
-    date,
-    showDate,
-    setDate,
-    showCalendar,
-    setShowCalendar,
+    globalFontSize,
+    dateStart,
+    dateEnd,
+    showDateStart,
+    showDateEnd,
+    showStartCalendar,
+    setShowStartCalendar,
+    showEndCalendar,
+    setShowEndCalendar,
+    chooseStartDate,
+    chooseEndDate,
+    refresh,
     isRefreshing,
     setIsRefreshing,
-    chooseDate,
-    globalFontSize
   }
 }
