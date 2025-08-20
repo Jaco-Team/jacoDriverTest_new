@@ -30,15 +30,15 @@ export function useModalOrderLogic() {
   const snapPoints = useMemo(() => ['25%', '50%', '75%'], [])
 
   // Колбэк при изменении положения шторки
-  // const handleSheetChanges = useCallback(
-  //   (index: number) => {
-  //     if (index < 0) {
-  //       // Если шторка закрылась
-  //       showOrdersMap(-1)
-  //     }
-  //   },
-  //   [showOrdersMap]
-  // )
+  const handleSheetChanges = useCallback(
+    (index: number) => {
+      if (index <= 0) {
+        // Если шторка закрылась
+        showOrdersMap(-1)
+      }
+    },
+    [showOrdersMap]
+  )
 
   //const sheetIndex = isOpenOrderMap ? 2 : -1
   const sheetIndex = 0;
@@ -65,7 +65,7 @@ export function useModalOrderLogic() {
     sheetIndex,
     bottomSheetRef,
     snapPoints,
-    //handleSheetChanges
+    handleSheetChanges
   }
 }
 

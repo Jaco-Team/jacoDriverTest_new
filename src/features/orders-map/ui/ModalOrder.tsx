@@ -22,7 +22,7 @@ export const ModalOrder = () => {
     sheetIndex,
     bottomSheetRef,
     snapPoints,
-    //handleSheetChanges
+    handleSheetChanges
   } = useModalOrderLogic();
 
   return (
@@ -32,7 +32,8 @@ export const ModalOrder = () => {
       snapPoints={snapPoints} // ['50%', '25%']
       enablePanDownToClose    // позволяет свайпом вниз закрыть
       backdropComponent={BottomSheetBackdrop} // полу-прозрачный фон
-      onChange={ (index: number) => { if( index < 0 ){ showOrdersMap(-1) } } }
+      //onChange={ (index: number) => { if( index < 0 ){ showOrdersMap(-1) } } }
+      onChange={handleSheetChanges}
       style={{ zIndex: 1000 }}
       backgroundStyle={{ borderRadius: 30, backgroundColor: '#f9fafb' }}
     >
