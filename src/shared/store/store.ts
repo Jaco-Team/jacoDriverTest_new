@@ -121,12 +121,14 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
   
       const json = await api<LoginResponse>('auth', data);
   
+      console.log('json', json);
+
       if (json?.st === true) {
         useGlobalStore.getState().setTokenAuth(json.data?.token ?? '');
 
         useSettingsStore.getState().getSettings();
       }else{
-        useGlobalStore.getState().showModalText(true, json.data?.text);
+        useGlobalStore.getState().showModalText(true, json?.text);
       }
 
       setTimeout( () => {
