@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { useFocusEffect } from '@react-navigation/native'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useFocusEffect, useIsFocused } from '@react-navigation/native'
 import { useShallow } from 'zustand/react/shallow'
 
 import YaMap, { Animation } from 'react-native-yamap'
 
 import { useOrdersStore, useGEOStore, useSettingsStore } from '@/shared/store/store'
+
+import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
 
 export function useMapLogic() {
   const mapRef = useRef<YaMap>(null)
@@ -32,27 +34,27 @@ export function useMapLogic() {
 
   const [ showLocationDriver, set_type_location, type_location ] = useGEOStore( useShallow( state => [ state.showLocationDriver, state.set_type_location, state.type_location ] ) )
 
-  // При фокусе экрана: запускаем getOrders, getHome, и интервал
+  const isFocused = useIsFocused();
+
+  // ✅ 1) Один раз на вход в экран (на фокус), без завязки на update_interval
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       getOrders();
       getHome();
       getSettings();
+      return () => {};
+    }, []) // <-- без зависимостей
+  );
 
-      const intervalId: ReturnType<typeof setInterval> = setInterval(() => {
-        getOrders(false)
-      }, update_interval * 1000)
-
-      return () => clearInterval(intervalId)
-    }, [update_interval])
-  )
-
-  // При первом рендере тоже
+  // ✅ 2) Отдельно — только интервал автообновления
   useEffect(() => {
-    getOrders();
-    getHome();
-    getSettings();
-  }, [])
+    if (!isFocused) return;
+    const ms = Number(update_interval) * 1000;
+    if (ms <= 0) return;
+
+    const id = setInterval(() => getOrders(false), ms);
+    return () => clearInterval(id);
+  }, [isFocused, update_interval, getOrders]);
 
   // Метод для установки зума
   const updateZoom = async (value: number) => {
@@ -64,6 +66,7 @@ export function useMapLogic() {
 
   // Метод для центрирования на «home»
   const getHome = () => {
+    Analytics.log(AnalyticsEvent.MapHomeCenter, 'Центрирование карты на домашнюю точку');
     if (mapRef.current && home) {
       mapRef.current.setCenter(
         { lon: home.lon, lat: home.lat },

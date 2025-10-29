@@ -44,10 +44,31 @@ export function MainDrawerNavigator() {
   useSettingsUpdater();
 
   useEffect(() => {
-    // Инициализация уведомлений и получение токена
+    //Инициализация уведомлений и получение токена
     initializeNotifications(setNotifToken)
     requestNotificationPermission()
   }, [setNotifToken])
+
+  // добавлял при настройке jest, но пока не используется
+  // useEffect(() => {
+  //   let unsub: undefined | (() => void);
+  //   let mounted = true;
+
+  //   (async () => {
+  //     const cleanup = await initializeNotifications(setNotifToken);
+  //     if (mounted) {
+  //       unsub = cleanup;
+  //       await requestNotificationPermission();
+  //     } else {
+  //       cleanup(); // если уже размонтировались — сразу почистим
+  //     }
+  //   })();
+
+  //   return () => {
+  //     mounted = false;
+  //     unsub?.();
+  //   };
+  // }, [setNotifToken]);
 
   const isActiveFilter = types_dop.length != type_dop.length;
 

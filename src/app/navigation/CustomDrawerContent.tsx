@@ -9,6 +9,9 @@ import { useNavigation, ParamListBase } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
 
+import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
+import {RU_SCREEN_NAMES} from '@/app/navigation/types';
+
 export const CustomDrawerContent = memo(function CustomDrawerContent(props: any): React.JSX.Element {
   const { navigate } = useNavigation<NativeStackNavigationProp<ParamListBase>>();
 
@@ -19,6 +22,9 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(props: any)
   const dialCall = useDialCall();
 
   const logOut = async () => {
+    const title = RU_SCREEN_NAMES['Auth'] ?? 'Авторизация';
+    Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${title}`);
+
     logogout();
     navigate('Auth');
   };
@@ -26,7 +32,7 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(props: any)
   return (
     <DrawerContentScrollView {...props}>
     
-      { is_need_avg_time &&
+      {is_need_avg_time &&
         <DrawerItem
           activeTintColor="#c03"
           inactiveTintColor="#000"
@@ -38,48 +44,51 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(props: any)
 
       <DrawerItemList {...props} />
 
-      { phones?.phone_upr ?
+      {phones?.phone_upr ?
         <DrawerItem
           activeTintColor="#c03"
           inactiveTintColor="#000"
           label="Директор"
-          //onPress={ () => {} }
-          
-          onPress={() => dialCall(phones?.phone_upr)}
+          onPress={() => {
+            Analytics.log(AnalyticsEvent.DrawerCallDirector, 'Звонок директору');
+            dialCall(phones.phone_upr);
+          }}
           labelStyle={{fontSize: globalFontSize }}
         />
           :
         false
       }
-      { phones?.phone_man ?
+
+      {phones?.phone_man ? (
         <DrawerItem
           activeTintColor="#c03"
           inactiveTintColor="#000"
           label="Менеджер"
-          //onPress={ () => {} }
-          onPress={() => dialCall(phones?.phone_man)}
-          labelStyle={{fontSize: globalFontSize }}
+          onPress={() => {
+            Analytics.log(AnalyticsEvent.DrawerCallManager, 'Звонок менеджеру');
+            dialCall(phones.phone_man);
+          }}
+          labelStyle={{ fontSize: globalFontSize }}
         />
-          :
-        false
-      }
-      { phones?.phone_center ?
+      ) : false}
+
+       {phones?.phone_center ? (
         <DrawerItem
-          label="Контакт-центр"
           activeTintColor="#c03"
           inactiveTintColor="#000"
-          //onPress={ () => {} }
-          onPress={() => dialCall(phones?.phone_center)}
-          labelStyle={{fontSize: globalFontSize }}
+          label="Контакт-центр"
+          onPress={() => {
+            Analytics.log(AnalyticsEvent.DrawerCallContactCenter, 'Звонок в Контакт-центр');
+            dialCall(phones.phone_center);
+          }}
+          labelStyle={{ fontSize: globalFontSize }}
         />
-          :
-        false
-      }
+      ) : false}
+
       <DrawerItem
         label="Выйти"
         activeTintColor="#c03"
         inactiveTintColor="#000"
-        //onPress={ () => {} }
         onPress={logOut}
         labelStyle={{fontSize: globalFontSize }}
       />

@@ -9,6 +9,8 @@ import { useSettingsStore, useGlobalStore } from '@/shared/store/store'
 import { useShallow } from 'zustand/react/shallow'
 import { Theme, DelType, ShowType } from '@/shared/types/globalTypes'
 
+import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
+
 export function useSettingsLogic() {
   // Достаём методы/значения из zustand
   const [
@@ -117,6 +119,8 @@ export function useSettingsLogic() {
 
   // Открыть настройки приложения
   const openSettings = () => {
+    Analytics.log(AnalyticsEvent.SystemSettingsOpen, 'Открытие системных настроек');
+     
     if (Platform.OS === 'ios') {
       Linking.openURL('app-settings://')
     } else {

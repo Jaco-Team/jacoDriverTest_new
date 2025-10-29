@@ -5,6 +5,7 @@ import { Divider } from '@/components/ui/divider'
 import { Calendar } from '@/shared/ui/Calendar'
 import { useStatisticsTable } from '../model/useStatisticsTable'
 import { StatisticsTableView } from './StatisticsTableView'
+import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
 
 export function StatisticsTableScreen() {
   // Бизнес-логика (даты, загрузка данных) из хука
@@ -55,7 +56,10 @@ export function StatisticsTableScreen() {
 
         {/* Кнопка «Дата от» */}
         <Button
-          onPress={() => setShowCalendarStart(true)}
+           onPress={() => {
+            Analytics.log(AnalyticsEvent.StatisticsCalendarStartOpen, 'Открытие календаря (Статистика времени): Дата от');
+            setShowCalendarStart(true);
+          }}
           variant="outline"
           className="rounded-lg border-gray-200 justify-center items-center h-auto mb-5"
         >
@@ -69,7 +73,10 @@ export function StatisticsTableScreen() {
 
         {/* Кнопка «Дата до» */}
         <Button
-          onPress={() => setShowCalendarEnd(true)}
+          onPress={() => {
+            Analytics.log(AnalyticsEvent.StatisticsCalendarEndOpen, 'Открытие календаря (Статистика времени): Дата до');
+            setShowCalendarEnd(true);
+          }}
           variant="outline"
           className="rounded-lg border-gray-200 justify-center items-center h-auto mb-5"
         >

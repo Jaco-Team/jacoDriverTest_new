@@ -72,6 +72,36 @@ export async function initializeNotifications(setNotifToken: (token: string) => 
   //setBackgroundMessageHandler(messagingInstance, onMessageReceived);
 }
 
+// добавлял при настройке jest, но пока не используется
+// type Unsub = () => void;
+// export async function initializeNotifications(
+//     setNotifToken: (token: string) => void
+//   ): Promise<Unsub> {
+//     const app = getApp();
+//     const messaging = getMessaging(app);
+
+//     try {
+//       await notifee.requestPermission({
+//         criticalAlert: true,
+//         announcement: true,
+//         sound: true,
+//         provisional: true,
+//       });
+//     } catch {}
+
+//     try {
+//       const token = await getToken(messaging);
+//       if (token) setNotifToken(token);
+//     } catch {}
+
+//     // ВАЖНО: onMessage возвращает функцию отписки — её и вернём наружу
+//     const unsubscribeOnMessage = onMessage(messaging, onMessageReceived);
+
+//     return () => {
+//       try { unsubscribeOnMessage(); } catch {}
+//     };
+//   }
+
 /**
  * Запрос разрешения на уведомления.
  * Если уведомления запрещены, выводим Alert с предложением открыть настройки.

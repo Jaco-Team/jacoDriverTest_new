@@ -22,6 +22,8 @@ import 'dayjs/locale/ru'
 
 dayjs.locale('ru')
 
+import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
+
 interface ExtendedGeolocationResponse extends GeolocationResponse {
   mocked?: boolean;
 }
@@ -155,8 +157,11 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
       };
   
       const json = await api<LoginResponse>('auth', data);
-  
-      if( json.st === false){
+
+      if (json.st === true) {
+        Analytics.log(AnalyticsEvent.AuthSendSms, 'Отправка СМС-кода');
+      } else {
+        Analytics.log(AnalyticsEvent.AuthSendSmsFail, 'Ошибка отправки СМС-кода');
         useGlobalStore.getState().showModalText(true, json.text);
       }
 
@@ -224,7 +229,13 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
       return json.st;
     },
 
-    logogout: () => { useGlobalStore.getState().setTokenAuth(''); },
+    logogout: () => {
+      // метрика выхода
+      Analytics.log(AnalyticsEvent.DrawerLogout, 'Выход из аккаунта');
+
+      // разлогин
+      useGlobalStore.getState().setTokenAuth('');
+    },
 }))
 
 export const useStatStore = create<StatTypes>()((set, get) => ({
@@ -359,18 +370,28 @@ export const useStatStore = create<StatTypes>()((set, get) => ({
     }, 500 )
   },
 
+  // показ модалки ошибки по камерам/заказам
   showModalErrCam(is_show: boolean, err?: GraphErrCam | null): void {
+    Analytics.log(
+      is_show ? AnalyticsEvent.GraphErrCamModalOpen : AnalyticsEvent.GraphErrCamModalClose,
+      is_show ? 'Открытие модалки ошибки по камерам' : 'Закрытие модалки ошибки по камерам'
+    );
     set({
       isShowModalErrCam: is_show,
       modalErrCam: err
-    })
+    });
   },
 
+  // показ модалки ошибки по заказам
   showModalErrOrder(is_show: boolean, err?: GraphErrOrder | null): void {
+    Analytics.log(
+      is_show ? AnalyticsEvent.GraphErrOrderModalOpen : AnalyticsEvent.GraphErrOrderModalClose,
+      is_show ? 'Открытие модалки ошибки по заказу' : 'Закрытие модалки ошибки по заказу'
+    );
     set({
       isShowModalErrOrder: is_show,
       modalErrOrder: err
-    })
+    });
   },
 
   answer_err_cam: async (text: string, err_id: number) => {
@@ -406,6 +427,7 @@ export const useStatStore = create<StatTypes>()((set, get) => ({
     }, 300);
   },
 
+  // ответ на ошибку/обжаловать ошибку по заказам
   answer_err_order: async (text: string, err_id: number, row_id: number) => {
     const token = await useGlobalStore.getState().getAuthToken();
 
@@ -426,8 +448,10 @@ export const useStatStore = create<StatTypes>()((set, get) => ({
     const res = await api<AnswerErrCamResponse>('graph', data);
 
     if (res?.st === false) {
+      Analytics.log(AnalyticsEvent.GraphErrOrderAnswerFail, 'Обжалование (график работ): ошибка отправки');
       useGlobalStore.getState().showModalText(true, res?.text);
     } else {
+      Analytics.log(AnalyticsEvent.GraphErrOrderAnswerSuccess, 'Обжалование (график работ): отправлено');
       get().showModalErrOrder(false);
       get().getGraph();
     }
@@ -507,7 +531,14 @@ export const useSettingsStore = create<SettingsStore>()( (set, get) => ({
 
   rotate_map: false,
 
+  // установка поворота карты
   setRotateMap: (is_rotate) => {
+
+    Analytics.log(
+      is_rotate ? AnalyticsEvent.MapRotateOn : AnalyticsEvent.MapRotateOff,
+      is_rotate ? 'Включение авто-ротация карты' : 'Выключение авто-ротация карты'
+    );
+
     set({
       rotate_map: is_rotate,
     })
@@ -561,6 +592,7 @@ export const useSettingsStore = create<SettingsStore>()( (set, get) => ({
     }, 300 )
   },
 
+  // сохранение настроек
   saveSettings: async (type_show_del: string, centered_map: string[], fontSize: number, update_interval: number, color: string, mapScale: number, groupTypeTime: string, theme: Theme, night_map: string[], is_scaleMap: string[]) => {
     const token = await useGlobalStore.getState().getAuthToken();
 
@@ -587,19 +619,30 @@ export const useSettingsStore = create<SettingsStore>()( (set, get) => ({
       mapScale
     };
 
-    await api<SaveSettingsResponse>('settings', data);
+    try {
+      
+      await api<SaveSettingsResponse>('settings', data);
 
-    useGlobalStore.getState().showAlertText(true, 'Настройки сохранены');
-    
-    useGlobalStore.getState().setFontSize(fontSize);
-    useGlobalStore.getState().setTheme(theme);
-    useGlobalStore.getState().setMapScale(mapScale);
+      Analytics.log(AnalyticsEvent.SettingsSaveSuccess, 'Успешное сохранение настроек');
 
-    setTimeout(() => {
-      set({isClick: false});
+      useGlobalStore.getState().showAlertText(true, 'Настройки сохранены');
+      useGlobalStore.getState().setFontSize(fontSize);
+      useGlobalStore.getState().setTheme(theme);
+      useGlobalStore.getState().setMapScale(mapScale);
 
-      useGlobalStore.getState().setSpinner(false);
-    }, 300);
+    } catch (e) {
+
+      Analytics.log(AnalyticsEvent.SettingsSaveFail, 'Ошибка в сохранение настроек');
+      useGlobalStore.getState().showModalText(true, 'Не удалось сохранить настройки');
+
+    } finally {
+
+      setTimeout(() => {
+        set({ isClick: false });
+        useGlobalStore.getState().setSpinner(false);
+      }, 300);
+
+    }
   },
 
   getPhoneCafe: async () => {
@@ -744,7 +787,10 @@ export const useGEOStore = create<GEOStore>()((set, get) => ({
     useGlobalStore.getState().setSpinner(false);
   },
 
+  // показать текущее местоположение водителя
   showLocationDriver: async() => {
+    Analytics.log(AnalyticsEvent.DriverLocation, 'Показать текущее местоположение водителя на карте');
+
     useGlobalStore.getState().setSpinner(true);
   
     set({
@@ -918,9 +964,17 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
   showOrders: [],
   isOpenOrderMap: false,
 
+  // показ модалки выбора доп. типов заказов
   showModalTypeDop: ( is_show: boolean ) => {
+
+    Analytics.log(
+      is_show ? AnalyticsEvent.OrdersTypeDopModalOpen : AnalyticsEvent.OrdersTypeDopModalClose,
+      is_show ? 'Открытие модалки доп. типов заказов на карте' : 'Закрытие модалки доп. типов заказов на карте'
+    );
+
     set({is_showModalTypeDop: is_show});
   },
+
   setTypeDop: (type: string[]) => {
     if( type.length == 0 ){
       type = ['1', '2', '3'];
@@ -942,6 +996,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
     return orders.filter(order => statuses.includes(order.status));
   },
 
+  // получение заказов
   getOrders: async (is_reload = false) => {
     const token = await useGlobalStore.getState().getAuthToken();
 
@@ -977,6 +1032,8 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
       const json = await api<GetOrdersResponse>('orders', data);
 
       if( json.st === false ){
+        Analytics.log(AnalyticsEvent.OrdersFetchFail, 'Ошибка при получении списка заказов');
+
         useGlobalStore.getState().setSpinner(false);
         set({
           is_check: false,
@@ -1003,10 +1060,12 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
         });
 
       } else {
+        Analytics.log(AnalyticsEvent.OrdersFetchFail, 'Ошибка при получении списка заказов');
         useGlobalStore.getState().showModalText(true, json.text);
       }
     } catch (err) {
       console.log(err);
+      Analytics.log(AnalyticsEvent.OrdersFetchFail, 'Ошибка при получении списка заказов');
     }
 
     setTimeout(() => {
@@ -1018,12 +1077,19 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
       useGlobalStore.getState().setSpinnerHidden(false);
     }, 300);
   },
+
+  // выбор типа заказа
   selectType: (item: TypeOrder) => {
+    Analytics.log(AnalyticsEvent.OrderSelect, 'Выбор типа заказа');
+
     set({type: item});
     get().getOrders(true);
   },
+
+  // интервал обновления заказов
   setUpdateInterval: (interval: number) => { set({update_interval: interval}) },
   
+  // завершение/отмена/клиент не вышел на связь заказа при подтвреждении в модалке на страницах Список заказов / Заказы на карте
   actionButtonOrder: (type: number, order_id: number) => {
     if (get().isClick === false) {
       set({isClick: true});
@@ -1032,128 +1098,168 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
     }
     
     useGlobalStore.getState().setSpinner(true);
-    
-    if( get().driver_need_gps ){
-      if(type === 1 && get().type_confirm === 'fake') {
-        useGEOStore.getState().check_pos( get().actionOrderFake, {order_id, type} );
+
+    const fromModal = get().is_modalConfirm === true;
+    const isConfirmFake = fromModal && get().type_confirm === 'fake';
+
+    // логируем только валидные случаи
+    if (isConfirmFake) {
+      Analytics.log(AnalyticsEvent.ConfirmApprove, 'Клиент не вышел на связь');
+    } else if (type === 1) {
+      Analytics.log(AnalyticsEvent.ConfirmApprove, 'Взятие заказа');
+    } else if (type === 2) {
+      Analytics.log(AnalyticsEvent.ConfirmApprove, 'Заказ отменен');
+    } else if (type === 3) {
+      Analytics.log(AnalyticsEvent.ConfirmApprove, 'Заказ завершен');
+    }
+
+    const callWithGeo = (cb: any, payload: any) => {
+      if (get().driver_need_gps) {
+        useGEOStore.getState().check_pos(cb, payload);
       } else {
-        if( type === 1 ){
-          useGEOStore.getState().check_pos_fake( get().actionOrder, {order_id, type} );
-        }else{
-          useGEOStore.getState().check_pos( get().actionOrder, {order_id, type} );
-        }
+        useGEOStore.getState().check_pos_fake(cb, payload);
       }
-    }else{
-      
-      if(type === 1 && get().type_confirm === 'fake') {
-        useGEOStore.getState().check_pos_fake( get().actionOrderFake, {order_id, type} );
+    };
+
+    if (type === 1) {
+      // "Взять" заказ:
+      // если это НЕ из модалки "fake" — всегда обычный путь
+      if (isConfirmFake) {
+        // кейс "Клиент не вышел на связь" подтверждён в модалке
+        callWithGeo(get().actionOrderFake, { order_id, type });
       } else {
-        useGEOStore.getState().check_pos_fake( get().actionOrder, {order_id, type} );
+        // обычное "Взять" — игнорируем залипший type_confirm
+        useGEOStore.getState().check_pos_fake(get().actionOrder, { order_id, type });
       }
+    } else {
+      // type === 2/3 — отмена/завершение: нужна обычная гео-проверка
+      callWithGeo(get().actionOrder, { order_id, type });
     }
 
     setTimeout(() => {
-      //get().setActiveConfirm(false, null, null, null)
       set({isClick: false});
     }, 300);
+
   },
-  // завершение/отмена/клиент не вышел на связь заказа при подтвреждении в модалке на страницах Список заказов / Заказы на карте
+ 
   actionOrder: async ({data: {order_id, type}, latitude = '', longitude = ''}) => {
+
     //1 - get / 2 - close / 3 - finish
     const token = await useGlobalStore.getState().getAuthToken();
+    useGlobalStore.getState().setSpinner(true); // включаем тут, выключим в finally
 
-    const data = {
-      type: 'actionOrder',
-      token: token,
-      id: order_id,
-      type_action: type,
-      appToken: useGlobalStore.getState().notifToken,
-      latitude: latitude,
-      longitude: longitude,
-    };
+    try {
 
-    const res = await api<StatusTextType>('orders', data);
+      const data = {
+        type: 'actionOrder',
+        token: token,
+        id: order_id,
+        type_action: type,
+        appToken: useGlobalStore.getState().notifToken,
+        latitude: latitude,
+        longitude: longitude,
+      };
 
-    if (res?.st === false) {
-      useGlobalStore.getState().showModalText(true, res.text);
+      const res = await api<StatusTextType>('orders', data);
 
-      setTimeout(() => {
-        useGlobalStore.getState().setSpinner(false);
-      }, 500);
-    } else {
-      //get().closeOrderMap();
-      //get().setShowPay(false);
-      get().showOrdersMap(-1);
-      get().getOrders();
+      if (res?.st === false) {
+        // Сервер вернул ошибку — показываем текст (спиннер погасим в finally)
+        useGlobalStore.getState().showModalText(true, res.text);
 
-      setTimeout(() => {
-        useGlobalStore.getState().setSpinner(false);
-        //get().closeOrderMap();
+        return;
+      }
+
+       // УСПЕХ: немедленно приводим UI в актуальное состояние — независимо от update_interval
+       // закрываем карту только если она реально открыта (чтобы не сыпались лишние события/логирование)
+      if (get().isOpenOrderMap) {
+        get().showOrdersMap(-1);  // свернуть/закрыть карту/модалку
+      }
+
+      get().getOrders(); // ручной рефреш списка
+
+      // закрываем confirm только если он был открыт
+      if (get().is_modalConfirm) {
         get().setActiveConfirm(false);
-      }, 500);
+      }
+
+    } finally {
+
+      // Всегда гасим спиннер и снимаем «клик», даже при исключении
+      useGlobalStore.getState().setSpinner(false);
+      set({ isClick: false });
+
     }
+    
   },
+
   actionOrderFake: async ({ data: {order_id}, latitude = '', longitude = '', accuracy = 0 }) => {
+
     const token = await useGlobalStore.getState().getAuthToken();
+    useGlobalStore.getState().setSpinner(true); // включаем тут, выключим в finally
 
-    const data = {
-      type: 'checkFakeOrder',
-      token: token,
-      order_id: order_id,
-      latitude: latitude,
-      longitude: longitude,
-    };
+    try {
 
-    const res = await api<StatusTextType>('orders', data);
+      const data = {
+        type: 'checkFakeOrder',
+        token: token,
+        order_id: order_id,
+        latitude: latitude,
+        longitude: longitude,
+      };
 
-    if (res?.st === false) {
-      useGlobalStore.getState().showModalText(true, res.text);
+      const res = await api<StatusTextType>('orders', data);
 
-      setTimeout(() => {
-        useGlobalStore.getState().setSpinner(false);
-      }, 500);
-    } else {
-      
-      // let now = new Date();
-      // let min = now.getMinutes();
+      if (res?.st === false) {
+        useGlobalStore.getState().showModalText(true, res.text);
 
-      // if( parseInt(min) < 10) {
-      //   min = '0' + min;
-      // }
+        return;
+      }
 
-      // set({
-      //   location_driver: {lon: longitude, lat: latitude, accuracy: parseFloat(accuracy)},
-      //   location_driver_time_text: now.getHours() + ':' + min
-      // })
-      
-      //get().closeOrderMap();
+      // УСПЕХ: вручную обновляем UI (раньше тут не было showOrdersMap(-1) — из-за этого «ничего не происходило» при отключённом автообновлении)
+      // закрываем карту только если она реально открыта (чтобы не сыпались лишние события/логирование)
+      if (get().isOpenOrderMap) {
+        get().showOrdersMap(-1);  // свернуть/закрыть карту/модалку
+      }
+
       get().getOrders();
 
-      setTimeout(() => {
-        useGlobalStore.getState().setSpinner(false);
-      }, 500);
-
-      // setTimeout(() => {
-      //   set({
-      //     location_driver: null
-      //   })
-      // }, 30000);
+    } finally {
+      useGlobalStore.getState().setSpinner(false);
+      set({ isClick: false });
     }
+   
   },
+
   // открытие/закрытие модалки с подтверждением завершения заказа
   setActiveConfirm: (active, order_id, type_confirm, order_confirm_is_delete) => {
+
+    if (active) {
+      Analytics.log(AnalyticsEvent.ConfirmModalOpen, 'Открытие модалки подтверждения заказа');
+    } else {
+      Analytics.log(AnalyticsEvent.ConfirmModalClose, 'Закрытие модалки подтверждения заказа');
+    }
+
     set({
-      type_confirm,
+      //type_confirm,
+      type_confirm: active ? type_confirm : '',         // ← сбрасываем при закрытии, изменения после тестирования
       order_confirm_id: order_id,
       is_modalConfirm: active,
       order_confirm_is_delete
     });
   },
+
+  // открытие заказа на карте
   showOrdersMap: (id: number) => {
     if ( id === -1) {
-      set({
-        isOpenOrderMap: false
-      });
+
+       // логируем закрытие ТОЛЬКО если реально было открыто
+      if (get().isOpenOrderMap) {
+        Analytics.log(AnalyticsEvent.OrderMapClose, 'Закрытие заказа на карте');
+        set({
+          isOpenOrderMap: false
+        });
+      }
+
       return;
     }
 
@@ -1161,6 +1267,8 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
     if (order) {
       const new_orders = get().orders.filter(item => item.addr === order.addr && item.pd === order.pd);
+
+      Analytics.log(AnalyticsEvent.OrderMapOpen, 'Открытие заказа на карте');
       
       set({
         showOrders: new_orders,
@@ -1244,6 +1352,7 @@ export const useFeedbackStore = create<FeedbackState>((set, get) => ({
     }, 300);
   },
   
+  // Создание предложения
   createFeedback: async (feedback) => {
 
     if( get().is_click == true ){
@@ -1270,6 +1379,8 @@ export const useFeedbackStore = create<FeedbackState>((set, get) => ({
       const response = await api<createFeedbackResponse>('feedback', data);
 
       if( response?.data?.st == true ){
+
+        Analytics.log(AnalyticsEvent.FeedbackCreate, 'Создание предложения');
 
         const successInfo = await get().uploadImages(response?.data?.id, feedback.images ?? []);
 
@@ -1313,8 +1424,24 @@ export const useFeedbackStore = create<FeedbackState>((set, get) => ({
     
   },
   
-  openCreateModal: () => set({ modal: { ...get().modal, isCreateModalOpen: true } }),
-  closeCreateModal: () => set({ modal: { ...get().modal, isCreateModalOpen: false } }),
+  // Открытие модалки создания обратной связи
+  openCreateModal: () => {
+    const m = get().modal;
+    if (!m.isCreateModalOpen) {
+      Analytics.log(AnalyticsEvent.FeedbackModalOpen, 'Открытие модалки обратной связи');
+    }
+    set({ modal: { ...m, isCreateModalOpen: true } });
+  },
+
+  // Закрытие модалки создания обратной связи
+  closeCreateModal: () => {
+    const m = get().modal;
+    if (m.isCreateModalOpen) {
+      Analytics.log(AnalyticsEvent.FeedbackModalClose, 'Закрытие модалки обратной связи');
+    }
+    set({ modal: { ...m, isCreateModalOpen: false } });
+  },
+
   openViewModal: (feedback) => {
     set({ 
       modal: { 

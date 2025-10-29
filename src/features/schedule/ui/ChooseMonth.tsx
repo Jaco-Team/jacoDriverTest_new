@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/actionsheet'
 import { useChooseMonthLogic } from '../model/useChooseMonthLogic'
 
+import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
+
 export function ChooseMonth(): React.JSX.Element {
   const {
     month_list,
@@ -25,12 +27,21 @@ export function ChooseMonth(): React.JSX.Element {
     <>
       <TouchableOpacity
         className="flex-row items-center text-center justify-center w-full pt-6 pb-0"
-        onPress={() => setIsOpenDateMenu(true)}
+         onPress={() => {
+          Analytics.log(AnalyticsEvent.GraphMonthPickerOpen, 'Открытие выбора месяца (График работы)');
+          setIsOpenDateMenu(true);
+        }}
       >
         <Text className="font-bold text-5xl">{activeMounth}</Text>
       </TouchableOpacity>
 
-      <Actionsheet isOpen={isOpenDateMenu} onClose={() => setIsOpenDateMenu(false)}>
+      <Actionsheet 
+        isOpen={isOpenDateMenu} 
+        onClose={() => {
+          Analytics.log(AnalyticsEvent.GraphMonthPickerClose, 'Закрытие выбора месяца (График работы)');
+          setIsOpenDateMenu(false);
+        }}
+      >
         <ActionsheetBackdrop />
         <ActionsheetContent>
           <ActionsheetDragIndicatorWrapper>
@@ -40,7 +51,12 @@ export function ChooseMonth(): React.JSX.Element {
           {month_list.map((item, index) => (
             <ActionsheetItem
               key={index}
-              onPress={() => onSelectMonth(item.day, item.mounth)}
+              onPress={() => {
+                Analytics.log(AnalyticsEvent.GraphMonthSelected, 'Выбор месяца (График работы)');
+                Analytics.log(AnalyticsEvent.GraphMonthPickerClose, 'Закрытие выбора месяца (График работы)');
+                onSelectMonth(item.day, item.mounth);     
+                setIsOpenDateMenu(false);
+              }}
               className={ `${index === 0 || index === 1 ? 'border-b border-gray-200' : ''} flex-row items-center justify-center w-full ${Platform.OS === 'ios' ? 'h-12' : 'h-auto'}` }
             >
               <ActionsheetItemText

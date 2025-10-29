@@ -10,7 +10,7 @@ import {
   ActionsheetBackdrop,
 } from "@/components/ui/actionsheet"
 
-import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet'
+//import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet'
 
 import { useGlobalStore, useOrdersStore } from '@/shared/store/store';
 import { useShallow } from 'zustand/react/shallow'
@@ -21,7 +21,10 @@ export const OrdersTypeList: React.FC = () => {
   const [isActionSheetVisible, setActionSheetVisible] = useState(false);
 
   const [ globalFontSize ] = useGlobalStore(useShallow( state => [ state.globalFontSize ]));
-  const [ type, types, selectType ] = useOrdersStore(useShallow( state => [ state.type, state.types, state.selectType ]));
+  const [ type, types, selectType ] = useOrdersStore(useShallow( state => {
+    return [ state.type, state.types, state.selectType ];
+  }));
+  console.log("🚀 === OrdersTypeList type:", type);
 
   const handleSelect = (item: TypeOrder) => {
     selectType(item);

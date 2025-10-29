@@ -46,27 +46,27 @@ export const CardOrderComponent: React.FC<CardOrderProps> = ({ item, FormatPrice
 
       {item.fake_dom == 0 && <Text className="font-bold text-black pb-3" style={textStyle}>Домофон не работает</Text>}
       
-      <HStack className="pb-1">
+      <HStack className="pb-1" testID="order-need-time">
         <Text className="font-bold text-black" style={textStyle}>Ко времени: </Text>
         <Text className="font-normal text-black" style={textStyle}>{item.need_time}</Text>
       </HStack>
 
       { item.status_order != 1 ? false :
-        <HStack className="pb-3">
+        <HStack className="pb-3" testID="order-time-start">
           <Text className="font-bold text-black" style={textStyle}>Начнут готовить: </Text>
           <Text className="font-normal text-black" style={textStyle}>{item.time_start_order}</Text>
         </HStack>
       }
 
       { item.status_order != 6 ? false :
-        <HStack className="pb-3">
+        <HStack className="pb-3" testID="order-time-close">
           <Text className="font-bold text-black" style={textStyle}>Отдали: </Text>
           <Text className="font-normal text-black" style={textStyle}>{item.close_date_time_order}</Text>
         </HStack>
       }
 
       { item.status_order == 6 ? false :
-        <HStack className="pb-3">
+        <HStack className="pb-3" testID="order-time-left">
           <Text className="font-bold text-black" style={textStyle}>Осталось: </Text>
           <Text className="font-normal text-black" style={textStyle}>{item.to_time}</Text>
         </HStack>
@@ -76,19 +76,19 @@ export const CardOrderComponent: React.FC<CardOrderProps> = ({ item, FormatPrice
         <CommentText comment={item.comment} showAlertText={showAlertText} globalFontSize={globalFontSize} dialCall={dialCall} />
       }
   
-      <HStack className="pb-3">
-        <Text className="font-bold text-black" style={textStyle}>Сумма: </Text>
+      <HStack className="pb-3" testID="order-price-sum">
+        <Text className="font-bold text-black" style={textStyle} testID="order-price-sum-label">Сумма: </Text>
         { item.online_pay == 1 ?
-          <Text className="font-bold text-primary-main" style={textStyle}>Оплачено</Text>
+          <Text className="font-bold text-primary-main" style={textStyle} testID="order-price-paid">Оплачено</Text>
             :
-          <Text className="font-normal text-black" style={textStyle}>{FormatPrice(item.sum_order)}₽</Text>
+          <Text className="font-normal text-black" style={textStyle} testID="order-price-sum-value">{FormatPrice(item.sum_order)}₽</Text>
         }
       </HStack>
 
       {item.sdacha == 0 || item.online_pay == 1 ? null : (
-        <HStack className="pb-3">
-          <Text className="font-bold text-black" style={textStyle}>Сдача с: </Text>
-          <Text className="font-normal text-black" style={textStyle}>{FormatPrice(item.sdacha)}₽ ( {item.sum_sdacha}₽ )</Text>
+        <HStack className="pb-3" testID="order-price-sdacha">
+          <Text className="font-bold text-black" style={textStyle} testID="order-price-sdacha-label">Сдача с: </Text>
+          <Text className="font-normal text-black" style={textStyle} testID="order-price-sdacha-value">{FormatPrice(item.sdacha)}₽ ( {item.sum_sdacha}₽ )</Text>
         </HStack>
       )}
 

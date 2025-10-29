@@ -13,6 +13,8 @@ import { useResetPwdLogic } from '../model/useResetPwdLogic'
 import { ScreenLayout } from '@/shared/ui/ScreenLayout'
 import { KeyboardAvoidingLayout } from '@/shared/ui/KeyboardAvoidingLayout'
 
+import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
+
 export function ResetPwdScreen(): React.JSX.Element {
   const {
     activeStep,
@@ -76,6 +78,7 @@ export function ResetPwdScreen(): React.JSX.Element {
                 size="xl"
                 variant="link"
                 onPress={() => {
+                  Analytics.log(AnalyticsEvent.ScreenOpen, 'Открытие страницы Авторизации');
                   navigation.navigate('Auth')
                 }}
               >

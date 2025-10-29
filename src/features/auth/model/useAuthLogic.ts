@@ -5,6 +5,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useLoginStore, useGlobalStore } from '@/shared/store/store'
 import { useShallow } from 'zustand/react/shallow'
 
+import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
+import {RU_SCREEN_NAMES} from '@/app/navigation/types';
+
 export function useAuthLogic() {
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>()
 
@@ -27,6 +30,9 @@ export function useAuthLogic() {
       const check = async () => {
         const token = await check_token()
         if (token === true) {
+          const title = RU_SCREEN_NAMES['List_orders'] ?? 'Список заказов';
+          Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${title}`);
+
           navigation.navigate('List_orders')
         } else {
           navigation.navigate('Auth') // остаёмся на Auth
@@ -49,11 +55,21 @@ export function useAuthLogic() {
     }
     const res = await auth(login, pwd)
     if (res.st === true) {
+      Analytics.log(AnalyticsEvent.AuthLogin, 'Успешная авторизация');
+
+      const title = RU_SCREEN_NAMES['List_orders'] ?? 'Список заказов';
+      Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${title}`);
+
       navigation.navigate('List_orders')
+    } else {   
+
+      Analytics.log(AnalyticsEvent.AuthLoginFail, 'Ошибка авторизации');
+
     }
   }
 
   const GoToResetPWD = () => {
+    Analytics.log(AnalyticsEvent.AuthGoToResetPwd, 'Восстановление пароля');
     navigation.navigate('ResetPwd');
   }
 

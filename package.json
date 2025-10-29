@@ -8,9 +8,13 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
+    "test:ib": "jest --runInBand",
+    "test:clean": "jest --clearCache && jest",
+    "test:ci": "jest --runInBand",
     "postinstall": "patch-package"
   },
   "dependencies": {
+    "@appmetrica/react-native-analytics": "^3.5.0",
     "@expo/html-elements": "^0.13.7",
     "@fortawesome/fontawesome-svg-core": "^7.0.1",
     "@fortawesome/free-solid-svg-icons": "^7.0.1",
@@ -90,6 +94,7 @@
     "@react-native/eslint-config": "0.78.2",
     "@react-native/metro-config": "0.78.2",
     "@react-native/typescript-config": "0.78.2",
+    "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^30.0.0",
     "@types/react": "^18.3.24",
     "@types/react-native-vector-icons": "^6.4.18",

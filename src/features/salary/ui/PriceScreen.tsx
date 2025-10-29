@@ -8,6 +8,8 @@ import { usePriceScreen } from '../model/usePriceScreen'
 
 import { ScreenLayout } from '@/shared/ui/ScreenLayout'
 
+import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
+
 export function PriceScreen(): React.JSX.Element {
    const {
     statPrice,
@@ -34,13 +36,13 @@ export function PriceScreen(): React.JSX.Element {
       <Calendar
         is_show={showStartCalendar}
         date={dateStart}
-        changeDate={(d) => { chooseStartDate(d); setShowStartCalendar(false) }}
+        changeDate={(d) => { chooseStartDate(d); setShowStartCalendar(false); Analytics.log(AnalyticsEvent.PriceStartCalendarClose, 'Закрытие календаря (Расчет): Дата от'); }}
         setShowCalendar={setShowStartCalendar}
       />
       <Calendar
         is_show={showEndCalendar}
         date={dateEnd}
-        changeDate={(d) => { chooseEndDate(d); setShowEndCalendar(false) }}
+        changeDate={(d) => { chooseEndDate(d); setShowEndCalendar(false); Analytics.log(AnalyticsEvent.PriceEndCalendarClose, 'Закрытие календаря (Расчет): Дата до'); }}
         setShowCalendar={setShowEndCalendar}
       />
 
@@ -49,7 +51,7 @@ export function PriceScreen(): React.JSX.Element {
       >
         <View className='m-5 mb-0'>
           <Button
-            onPress={() => setShowStartCalendar(true)}
+            onPress={() => { setShowStartCalendar(true); Analytics.log(AnalyticsEvent.PriceStartCalendarOpen, 'Открытие календаря (Расчет): Дата от'); }}
             variant='outline'
             className='w-full rounded-lg border-gray-200 h-auto mb-3 bg-white'
           >
@@ -60,7 +62,7 @@ export function PriceScreen(): React.JSX.Element {
           </Button>
 
           <Button
-            onPress={() => setShowEndCalendar(true)}
+            onPress={() => {setShowEndCalendar(true); Analytics.log(AnalyticsEvent.PriceEndCalendarOpen, 'Открытие календаря (Расчет): Дата до'); }}
             variant='outline'
             className='w-full rounded-lg border-gray-200 h-auto bg-white'
           >
