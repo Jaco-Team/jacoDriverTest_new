@@ -1,53 +1,156 @@
 PODS:
+  - appmetrica-react-native-analytics (3.5.0):
+    - AppMetricaAnalytics (= 5.12.1)
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
+  - AppMetricaAdSupport (5.12.1):
+    - AppMetricaCore (= 5.12.1)
+    - AppMetricaCoreExtension (= 5.12.1)
+  - AppMetricaAnalytics (5.12.1):
+    - AppMetricaAdSupport (= 5.12.1)
+    - AppMetricaCore (= 5.12.1)
+    - AppMetricaCrashes (= 5.12.1)
+    - AppMetricaScreenshot (= 5.12.1)
+    - AppMetricaWebKit (= 5.12.1)
+  - AppMetricaCore (5.12.1):
+    - AppMetricaCoreUtils (= 5.12.1)
+    - AppMetricaEncodingUtils (= 5.12.1)
+    - AppMetricaFMDB (= 5.12.1)
+    - AppMetricaHostState (= 5.12.1)
+    - AppMetricaIdentifiers (= 5.12.1)
+    - AppMetricaKeychain (= 5.12.1)
+    - AppMetricaLog (= 5.12.1)
+    - AppMetricaNetwork (= 5.12.1)
+    - AppMetricaPlatform (= 5.12.1)
+    - AppMetricaProtobuf (= 5.12.1)
+    - AppMetricaProtobufUtils (= 5.12.1)
+    - AppMetricaStorageUtils (= 5.12.1)
+  - AppMetricaCoreExtension (5.12.1):
+    - AppMetricaCore (= 5.12.1)
+    - AppMetricaStorageUtils (= 5.12.1)
+  - AppMetricaCoreUtils (5.12.1):
+    - AppMetricaLog (= 5.12.1)
+  - AppMetricaCrashes (5.12.1):
+    - AppMetricaCore (= 5.12.1)
+    - AppMetricaCoreExtension (= 5.12.1)
+    - AppMetricaCoreUtils (= 5.12.1)
+    - AppMetricaEncodingUtils (= 5.12.1)
+    - AppMetricaHostState (= 5.12.1)
+    - AppMetricaLog (= 5.12.1)
+    - AppMetricaPlatform (= 5.12.1)
+    - AppMetricaProtobufUtils (= 5.12.1)
+    - AppMetricaStorageUtils (= 5.12.1)
+    - KSCrash/Recording (< 2.2.0, >= 2.1.0)
+  - AppMetricaEncodingUtils (5.12.1):
+    - AppMetricaCoreUtils (= 5.12.1)
+    - AppMetricaLog (= 5.12.1)
+    - AppMetricaPlatform (= 5.12.1)
+  - AppMetricaFMDB (5.12.1)
+  - AppMetricaHostState (5.12.1):
+    - AppMetricaCoreUtils (= 5.12.1)
+    - AppMetricaLog (= 5.12.1)
+  - AppMetricaIdentifiers (5.12.1):
+    - AppMetricaKeychain (= 5.12.1)
+    - AppMetricaLogSwift (= 5.12.1)
+    - AppMetricaPlatform (= 5.12.1)
+    - AppMetricaStorageUtils (= 5.12.1)
+    - AppMetricaSynchronization (= 5.12.1)
+  - AppMetricaKeychain (5.12.1):
+    - AppMetricaCoreUtils (= 5.12.1)
+    - AppMetricaLog (= 5.12.1)
+    - AppMetricaStorageUtils (= 5.12.1)
+  - AppMetricaLog (5.12.1)
+  - AppMetricaLogSwift (5.12.1):
+    - AppMetricaLog (= 5.12.1)
+  - AppMetricaNetwork (5.12.1):
+    - AppMetricaCoreUtils (= 5.12.1)
+    - AppMetricaLog (= 5.12.1)
+    - AppMetricaPlatform (= 5.12.1)
+  - AppMetricaPlatform (5.12.1):
+    - AppMetricaCoreUtils (= 5.12.1)
+    - AppMetricaLog (= 5.12.1)
+  - AppMetricaProtobuf (5.12.1)
+  - AppMetricaProtobufUtils (5.12.1):
+    - AppMetricaProtobuf (= 5.12.1)
+  - AppMetricaScreenshot (5.12.1):
+    - AppMetricaCore (= 5.12.1)
+    - AppMetricaCoreExtension (= 5.12.1)
+  - AppMetricaStorageUtils (5.12.1):
+    - AppMetricaCoreUtils (= 5.12.1)
+    - AppMetricaLog (= 5.12.1)
+  - AppMetricaSynchronization (5.12.1):
+    - AppMetricaLogSwift (= 5.12.1)
+  - AppMetricaWebKit (5.12.1):
+    - AppMetricaCore (= 5.12.1)
+    - AppMetricaCoreUtils (= 5.12.1)
+    - AppMetricaLog (= 5.12.1)
   - boost (1.84.0)
   - DoubleConversion (1.1.6)
   - fast_float (6.1.4)
   - FBLazyVector (0.77.2)
-  - Firebase (11.15.0):
-    - Firebase/Core (= 11.15.0)
-  - Firebase/Core (11.15.0):
+  - Firebase (12.4.0):
+    - Firebase/Core (= 12.4.0)
+  - Firebase/Core (12.4.0):
     - Firebase/CoreOnly
-    - FirebaseAnalytics (~> 11.15.0)
-  - Firebase/CoreOnly (11.15.0):
-    - FirebaseCore (~> 11.15.0)
-  - Firebase/Messaging (11.15.0):
+    - FirebaseAnalytics (~> 12.4.0)
+  - Firebase/CoreOnly (12.4.0):
+    - FirebaseCore (~> 12.4.0)
+  - Firebase/Messaging (12.4.0):
     - Firebase/CoreOnly
-    - FirebaseMessaging (~> 11.15.0)
-  - FirebaseAnalytics (11.15.0):
-    - FirebaseAnalytics/Default (= 11.15.0)
-    - FirebaseCore (~> 11.15.0)
-    - FirebaseInstallations (~> 11.0)
+    - FirebaseMessaging (~> 12.4.0)
+  - FirebaseAnalytics (12.4.0):
+    - FirebaseAnalytics/Default (= 12.4.0)
+    - FirebaseCore (~> 12.4.0)
+    - FirebaseInstallations (~> 12.4.0)
     - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
     - GoogleUtilities/MethodSwizzler (~> 8.1)
     - GoogleUtilities/Network (~> 8.1)
     - "GoogleUtilities/NSData+zlib (~> 8.1)"
     - nanopb (~> 3.30910.0)
-  - FirebaseAnalytics/Default (11.15.0):
-    - FirebaseCore (~> 11.15.0)
-    - FirebaseInstallations (~> 11.0)
-    - GoogleAppMeasurement/Default (= 11.15.0)
+  - FirebaseAnalytics/Default (12.4.0):
+    - FirebaseCore (~> 12.4.0)
+    - FirebaseInstallations (~> 12.4.0)
+    - GoogleAppMeasurement/Default (= 12.4.0)
     - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
     - GoogleUtilities/MethodSwizzler (~> 8.1)
     - GoogleUtilities/Network (~> 8.1)
     - "GoogleUtilities/NSData+zlib (~> 8.1)"
     - nanopb (~> 3.30910.0)
-  - FirebaseCore (11.15.0):
-    - FirebaseCoreInternal (~> 11.15.0)
+  - FirebaseCore (12.4.0):
+    - FirebaseCoreInternal (~> 12.4.0)
     - GoogleUtilities/Environment (~> 8.1)
     - GoogleUtilities/Logger (~> 8.1)
-  - FirebaseCoreExtension (11.15.0):
-    - FirebaseCore (~> 11.15.0)
-  - FirebaseCoreInternal (11.15.0):
+  - FirebaseCoreExtension (12.4.0):
+    - FirebaseCore (~> 12.4.0)
+  - FirebaseCoreInternal (12.4.0):
     - "GoogleUtilities/NSData+zlib (~> 8.1)"
-  - FirebaseInstallations (11.15.0):
-    - FirebaseCore (~> 11.15.0)
+  - FirebaseInstallations (12.4.0):
+    - FirebaseCore (~> 12.4.0)
     - GoogleUtilities/Environment (~> 8.1)
     - GoogleUtilities/UserDefaults (~> 8.1)
     - PromisesObjC (~> 2.4)
-  - FirebaseMessaging (11.15.0):
-    - FirebaseCore (~> 11.15.0)
-    - FirebaseInstallations (~> 11.0)
-    - GoogleDataTransport (~> 10.0)
+  - FirebaseMessaging (12.4.0):
+    - FirebaseCore (~> 12.4.0)
+    - FirebaseInstallations (~> 12.4.0)
+    - GoogleDataTransport (~> 10.1)
     - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
     - GoogleUtilities/Environment (~> 8.1)
     - GoogleUtilities/Reachability (~> 8.1)
@@ -55,27 +158,28 @@ PODS:
     - nanopb (~> 3.30910.0)
   - fmt (11.0.2)
   - glog (0.3.5)
-  - GoogleAdsOnDeviceConversion (2.1.0):
+  - GoogleAdsOnDeviceConversion (3.1.0):
+    - GoogleUtilities/Environment (~> 8.1)
     - GoogleUtilities/Logger (~> 8.1)
     - GoogleUtilities/Network (~> 8.1)
     - nanopb (~> 3.30910.0)
-  - GoogleAppMeasurement/Core (11.15.0):
+  - GoogleAppMeasurement/Core (12.4.0):
     - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
     - GoogleUtilities/MethodSwizzler (~> 8.1)
     - GoogleUtilities/Network (~> 8.1)
     - "GoogleUtilities/NSData+zlib (~> 8.1)"
     - nanopb (~> 3.30910.0)
-  - GoogleAppMeasurement/Default (11.15.0):
-    - GoogleAdsOnDeviceConversion (= 2.1.0)
-    - GoogleAppMeasurement/Core (= 11.15.0)
-    - GoogleAppMeasurement/IdentitySupport (= 11.15.0)
+  - GoogleAppMeasurement/Default (12.4.0):
+    - GoogleAdsOnDeviceConversion (~> 3.1.0)
+    - GoogleAppMeasurement/Core (= 12.4.0)
+    - GoogleAppMeasurement/IdentitySupport (= 12.4.0)
     - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
     - GoogleUtilities/MethodSwizzler (~> 8.1)
     - GoogleUtilities/Network (~> 8.1)
     - "GoogleUtilities/NSData+zlib (~> 8.1)"
     - nanopb (~> 3.30910.0)
-  - GoogleAppMeasurement/IdentitySupport (11.15.0):
-    - GoogleAppMeasurement/Core (= 11.15.0)
+  - GoogleAppMeasurement/IdentitySupport (12.4.0):
+    - GoogleAppMeasurement/Core (= 12.4.0)
     - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
     - GoogleUtilities/MethodSwizzler (~> 8.1)
     - GoogleUtilities/Network (~> 8.1)
@@ -127,6 +231,11 @@ PODS:
   - hermes-engine (0.77.2):
     - hermes-engine/Pre-built (= 0.77.2)
   - hermes-engine/Pre-built (0.77.2)
+  - KSCrash/Core (2.1.2)
+  - KSCrash/Recording (2.1.2):
+    - KSCrash/RecordingCore
+  - KSCrash/RecordingCore (2.1.2):
+    - KSCrash/Core
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
     - nanopb/encode (= 3.30910.0)
@@ -1379,7 +1488,7 @@ PODS:
     - Yoga
   - react-native-netinfo (11.4.1):
     - React-Core
-  - react-native-safe-area-context (5.6.1):
+  - react-native-safe-area-context (5.6.2):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1392,8 +1501,8 @@ PODS:
     - React-featureflags
     - React-graphics
     - React-ImageManager
-    - react-native-safe-area-context/common (= 5.6.1)
-    - react-native-safe-area-context/fabric (= 5.6.1)
+    - react-native-safe-area-context/common (= 5.6.2)
+    - react-native-safe-area-context/fabric (= 5.6.2)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-rendererdebug
@@ -1402,7 +1511,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-safe-area-context/common (5.6.1):
+  - react-native-safe-area-context/common (5.6.2):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1423,7 +1532,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-safe-area-context/fabric (5.6.1):
+  - react-native-safe-area-context/fabric (5.6.2):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1437,6 +1546,27 @@ PODS:
     - React-graphics
     - React-ImageManager
     - react-native-safe-area-context/common
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
+  - react-native-worklets-core (1.6.2):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
     - React-NativeModulesApple
     - React-RCTFabric
     - React-rendererdebug
@@ -1776,7 +1906,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNDateTimePicker (8.4.4):
+  - RNDateTimePicker (8.5.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1797,17 +1927,17 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNDeviceInfo (14.0.4):
+  - RNDeviceInfo (14.1.1):
     - React-Core
-  - RNFBApp (22.4.0):
-    - Firebase/CoreOnly (= 11.15.0)
+  - RNFBApp (23.5.0):
+    - Firebase/CoreOnly (= 12.4.0)
     - React-Core
-  - RNFBMessaging (22.4.0):
-    - Firebase/Messaging (= 11.15.0)
+  - RNFBMessaging (23.5.0):
+    - Firebase/Messaging (= 12.4.0)
     - FirebaseCoreExtension
     - React-Core
     - RNFBApp
-  - RNGestureHandler (2.28.0):
+  - RNGestureHandler (2.29.1):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1833,7 +1963,7 @@ PODS:
     - RNNotifee/NotifeeCore (= 9.1.8)
   - RNNotifee/NotifeeCore (9.1.8):
     - React-Core
-  - RNPermissions (5.4.2):
+  - RNPermissions (5.4.4):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1941,7 +2071,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNScreens (4.14.1):
+  - RNScreens (4.18.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1962,9 +2092,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNScreens/common (= 4.14.1)
+    - RNScreens/common (= 4.18.0)
     - Yoga
-  - RNScreens/common (4.14.1):
+  - RNScreens/common (4.18.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1986,7 +2116,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNSentry (6.20.0):
+  - RNSentry (7.6.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2007,9 +2137,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - Sentry/HybridSDK (= 8.53.2)
+    - Sentry/HybridSDK (= 8.57.2)
     - Yoga
-  - RNSVG (15.12.1):
+  - RNSVG (15.15.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2029,9 +2159,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNSVG/common (= 15.12.1)
+    - RNSVG/common (= 15.15.0)
     - Yoga
-  - RNSVG/common (15.12.1):
+  - RNSVG/common (15.15.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2076,12 +2206,13 @@ PODS:
   - RNYamap (4.8.3):
     - React
     - YandexMapsMobile (= 4.8.0-full)
-  - Sentry/HybridSDK (8.53.2)
+  - Sentry/HybridSDK (8.57.2)
   - SocketRocket (0.7.1)
   - YandexMapsMobile (4.8.0-full)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
+  - "appmetrica-react-native-analytics (from `../node_modules/@appmetrica/react-native-analytics`)"
   - boost (from `../node_modules/react-native/third-party-podspecs/boost.podspec`)
   - DoubleConversion (from `../node_modules/react-native/third-party-podspecs/DoubleConversion.podspec`)
   - fast_float (from `../node_modules/react-native/third-party-podspecs/fast_float.podspec`)
@@ -2128,6 +2259,7 @@ DEPENDENCIES:
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - react-native-worklets-core (from `../node_modules/react-native-worklets-core`)
   - React-nativeconfig (from `../node_modules/react-native/ReactCommon`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-perflogger (from `../node_modules/react-native/ReactCommon/reactperflogger`)
@@ -2176,6 +2308,27 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - AppMetricaAdSupport
+    - AppMetricaAnalytics
+    - AppMetricaCore
+    - AppMetricaCoreExtension
+    - AppMetricaCoreUtils
+    - AppMetricaCrashes
+    - AppMetricaEncodingUtils
+    - AppMetricaFMDB
+    - AppMetricaHostState
+    - AppMetricaIdentifiers
+    - AppMetricaKeychain
+    - AppMetricaLog
+    - AppMetricaLogSwift
+    - AppMetricaNetwork
+    - AppMetricaPlatform
+    - AppMetricaProtobuf
+    - AppMetricaProtobufUtils
+    - AppMetricaScreenshot
+    - AppMetricaStorageUtils
+    - AppMetricaSynchronization
+    - AppMetricaWebKit
     - Firebase
     - FirebaseAnalytics
     - FirebaseCore
@@ -2187,6 +2340,7 @@ SPEC REPOS:
     - GoogleAppMeasurement
     - GoogleDataTransport
     - GoogleUtilities
+    - KSCrash
     - nanopb
     - PromisesObjC
     - Sentry
@@ -2194,6 +2348,8 @@ SPEC REPOS:
     - YandexMapsMobile
 
 EXTERNAL SOURCES:
+  appmetrica-react-native-analytics:
+    :path: "../node_modules/@appmetrica/react-native-analytics"
   boost:
     :podspec: "../node_modules/react-native/third-party-podspecs/boost.podspec"
   DoubleConversion:
@@ -2275,6 +2431,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-community/netinfo"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-worklets-core:
+    :path: "../node_modules/react-native-worklets-core"
   React-nativeconfig:
     :path: "../node_modules/react-native/ReactCommon"
   React-NativeModulesApple:
@@ -2367,107 +2525,131 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
+  appmetrica-react-native-analytics: c68204c9eefa3814c14dc24691393a3b33bbbe69
+  AppMetricaAdSupport: 26884bc5ec935a990b6bbfa938c854c0fdf1b248
+  AppMetricaAnalytics: 89c6cb2f7b6f75f83ccdab2b719afe9b51f1680d
+  AppMetricaCore: 145ddc416db0a7eead339de9a5e1521863426a1b
+  AppMetricaCoreExtension: 1fc4222eef017e25e8f89c5b02b8563179a40d13
+  AppMetricaCoreUtils: 9e23195da2dc2d76404ac49592e05f1dd276d1e8
+  AppMetricaCrashes: 41d7e00fc2da7ca9c8de670546d65635c81ff821
+  AppMetricaEncodingUtils: 02f48c8d45b7883c4e2a85d49ec3a66a39fd4f6d
+  AppMetricaFMDB: 482767dda08c9cec7c8d115d423aacb6b21e9e89
+  AppMetricaHostState: 447bc4c02107b3531ae77fc91ea200ddc32bb029
+  AppMetricaIdentifiers: 1c34f28d8650c4c5c931643ac8779f431e809c9f
+  AppMetricaKeychain: 76f4afe269b233c1a2493350712d24c4d18858b8
+  AppMetricaLog: 84a50f144c83a7de66778dfa990db0ac1d60e10c
+  AppMetricaLogSwift: 3ca89a024f3c8c7b09f4b2ce89a6e7ce65b3b7d6
+  AppMetricaNetwork: e8ba646d4408e2b62e272f8b49c66ffda103bfbd
+  AppMetricaPlatform: 543e24bd127eb94c14a708770980f9203e9403b4
+  AppMetricaProtobuf: 437a155c3ea82c7fc9a5f8ff5037c513a2287225
+  AppMetricaProtobufUtils: f8bf3222d88f466363a657dd14b575af16327d81
+  AppMetricaScreenshot: 852d0d8e7507de940120550890bd75cb53fbdfe3
+  AppMetricaStorageUtils: e10b5fbf8c8d9125ad200a360c9e95e53c7a0f3c
+  AppMetricaSynchronization: 3c019f1c791e11f80de51cacda4b2ed4b20935a8
+  AppMetricaWebKit: 4a659e1f6990460e8e4893d44a22af01b5c57a4f
   boost: 7e761d76ca2ce687f7cc98e698152abd03a18f90
   DoubleConversion: cb417026b2400c8f53ae97020b2be961b59470cb
   fast_float: 06eeec4fe712a76acc9376682e4808b05ce978b6
   FBLazyVector: 4c16dde959a9d6b24f2aa32cb87cb919a1ace3f3
-  Firebase: d99ac19b909cd2c548339c2241ecd0d1599ab02e
-  FirebaseAnalytics: 6433dfd311ba78084fc93bdfc145e8cb75740eae
-  FirebaseCore: efb3893e5b94f32b86e331e3bd6dadf18b66568e
-  FirebaseCoreExtension: edbd30474b5ccf04e5f001470bdf6ea616af2435
-  FirebaseCoreInternal: 9afa45b1159304c963da48addb78275ef701c6b4
-  FirebaseInstallations: 317270fec08a5d418fdbc8429282238cab3ac843
-  FirebaseMessaging: 3b26e2cee503815e01c3701236b020aa9b576f09
+  Firebase: f07b15ae5a6ec0f93713e30b923d9970d144af3e
+  FirebaseAnalytics: 0fc2b20091f0ddd21bf73397cf8f0eb5346dc24f
+  FirebaseCore: bb595f3114953664e3c1dc032f008a244147cfd3
+  FirebaseCoreExtension: 7e1f7118ee970e001a8013719fb90950ee5e0018
+  FirebaseCoreInternal: d7f5a043c2cd01a08103ab586587c1468047bca6
+  FirebaseInstallations: ae9f4902cb5bf1d0c5eaa31ec1f4e5495a0714e2
+  FirebaseMessaging: d33971b7bb252745ea6cd31ab190d1a1df4b8ed5
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: eb93e2f488219332457c3c4eafd2738ddc7e80b8
-  GoogleAdsOnDeviceConversion: 2be6297a4f048459e0ae17fad9bfd2844e10cf64
-  GoogleAppMeasurement: 700dce7541804bec33db590a5c496b663fbe2539
+  GoogleAdsOnDeviceConversion: e03a386840803ea7eef3fd22a061930142c039c1
+  GoogleAppMeasurement: 1e718274b7e015cefd846ac1fcf7820c70dc017d
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   hermes-engine: 8eb265241fa1d7095d3a40d51fd90f7dce68217c
+  KSCrash: bd950ede6c40a50bfc9f246c38a7f3408705fa3c
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
-  RCT-Folly: 36fe2295e44b10d831836cc0d1daec5f8abcf809
+  RCT-Folly: e78785aa9ba2ed998ea4151e314036f6c49e6d82
   RCTDeprecation: 85b72250b63cfb54f29ca96ceb108cb9ef3c2079
   RCTRequired: 567cb8f5d42b990331bfd93faad1d8999b1c1736
   RCTTypeSafety: 5e57924492a5e0a762654f814dd018953274eca9
   React: 53c9bd6f974c5dd019ee466e46477eb679149c38
   React-callinvoker: d6484472c1c742917b51338525336d6a74ab8a9f
-  React-Core: 043aaf319142ecc02db6fffccb780186e6e7462a
-  React-CoreModules: abe0b2089368e420b7beaa5e140771181e2f6edb
-  React-cxxreact: 8b678dd36228089b6ee19d62f2bfb8935ea1c63b
+  React-Core: 4ddb741e08144902ce4e0e66b7c67c6f2dc5bfc7
+  React-CoreModules: 0a31ca662ac169edd0c210efd324e19b3012d7ed
+  React-cxxreact: f8ecc64ebf8b795c550ae8b65ba4908ffe7350d0
   React-debug: bcb3ad3ac30170b3dad4a35b4b85db17ff9553b2
-  React-defaultsnativemodule: d5b394a484d51536d31c72a3acfdf44f3853b6e0
-  React-domnativemodule: 1c98e505131e592820d1e07bc338da1f7e5fa525
-  React-Fabric: 14f6e4093b61fb3ffe36bf6950c70303141ae371
-  React-FabricComponents: 9b17f0ebc3727fdb047b91dc8bfe161054a5c3d1
-  React-FabricImage: 2acad6f7717dfb64838fde6155b405abb6d03a26
+  React-defaultsnativemodule: 6f82446e1c372d904fd06f7c405fcb04f76e3d24
+  React-domnativemodule: 6af75363e305253251475a82df996cde8a53e066
+  React-Fabric: 0a8ef32ba4f8516c89d89126434ead8c0c564da1
+  React-FabricComponents: 7c69a91400e6c1766ad9d44b7fa73871559ead30
+  React-FabricImage: dc71846e7a8b0825890faacf88a2a1cf771c7108
   React-featureflags: 1d15b368330ec96edc02e68cdae0f266efad5ebe
-  React-featureflagsnativemodule: a9b32e1e68139af535e1f82ce1f92d909a5dc4f0
-  React-graphics: 826e6af1b57fb2bbcf22469ae9783bf25d219c3a
-  React-hermes: c07c778ab9cb80a943116ef4574087e8570206cf
-  React-idlecallbacksnativemodule: 8ae14cc7ca4d772edada3d948eefc8963f43abeb
-  React-ImageManager: a1575aa1651b637dbea4de1d293fb56a37d0d3d3
-  React-jserrorhandler: 8d327cb4a9831e91918baebe3849d86aac60e963
-  React-jsi: 1c901c8f6e8d4555b6a5747c5a5b7c7cf757da71
-  React-jsiexecutor: d59faf2904bb0bd1daec18bc59731623e79a74eb
-  React-jsinspector: 543fbcf74a8070c83a04ee77938b9813bf074c3b
-  React-jsitracing: e115ec1ec16836a517909bf66c63b993bc9e36dd
-  React-logger: 5320a2acb25baa566cda59b611231929dd3ed7fc
-  React-Mapbuffer: 0d55aa10e3dcbc51121df490f1ffff427d68e6f2
-  React-microtasksnativemodule: c2bc0e0f39308276c073feaca6a0dd453d4172c5
-  react-native-geolocation: 70b8819c3a45a4613e58c2b13ba694ec1f7de3d2
-  react-native-image-picker: fb2d12cb86e0b3e58caee9aa660ddbd5742c841c
-  react-native-netinfo: f0a9899081c185db1de5bb2fdc1c88c202a059ac
-  react-native-safe-area-context: ad7b31de8373577e003e700340b746fd5645b12c
+  React-featureflagsnativemodule: 45f51f78d54579087e1233dc8bae31e2536c4208
+  React-graphics: 235f82ac0ca6b4533049e10baf202f521804baef
+  React-hermes: 104bc85f9903f1caa91db6b09a5f97ceda6c50af
+  React-idlecallbacksnativemodule: 47f766f119cccd4486081f88ebc30e3046130ce0
+  React-ImageManager: 0190f64acb02be89d57764f608989297409eba30
+  React-jserrorhandler: 30f3a3a2e54ac2528bf93b59f764a8ae1bcd88eb
+  React-jsi: 0a6dd1eafe243a6c19c5207103aa0fba3c45a46d
+  React-jsiexecutor: 9aba4e775cc17d9c4311caf1bf2158a570380a9a
+  React-jsinspector: 6982d464d92181217de063cebc4a992d99d85b7f
+  React-jsitracing: a6569c6c0dadecdce4821f87a420b409a19e42d3
+  React-logger: 592d84bed2e04db64c0b3725f9970b437473f3d3
+  React-Mapbuffer: 595c88852c1dcb1c4faafad88148de8690a70aae
+  React-microtasksnativemodule: b56986b155ae82e9bcb1d1c0ca8726bac52dbb6e
+  react-native-geolocation: 66ddfd59066bb9365d0899967adc0a2cf2d0e6b2
+  react-native-image-picker: 84b261e109faa7312bca59f1f65c8f2b22865496
+  react-native-netinfo: cec9c4e86083cb5b6aba0e0711f563e2fbbff187
+  react-native-safe-area-context: 90db9cb1243ba193ef6d05b26ff0600e69112214
+  react-native-worklets-core: 70698b8dcaf742004d9fc4c483c2ffd82ebff25d
   React-nativeconfig: ecf4dc92c40b97e2b3f0c619938f78bfd6507b08
-  React-NativeModulesApple: 0a921ec6d315dd71bd676c18f852867ad2ca6e64
-  React-perflogger: a0f49e229d1252d683102df60d2392229ece5837
-  React-performancetimeline: a1bada11e8207c204cb865e2221c5a104b9d273f
+  React-NativeModulesApple: f457bbfb30fb3bc41979b1a87b99d292d7340d39
+  React-perflogger: 1111b5feb064c4cc83df88fb403efda54b387951
+  React-performancetimeline: f04d09d6c0da5c31c9c3a10afe6fcfdaddbb8624
   React-RCTActionSheet: 150cfe1df4275db2251a2a4a1b22be3294e94ef7
-  React-RCTAnimation: 67a303df28e0981f58a26968b3c15252a6b277b8
-  React-RCTAppDelegate: 1a35f04ca974e3a6cf3f0cdf367c98d86d7078bd
-  React-RCTBlob: 2ccb60fd765ed41292c495e4374eaf7c23a3c81c
-  React-RCTFabric: c813cdda618df8f80f76454ec692debe3d4d4682
-  React-RCTFBReactNativeSpec: 8ba5f519a51adb1feda2bc27beddd04b693b18f2
-  React-RCTImage: f235db428b4c98cbb1ad6304f826695f19e82c57
-  React-RCTLinking: 523a01769de55660743d6332157dfb4dbad817b8
-  React-RCTNetwork: d99ee5bf1f15ad8521d30c9da477906d7fb00110
-  React-RCTSettings: 4165a44c6f51787980634bd522f3b379ee8531a6
-  React-RCTText: 462ab8d4f2f180be83e3983307ce5ef5fa58210e
-  React-RCTVibration: ca784cb7e30c21852d4b78b1621bfa11940ab061
+  React-RCTAnimation: 1de976f7a660429c39e20a81a728eb0102226f9b
+  React-RCTAppDelegate: 5ec33437d41ed6158b344afa6860a5e2fd4ed538
+  React-RCTBlob: 27c8f8fa6cb47cd4cb422d74d015722f01835493
+  React-RCTFabric: 6936613851a1c0a92501a851a250171caf39104a
+  React-RCTFBReactNativeSpec: f50e55a68595850c35909c76b7dcfca2655db6fe
+  React-RCTImage: 148afd89e4de0c36b87df0d1e8c0007fa89fb055
+  React-RCTLinking: 389458d08b891fa0a03e4c2cee545ebff341d06f
+  React-RCTNetwork: a78572948341ef0f9438b2d1cd685be564256518
+  React-RCTSettings: 484e4ec805ff8ab6c0af21fe90f415a8fae89f43
+  React-RCTText: 0d6fbf6ebe6eaa749bc7d672ba01a3e96553e941
+  React-RCTVibration: 4baa58b79be7062096e0f0b7575d4f0507952449
   React-rendererconsistency: 5f7773101a5d744d37967faabdb1b259c8f0b481
-  React-rendererdebug: 9192bd38f4363b88d10bd117262354309d838cf9
+  React-rendererdebug: d6da0f1dd47e4a087396ec7e7c37d2f0a469d2bd
   React-rncore: 679835b31b637897cfd0b2ede7f9c206b9a688ff
-  React-RuntimeApple: fa9e3ba5e59ffcdf32c070427eb0040da251aacb
-  React-RuntimeCore: 68ddc9cecfab20e96a81a8c23503ddc0958984d4
+  React-RuntimeApple: 532438b9b2a0438639ebfae26117a23615b89d09
+  React-RuntimeCore: 8cb8fa729bf409730fc38a019556afc02e45989b
   React-runtimeexecutor: e6e7af01f9989f931289250ee9060604bc0f0144
-  React-RuntimeHermes: 8502d71fdf1568f11d72f5efeb8b0973758c0365
-  React-runtimescheduler: 60ab42d3567a9fca4a6fa3da18ac277255165359
+  React-RuntimeHermes: 825d11cbef3dac839016830bdb93d815492bbe94
+  React-runtimescheduler: a3560dd66614edaf2f2fb90697474802f8bdd358
   React-timing: d9adb125887c734222f455da146e2ff1a7b2b9c1
-  React-utils: 0bc6b54f3a3ffee24b925f0e4af918fd338ad806
-  ReactAppDependencyProvider: 8955603808eb24bbfde3511d2bcc8362d1d5860e
-  ReactCodegen: 204305627867dc05cf70b877d440bc2f7ed6d50f
-  ReactCommon: 5340e44b608ed628c3fe87408297185811285c22
-  RNCAsyncStorage: efa02b644121f4e1f7f33e712f4f82c30aa4ff4a
-  RNCClipboard: 41b301766fd5ec1d91b4cd7130607a2e99518bb2
-  RNDateTimePicker: 766ee51b40ca7efffa43b4846675f092f91f288e
-  RNDeviceInfo: feea80a690d2bde1fe51461cf548039258bd03f2
-  RNFBApp: 2c88b4fc4bcecf25ff9077abde08f4b1cbaff4c6
-  RNFBMessaging: 67ede2b8c07a00902f24dd5819b2c75901a75669
-  RNGestureHandler: 675c0ca118ece2f007ff68ca513ef8b6e6b8a2b4
-  RNNotifee: 4a6ee5c7deaf00e005050052d73ee6315dff7ec9
-  RNPermissions: ddb5306ef29f075499be9a1c7d13a842bb55e6e3
-  RNReanimated: ef80cf675203a39bb5e5464234cb08a0f0040ac2
-  RNScreens: c1e2cca8944acfe3aa40d2c1cba55e96891d4ba0
-  RNSentry: e13c92959b3791775f4c5e0958e5451018cdd4b1
-  RNSVG: 8d0b028ced9556d2e63a7f69783f8d9062943e65
-  RNVectorIcons: 3a2173c340d645b9af2dfe39801ae470a1b0a9a7
-  RNYamap: f50f8b52ac1b7ba84dbcd30dfa24e08b15fb4ed7
-  Sentry: 59993bffde4a1ac297ba6d268dc4bbce068d7c1b
+  React-utils: 5642285f8379e4d024f1f158ffcc77d9c52c877c
+  ReactAppDependencyProvider: f334cebc0beed0a72490492e978007082c03d533
+  ReactCodegen: 6f764a42662ad6379fd3fbb9c09baff6e4797b20
+  ReactCommon: 7763e59534d58e15f8f22121cdfe319040e08888
+  RNCAsyncStorage: 79cfba789fca205b204f3ce7948b874500129eb4
+  RNCClipboard: ba9fda8e2c9f003a29f7f66793069c4d0dada955
+  RNDateTimePicker: 66028060ebc0c6d67863fb6e6e670112ba213984
+  RNDeviceInfo: bcce8752b5043a623fe3c26789679b473f705d3c
+  RNFBApp: 78d866e12b98c79b7cb141fcdcdf9813eae09b15
+  RNFBMessaging: e16ebeae1f64f57603a193f1be6f3be7ab55c5e4
+  RNGestureHandler: 6ad7823942d1a2133b67552d9aeca1b6a6d452a2
+  RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
+  RNPermissions: 14134c8804b3bfd069ec668e5af5c8bfe0f2a37d
+  RNReanimated: 8a4ea733f88a33379150eb2e73b375e14de81e84
+  RNScreens: b0691b7488fc428136a2e7abab32f751b01b2696
+  RNSentry: d394f4937bfdd0f8eed954cce04ef44d3307737a
+  RNSVG: dbdb15de04bee823b05b581e1a7f199ff41d66a1
+  RNVectorIcons: 0e915baaf807d5dfed506a14f23a29476c1f07f9
+  RNYamap: e9e022763db4b546333d68af89f93d3313d028dd
+  Sentry: 83a3814c3ca042874b39c5c5bdffb6570d4d760e
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   YandexMapsMobile: 576340ead47bb112b6387eac1e605cfe7565c162
-  Yoga: 6f65362b9e599b5a80e079df91843ea27b4d1afa
+  Yoga: 31a098f74c16780569aebd614a0f37a907de0189
 
 PODFILE CHECKSUM: 0b162610211e488e53bc5012d5f20d13acb631d4
 
