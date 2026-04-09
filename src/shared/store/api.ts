@@ -60,7 +60,7 @@ declare global {
 }
 export {};
 
-const URL_API = 'https://api.jacochef.ru/driver/public/index.php/';
+const URL_API = 'https://api2.jacochef.ru/driver/public/index.php/';
 const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production';
 
 function actionsModeOn(module: string) {

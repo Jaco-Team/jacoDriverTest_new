@@ -74,5 +74,18 @@ target 'jacoDriverTest' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Xcode 26.x / modern toolchain workarounds for RN 0.77 native deps.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |build_config|
+        build_config.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
+        build_config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+
+        # fmt 11 can trip over consteval-related issues on newer Apple toolchains.
+        if target.name == 'fmt'
+          build_config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+        end
+      end
+    end
   end
 end
