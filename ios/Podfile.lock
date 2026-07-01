@@ -2004,7 +2004,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - RNFBApp
     - Yoga
-  - RNGestureHandler (2.31.0):
+  - RNGestureHandler (2.29.1):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2706,7 +2706,7 @@ SPEC CHECKSUMS:
   RNDeviceInfo: bcce8752b5043a623fe3c26789679b473f705d3c
   RNFBApp: a0bc667bd57043d25c07230858321674070f4727
   RNFBMessaging: 85526b43757ff09bc59e88a31127649c15ba4a2e
-  RNGestureHandler: de2b83641fe60ed7ecad25ff9e6991cf3c226fea
+  RNGestureHandler: 6ad7823942d1a2133b67552d9aeca1b6a6d452a2
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
   RNPermissions: 07dccf9dd0743d4e3831b1bed4f454370f865a93
   RNReanimated: 8a4ea733f88a33379150eb2e73b375e14de81e84

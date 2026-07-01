@@ -563,10 +563,10 @@ export const useSettingsStore = create<SettingsStore>()( (set, get) => ({
 
     get().getPhoneCafe();
 
-    useGlobalStore.getState().setFontSize(parseInt(res.data?.fontSize ?? 16));
+    useGlobalStore.getState().setFontSize(parseInt(String(res.data?.fontSize ?? 16), 10));
     useGlobalStore.getState().setTheme(res.data?.theme ?? 'white');
     //useGlobalStore.getState().setMapScale( parseFloat(res.data?.mapScale ?? 1) );
-    useGlobalStore.getState().setMapScale( parseFloat(res.data?.mapScale ?? 1) );
+    useGlobalStore.getState().setMapScale( parseFloat(String(res.data?.mapScale ?? 1)) );
 
     useGlobalStore.getState().setNeedAvgTime( (res.data?.driver_avg_time ?? 1) == 1 ? true : false );
     useGlobalStore.getState().setNeedPageStat( (res.data?.driver_page_stat_time ?? 1) == 1 ? true : false );
@@ -875,8 +875,6 @@ export const useGEOStore = create<GEOStore>()((set, get) => ({
               //   } 
               // }, 100);
               
-              
-            }else{
               
             }
           },

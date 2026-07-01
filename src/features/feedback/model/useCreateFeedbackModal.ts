@@ -11,7 +11,14 @@ import {
   Alert
 } from 'react-native';
 
-import { launchImageLibrary, launchCamera, ImagePickerResponse, Asset } from 'react-native-image-picker';
+import {
+  launchImageLibrary,
+  launchCamera,
+  ImagePickerResponse,
+  Asset,
+  ImageLibraryOptions,
+  CameraOptions,
+} from 'react-native-image-picker';
 
 export function useCreateFeedbackModal() {
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -97,7 +104,7 @@ export function useCreateFeedbackModal() {
   };
 
   const pickImageFromGallery = () => {
-    const options = {
+    const options: ImageLibraryOptions = {
       mediaType: 'photo',
       includeBase64: false,
       maxHeight: 2000,
@@ -110,7 +117,7 @@ export function useCreateFeedbackModal() {
   };
 
   const takePhoto = () => {
-    const options = {
+    const options: CameraOptions = {
       mediaType: 'photo',
       includeBase64: false,
       maxHeight: 2000,

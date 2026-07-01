@@ -40,7 +40,7 @@ describe('useStatisticsTable.onRefresh', () => {
 
   beforeEach(() => {
     jest.useFakeTimers();
-    jest.setSystemTime(new Date('2025-10-27T00:00:00Z'));
+    jest.setSystemTime(Date.parse('2025-10-27T00:00:00Z'));
     jest.clearAllMocks();
     api = null;
   });

@@ -12,6 +12,7 @@ export function useMapLogic() {
   const mapRef = useRef<YaMap>(null)
   const [zoom, setZoom] = useState<number>(12)
   const [isActiveFilter, setActiveFilter] = useState<boolean>(false);
+  const [trafficVisible, setTrafficVisible] = useState<boolean>(false)
 
   const [ getSettings, night_map, is_scaleMap, rotate_map, setRotateMap ] = useSettingsStore( useShallow( state => [ state.getSettings, state.night_map, state.is_scaleMap, state.rotate_map, state.setRotateMap ] ) )
 
@@ -64,6 +65,15 @@ export function useMapLogic() {
     }
   }
 
+  // Метод для отображения/скрытия пробок
+  const toggleTrafficVisible = () => {
+    setTrafficVisible((prev) => {
+      const nextValue = !prev
+      mapRef.current?.setTrafficVisible(nextValue)
+      return nextValue
+    })
+  }
+
   // Метод для центрирования на «home»
   const getHome = () => {
     Analytics.log(AnalyticsEvent.MapHomeCenter, 'Центрирование карты на домашнюю точку');
@@ -95,6 +105,8 @@ export function useMapLogic() {
     isActiveFilter,
     isOpenOrderMap,
     set_type_location,
-    type_location
+    type_location,
+    trafficVisible,
+    toggleTrafficVisible
   }
 }

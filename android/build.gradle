@@ -24,6 +24,7 @@ subprojects {
   configurations.configureEach {
     resolutionStrategy {
       force 'com.yandex.android:maps.mobile:4.19.0-navikit'
+      force 'com.google.android.gms:play-services-location:21.0.1'
     }
   }
 }

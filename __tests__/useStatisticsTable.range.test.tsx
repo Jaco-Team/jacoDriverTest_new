@@ -52,7 +52,7 @@ describe('useStatisticsTable: нормализация дат, алёрты и �
   beforeEach(() => {
     jest.useFakeTimers();
     // Полдень по UTC, чтобы не ловить сдвиги дат
-    jest.setSystemTime(new Date('2025-10-27T12:00:00Z'));
+    jest.setSystemTime(Date.parse('2025-10-27T12:00:00Z'));
     jest.clearAllMocks();
     api = null;
   });

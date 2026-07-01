@@ -59,13 +59,13 @@ export function useSettingsLogic() {
   const [is_scaleMapState, setScale_map] = useState<['is_scaleMap'] | []>(
     is_scaleMap === 1 ? ['is_scaleMap'] : []
   )
-  const [fontSizeState, setFontSize] = useState<number>(parseInt(fontSize))
+  const [fontSizeState, setFontSize] = useState<number>(parseInt(String(fontSize), 10))
   const [update_intervalState, setUpdate_interval] = useState<number>(update_interval)
   const [colorState, setColor] = useState<string>(color)
   const [swatchesLoadingState, setSwatchesLoading] = useState<boolean>(false)
   const [groupTypeTimeState, setGroupTypeTime] = useState<ShowType>(type_data_map)
   const [groupTypeThemeState, setGroupTypeTheme] = useState<Theme>(theme)
-  const [mapScaleState, setMapScale] = useState<number>(parseFloat(mapScale))
+  const [mapScaleState, setMapScale] = useState<number>(parseFloat(String(mapScale)))
   
 
   // При первом рендере
@@ -82,12 +82,12 @@ export function useSettingsLogic() {
     setNight_map(night_map == 1 ? ['is_night'] : [])
     setScale_map(is_scaleMap == 1 ? ['is_scaleMap'] : [])
 
-    setFontSize(parseInt(fontSize))
+    setFontSize(parseInt(String(fontSize), 10))
     setUpdate_interval(update_interval)
     setColor(color)
     setGroupTypeTime(type_data_map)
     setGroupTypeTheme(theme)
-    setMapScale(parseFloat(mapScale))
+    setMapScale(parseFloat(String(mapScale)))
   }, [
     action_centered_map,
     color,

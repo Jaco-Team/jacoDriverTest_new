@@ -2100,3 +2100,23 @@ index 48c1cdf..85eff5e 100644
 +      }
 +  }
  }
+diff --git a/node_modules/react-native-yamap/ios/View/RNYMView.m b/node_modules/react-native-yamap/ios/View/RNYMView.m
+index 5ca0b5a..2d1f8a9 100644
+--- a/node_modules/react-native-yamap/ios/View/RNYMView.m
++++ b/node_modules/react-native-yamap/ios/View/RNYMView.m
+@@ -386,6 +386,15 @@ - (void)setTrafficVisible:(BOOL)traffic {
+         [trafficLayer removeTrafficListenerWithTrafficListener:self];
+     }
+ }
++
++- (void)onTrafficChangedWithTrafficLevel:(YMKTrafficLevel *)trafficLevel {
++}
++
++- (void)onTrafficLoading {
++}
++
++- (void)onTrafficExpired {
++}
+ 
+ - (NSDictionary *)cameraPositionToJSON:(YMKCameraPosition *)position reason:(YMKCameraUpdateReason)reason finished:(BOOL)finished {
+     return @{

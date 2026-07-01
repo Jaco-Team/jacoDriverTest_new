@@ -3,7 +3,7 @@ import { Dimensions, StyleSheet, TouchableOpacity } from 'react-native'
 
 import YaMap from 'react-native-yamap'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import { faLocationDot, faLockOpen, faLock, faFilter, faLocationPin, faLocationPinLock } from '@fortawesome/free-solid-svg-icons'
+import { faLocationDot, faLockOpen, faLock, faFilter, faLocationPin, faLocationPinLock, faRoad } from '@fortawesome/free-solid-svg-icons'
 
 import { Slider, SliderThumb, SliderTrack, SliderFilledTrack } from '@/components/ui/slider'
 
@@ -15,13 +15,14 @@ import { DriverMarker } from './DriverMarker';
 import { ModalFilterOrders } from './ModalFilterOrders';
 
 const { width, height } = Dimensions.get('window')
+const MAP_CONTROL_RIGHT = 20
 
 import { useMapLogic } from '../model/useMapLogic'
 
 import { ScreenLayout } from '@/shared/ui/ScreenLayout'
 
 export function MapScreen() {
-  const { mapRef, zoom, updateZoom, getHome, home, showLocationDriver, night_map, is_scaleMap, rotate_map, setRotateMap, showModalTypeDop, is_showModalTypeDop, isActiveFilter, isOpenOrderMap, set_type_location, type_location } = useMapLogic()
+  const { mapRef, zoom, updateZoom, getHome, home, showLocationDriver, night_map, is_scaleMap, rotate_map, setRotateMap, showModalTypeDop, is_showModalTypeDop, isActiveFilter, isOpenOrderMap, set_type_location, type_location, trafficVisible, toggleTrafficVisible } = useMapLogic()
 
   const mtop = (height - 300) / 4
 
@@ -38,7 +39,7 @@ export function MapScreen() {
           step={0.2}
           style={{
             position: 'absolute',
-            right: 15,
+            right: MAP_CONTROL_RIGHT,
             width: 50,
             height: 300,
             top: mtop,
@@ -57,7 +58,7 @@ export function MapScreen() {
       </TouchableOpacity>
 
       { !(is_showModalTypeDop || isOpenOrderMap) ?
-        <TouchableOpacity style={{ backgroundColor: 'transparent', position: 'absolute', right: 20, bottom: 150, zIndex: 22, padding: 10 }} onPress={() => showModalTypeDop(true)}>
+        <TouchableOpacity style={{ backgroundColor: 'transparent', position: 'absolute', right: MAP_CONTROL_RIGHT, bottom: 150, zIndex: 22, padding: 10 }} onPress={() => showModalTypeDop(true)}>
           <FontAwesomeIcon size={25} color={ isActiveFilter ? '#fff44f' : night_map == 1 ? '#f0f8ff' : '#000' } style={{ zIndex: 22 }} icon={faFilter} />
         </TouchableOpacity>
           :
@@ -69,7 +70,7 @@ export function MapScreen() {
         style={{
           backgroundColor: 'transparent',
           position: 'absolute',
-          right: 10,
+          right: MAP_CONTROL_RIGHT,
           top: 10,
           padding: 10,
           zIndex: 22
@@ -83,6 +84,28 @@ export function MapScreen() {
           style={{ zIndex: 22 }} 
           icon={faLocationDot} 
           //icon={type_location === 'location' ? faLocationDot : type_location === 'watch' ? faLocationPin : faLocationPinLock} 
+        />
+      </TouchableOpacity>
+
+      {/* Кнопка для отображения пробок */}
+      <TouchableOpacity
+        style={{
+          backgroundColor: 'transparent',
+          position: 'absolute',
+          right: MAP_CONTROL_RIGHT,
+          top: 60,
+          padding: 10,
+          zIndex: 22
+        }}
+        onPress={() => toggleTrafficVisible()}
+        accessibilityRole="button"
+        accessibilityLabel={trafficVisible ? 'Скрыть пробки на карте' : 'Показать пробки на карте'}
+      >
+        <FontAwesomeIcon
+          size={25}
+          color={trafficVisible ? '#22c55e' : night_map == 1 ? '#f0f8ff' : '#000'}
+          style={{ zIndex: 22 }}
+          icon={faRoad}
         />
       </TouchableOpacity>
 
