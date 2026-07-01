@@ -118,4 +118,53 @@ describe('orders-map filters and getOrders', () => {
 
     expect(mockApi).not.toHaveBeenCalled();
   });
+
+  it('getOrders: пока предыдущая загрузка активна, повторный запрос игнорируется', async () => {
+    useOrdersStore.setState({ is_check: true } as any);
+
+    await useOrdersStore.getState().getOrders(true);
+
+    expect(mockApi).not.toHaveBeenCalled();
+  });
+
+  it('getOrders: при st=false сбрасывает loading guard и не затирает текущие заказы', async () => {
+    const orders = [{ id: 10, status: 'В очереди' }];
+    const setSpinner = jest.fn();
+    useGlobalStore.setState({ setSpinner } as any);
+    useOrdersStore.setState({
+      is_check: false,
+      orders,
+    } as any);
+    mockApi.mockResolvedValueOnce({ st: false, text: 'Ошибка загрузки' });
+
+    await useOrdersStore.getState().getOrders(true);
+
+    expect(mockApi).toHaveBeenCalledTimes(1);
+    expect(useOrdersStore.getState().orders).toBe(orders);
+    expect(useOrdersStore.getState().is_check).toBe(false);
+    expect(setSpinner).toHaveBeenCalledWith(false);
+  });
+
+  it('getOrders: при пустом data.orders показывает ошибку и гасит спиннеры по таймеру', async () => {
+    const showModalText = jest.fn();
+    const setSpinner = jest.fn();
+    const setSpinnerHidden = jest.fn();
+    useGlobalStore.setState({
+      showModalText,
+      setSpinner,
+      setSpinnerHidden,
+    } as any);
+    mockApi.mockResolvedValueOnce({ st: true, text: 'Заказы не найдены', data: {} });
+
+    await useOrdersStore.getState().getOrders(false);
+
+    expect(showModalText).toHaveBeenCalledWith(true, 'Заказы не найдены');
+    expect(useOrdersStore.getState().is_check).toBe(true);
+
+    jest.advanceTimersByTime(300);
+
+    expect(useOrdersStore.getState().is_check).toBe(false);
+    expect(setSpinner).toHaveBeenCalledWith(false);
+    expect(setSpinnerHidden).toHaveBeenCalledWith(false);
+  });
 });

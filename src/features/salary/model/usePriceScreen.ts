@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useStatStore, useGlobalStore } from '@/shared/store/store'
 import { useShallow } from 'zustand/react/shallow'
 import dayjs, { ConfigType } from 'dayjs'
@@ -29,9 +29,9 @@ export function usePriceScreen() {
 
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false)
 
-  const fetchRange = (start: string, end: string) => {
+  const fetchRange = useCallback((start: string, end: string) => {
     getStatBetween(start, end)
-  }
+  }, [getStatBetween])
 
   const chooseStartDate = (data: ConfigType) => {
     const newStart = dayjs(data).format('YYYY-MM-DD')
@@ -67,7 +67,7 @@ export function usePriceScreen() {
 
   useEffect(() => {
     fetchRange(dateStart, dateEnd)
-  }, [])
+  }, [dateEnd, dateStart, fetchRange])
 
   return {
     statPrice,

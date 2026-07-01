@@ -78,6 +78,8 @@ module.exports = [
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-undef': 'off',
       'no-unused-vars': 'off',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
     },
   },
 ];

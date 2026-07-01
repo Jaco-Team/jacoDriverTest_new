@@ -37,6 +37,21 @@ export function useMapLogic() {
 
   const isFocused = useIsFocused();
 
+  // Метод для центрирования на «home»
+  const getHome = useCallback(() => {
+    Analytics.log(AnalyticsEvent.MapHomeCenter, 'Центрирование карты на домашнюю точку');
+    if (mapRef.current && home) {
+      mapRef.current.setCenter(
+        { lon: home.lon, lat: home.lat },
+        12,
+        0,
+        0,
+        0,
+        Animation.SMOOTH
+      )
+    }
+  }, [home])
+
   // ✅ 1) Один раз на вход в экран (на фокус), без завязки на update_interval
   useFocusEffect(
     useCallback(() => {
@@ -44,7 +59,7 @@ export function useMapLogic() {
       getHome();
       getSettings();
       return () => {};
-    }, []) // <-- без зависимостей
+    }, [getHome, getOrders, getSettings])
   );
 
   // ✅ 2) Отдельно — только интервал автообновления
@@ -72,21 +87,6 @@ export function useMapLogic() {
       mapRef.current?.setTrafficVisible(nextValue)
       return nextValue
     })
-  }
-
-  // Метод для центрирования на «home»
-  const getHome = () => {
-    Analytics.log(AnalyticsEvent.MapHomeCenter, 'Центрирование карты на домашнюю точку');
-    if (mapRef.current && home) {
-      mapRef.current.setCenter(
-        { lon: home.lon, lat: home.lat },
-        12,
-        0,
-        0,
-        0,
-        Animation.SMOOTH
-      )
-    }
   }
 
   return {

@@ -222,7 +222,7 @@ jest.mock('@react-navigation/native', () => {
     resetRoot: () => {},
   });
   const useFocusEffect = (effect: () => void | (() => void)) => {
-    React.useEffect(() => (typeof effect === 'function' ? effect() : undefined), []);
+    React.useEffect(() => (typeof effect === 'function' ? effect() : undefined), [effect]);
   };
   const DefaultTheme = { dark: false, colors: {} };
   const ThemeProvider = ({ children }: any) => children;

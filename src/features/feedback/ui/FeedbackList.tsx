@@ -11,7 +11,7 @@ const FeedbackList: React.FC = () => {
 
   useEffect(() => {
     fetchFeedbacks();
-  }, []);
+  }, [fetchFeedbacks]);
 
   const filteredFeedbacks = useMemo(() => {
     return feedbacks.filter((feedback) => {

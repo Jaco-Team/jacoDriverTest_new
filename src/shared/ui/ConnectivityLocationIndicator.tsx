@@ -80,15 +80,6 @@ export const ConnectivityLocationIndicator: React.FC = () => {
     };
   }, []);
 
-  // Если все условия удовлетворительные — ничего не отображаем
-  if (!isLocationEnabled || !isInternetConnected || isPoorConnection) {
-    return null;
-  }
-
-  if (isLocationEnabled && isInternetConnected && isPoorConnection) {
-    setIsShow(true)
-  }
-
   const styles = useSpring({
     from: { translateY: -200, opacity: 0 },
     to: { translateY: is_show ? 70 : -100, opacity: 1 },
@@ -104,6 +95,15 @@ export const ConnectivityLocationIndicator: React.FC = () => {
       }
     },
   });
+
+  // Если все условия удовлетворительные — ничего не отображаем
+  if (!isLocationEnabled || !isInternetConnected || isPoorConnection) {
+    return null;
+  }
+
+  if (isLocationEnabled && isInternetConnected && isPoorConnection) {
+    setIsShow(true)
+  }
 
   return (
     <AnimatedView

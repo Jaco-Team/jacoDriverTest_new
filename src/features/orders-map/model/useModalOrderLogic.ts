@@ -48,7 +48,7 @@ export function useModalOrderLogic() {
       showOrdersMap(-1)
       bottomSheetRef.current?.close();
     }
-  }, [isOpenOrderMap]);
+  }, [isOpenOrderMap, showOrdersMap]);
 
   console.log( 'isOpenOrderMap', isOpenOrderMap )
 

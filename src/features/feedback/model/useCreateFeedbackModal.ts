@@ -56,17 +56,17 @@ export function useCreateFeedbackModal() {
     });
   };
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setTitle('');
     setDescription('');
     setType('предложение');
     setImages([]);
-  };
+  }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     resetForm();
     closeCreateModal();
-  };
+  }, [closeCreateModal, resetForm]);
 
   const feedbackTypes: FeedbackType[] = ['предложение', 'ошибка', 'улучшение', 'другое'];
 
