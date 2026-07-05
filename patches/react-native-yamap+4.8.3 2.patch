@@ -1,3 +1,201 @@
+diff --git a/node_modules/react-native-yamap/.idea/GitCommitMessageStorage.xml b/node_modules/react-native-yamap/.idea/GitCommitMessageStorage.xml
+deleted file mode 100644
+index 3b56900..0000000
+--- a/node_modules/react-native-yamap/.idea/GitCommitMessageStorage.xml
++++ /dev/null
+@@ -1,20 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<project version="4">
+-  <component name="GitCommitMessageStorage">
+-    <option name="messageStorage">
+-      <MessageStorage>
+-        <option name="commitTemplate">
+-          <CommitTemplate>
+-            <option name="body" value="" />
+-            <option name="changes" value="" />
+-            <option name="closes" value="" />
+-            <option name="scope" value="" />
+-            <option name="skipCi" value="" />
+-            <option name="subject" value="" />
+-            <option name="type" value="feat" />
+-          </CommitTemplate>
+-        </option>
+-      </MessageStorage>
+-    </option>
+-  </component>
+-</project>
+\ No newline at end of file
+diff --git a/node_modules/react-native-yamap/.idea/dictionaries b/node_modules/react-native-yamap/.idea/dictionaries
+deleted file mode 100644
+index 343c0b6..0000000
+--- a/node_modules/react-native-yamap/.idea/dictionaries
++++ /dev/null
+@@ -1,6 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<project version="4">
+-  <component name="ProjectDictionaryState">
+-    <dictionary name="nikita" />
+-  </component>
+-</project>
+\ No newline at end of file
+diff --git a/node_modules/react-native-yamap/.idea/inspectionProfiles/Project_Default.xml b/node_modules/react-native-yamap/.idea/inspectionProfiles/Project_Default.xml
+deleted file mode 100644
+index b3111f4..0000000
+--- a/node_modules/react-native-yamap/.idea/inspectionProfiles/Project_Default.xml
++++ /dev/null
+@@ -1,9 +0,0 @@
+-<component name="InspectionProjectProfileManager">
+-  <profile version="1.0">
+-    <option name="myName" value="Project Default" />
+-    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
+-    <inspection_tool class="JSMethodCanBeStatic" enabled="false" level="WARNING" enabled_by_default="false" />
+-    <inspection_tool class="JSRedundantSwitchStatement" enabled="false" level="WARNING" enabled_by_default="false" />
+-    <inspection_tool class="ThisExpressionReferencesGlobalObjectJS" enabled="false" level="WARNING" enabled_by_default="false" />
+-  </profile>
+-</component>
+\ No newline at end of file
+diff --git a/node_modules/react-native-yamap/.idea/jsLibraryMappings.xml b/node_modules/react-native-yamap/.idea/jsLibraryMappings.xml
+deleted file mode 100644
+index d23208f..0000000
+--- a/node_modules/react-native-yamap/.idea/jsLibraryMappings.xml
++++ /dev/null
+@@ -1,6 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<project version="4">
+-  <component name="JavaScriptLibraryMappings">
+-    <includedPredefinedLibrary name="Node.js Core" />
+-  </component>
+-</project>
+\ No newline at end of file
+diff --git a/node_modules/react-native-yamap/.idea/misc.xml b/node_modules/react-native-yamap/.idea/misc.xml
+deleted file mode 100644
+index a62cd3d..0000000
+--- a/node_modules/react-native-yamap/.idea/misc.xml
++++ /dev/null
+@@ -1,75 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<project version="4">
+-  <component name="MarkdownProjectSettings">
+-    <PreviewSettings splitEditorLayout="SPLIT" splitEditorPreview="PREVIEW" useGrayscaleRendering="false" zoomFactor="1.0" maxImageWidth="0" showGitHubPageIfSynced="false" allowBrowsingInPreview="false" synchronizePreviewPosition="true" highlightPreviewType="NONE" highlightFadeOut="5" highlightOnTyping="true" synchronizeSourcePosition="true" verticallyAlignSourceAndPreviewSyncPosition="true" showSearchHighlightsInPreview="false" showSelectionInPreview="true">
+-      <PanelProvider>
+-        <provider providerId="com.vladsch.idea.multimarkdown.editor.swing.html.panel" providerName="Default - Swing" />
+-      </PanelProvider>
+-    </PreviewSettings>
+-    <ParserSettings gitHubSyntaxChange="false">
+-      <PegdownExtensions>
+-        <option name="ABBREVIATIONS" value="false" />
+-        <option name="ANCHORLINKS" value="true" />
+-        <option name="ASIDE" value="false" />
+-        <option name="ATXHEADERSPACE" value="true" />
+-        <option name="AUTOLINKS" value="true" />
+-        <option name="DEFINITIONS" value="false" />
+-        <option name="DEFINITION_BREAK_DOUBLE_BLANK_LINE" value="false" />
+-        <option name="FENCED_CODE_BLOCKS" value="true" />
+-        <option name="FOOTNOTES" value="false" />
+-        <option name="HARDWRAPS" value="false" />
+-        <option name="HTML_DEEP_PARSER" value="false" />
+-        <option name="INSERTED" value="false" />
+-        <option name="QUOTES" value="false" />
+-        <option name="RELAXEDHRULES" value="true" />
+-        <option name="SMARTS" value="false" />
+-        <option name="STRIKETHROUGH" value="true" />
+-        <option name="SUBSCRIPT" value="false" />
+-        <option name="SUPERSCRIPT" value="false" />
+-        <option name="SUPPRESS_HTML_BLOCKS" value="false" />
+-        <option name="SUPPRESS_INLINE_HTML" value="false" />
+-        <option name="TABLES" value="true" />
+-        <option name="TASKLISTITEMS" value="true" />
+-        <option name="TOC" value="false" />
+-        <option name="WIKILINKS" value="true" />
+-      </PegdownExtensions>
+-      <ParserOptions>
+-        <option name="COMMONMARK_LISTS" value="true" />
+-        <option name="DUMMY" value="false" />
+-        <option name="EMOJI_SHORTCUTS" value="true" />
+-        <option name="FLEXMARK_FRONT_MATTER" value="false" />
+-        <option name="GFM_LOOSE_BLANK_LINE_AFTER_ITEM_PARA" value="false" />
+-        <option name="GFM_TABLE_RENDERING" value="true" />
+-        <option name="GITBOOK_URL_ENCODING" value="false" />
+-        <option name="GITHUB_EMOJI_URL" value="false" />
+-        <option name="GITHUB_LISTS" value="false" />
+-        <option name="GITHUB_WIKI_LINKS" value="true" />
+-        <option name="JEKYLL_FRONT_MATTER" value="false" />
+-        <option name="SIM_TOC_BLANK_LINE_SPACER" value="true" />
+-      </ParserOptions>
+-    </ParserSettings>
+-    <HtmlSettings headerTopEnabled="false" headerBottomEnabled="false" bodyTopEnabled="false" bodyBottomEnabled="false" embedUrlContent="false" addPageHeader="true">
+-      <GeneratorProvider>
+-        <provider providerId="com.vladsch.idea.multimarkdown.editor.swing.html.generator" providerName="Default Swing HTML Generator" />
+-      </GeneratorProvider>
+-      <headerTop />
+-      <headerBottom />
+-      <bodyTop />
+-      <bodyBottom />
+-    </HtmlSettings>
+-    <CssSettings previewScheme="UI_SCHEME" cssUri="" isCssUriEnabled="false" isCssTextEnabled="false" isDynamicPageWidth="true">
+-      <StylesheetProvider>
+-        <provider providerId="com.vladsch.idea.multimarkdown.editor.swing.html.css" providerName="Default Swing Stylesheet" />
+-      </StylesheetProvider>
+-      <ScriptProviders />
+-      <cssText />
+-    </CssSettings>
+-    <HtmlExportSettings updateOnSave="false" parentDir="$ProjectFileDir$" targetDir="$ProjectFileDir$" cssDir="" scriptDir="" plainHtml="false" imageDir="" copyLinkedImages="false" imageUniquifyType="0" targetExt="" useTargetExt="false" noCssNoScripts="false" linkToExportedHtml="true" exportOnSettingsChange="true" regenerateOnProjectOpen="false" />
+-    <LinkMapSettings>
+-      <textMaps />
+-    </LinkMapSettings>
+-  </component>
+-  <component name="PreferredVcsStorage">
+-    <preferredVcsName>ApexVCS</preferredVcsName>
+-  </component>
+-</project>
+\ No newline at end of file
+diff --git a/node_modules/react-native-yamap/.idea/modules.xml b/node_modules/react-native-yamap/.idea/modules.xml
+deleted file mode 100644
+index c9d05b3..0000000
+--- a/node_modules/react-native-yamap/.idea/modules.xml
++++ /dev/null
+@@ -1,8 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<project version="4">
+-  <component name="ProjectModuleManager">
+-    <modules>
+-      <module fileurl="file://$PROJECT_DIR$/.idea/react-native-yamap.iml" filepath="$PROJECT_DIR$/.idea/react-native-yamap.iml" />
+-    </modules>
+-  </component>
+-</project>
+\ No newline at end of file
+diff --git a/node_modules/react-native-yamap/.idea/react-native-yamap.iml b/node_modules/react-native-yamap/.idea/react-native-yamap.iml
+deleted file mode 100644
+index 0c8867d..0000000
+--- a/node_modules/react-native-yamap/.idea/react-native-yamap.iml
++++ /dev/null
+@@ -1,12 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<module type="WEB_MODULE" version="4">
+-  <component name="NewModuleRootManager">
+-    <content url="file://$MODULE_DIR$">
+-      <excludeFolder url="file://$MODULE_DIR$/temp" />
+-      <excludeFolder url="file://$MODULE_DIR$/.tmp" />
+-      <excludeFolder url="file://$MODULE_DIR$/tmp" />
+-    </content>
+-    <orderEntry type="inheritedJdk" />
+-    <orderEntry type="sourceFolder" forTests="false" />
+-  </component>
+-</module>
+\ No newline at end of file
+diff --git a/node_modules/react-native-yamap/.idea/vcs.xml b/node_modules/react-native-yamap/.idea/vcs.xml
+deleted file mode 100644
+index 94a25f7..0000000
+--- a/node_modules/react-native-yamap/.idea/vcs.xml
++++ /dev/null
+@@ -1,6 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<project version="4">
+-  <component name="VcsDirectoryMappings">
+-    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+-  </component>
+-</project>
+\ No newline at end of file
 diff --git a/node_modules/react-native-yamap/android/src/main/java/ru/vvdev/yamap/ClusteredYamapViewManager.kt b/node_modules/react-native-yamap/android/src/main/java/ru/vvdev/yamap/ClusteredYamapViewManager.kt
 index 54d8a0f..b58b809 100644
 --- a/node_modules/react-native-yamap/android/src/main/java/ru/vvdev/yamap/ClusteredYamapViewManager.kt

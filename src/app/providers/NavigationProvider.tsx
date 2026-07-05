@@ -1,11 +1,11 @@
 import React, { ReactNode } from 'react';
-import { NavigationContainer, NavigationState } from '@react-navigation/native';
+import { NavigationContainer, NavigationState, ParamListBase } from '@react-navigation/native';
 
 import { Analytics, AnalyticsEvent } from '@/analytics/AppMetricaService';
 import { RU_SCREEN_NAMES } from '@/app/navigation/types';
 
 import { createNavigationContainerRef } from '@react-navigation/native';
-export const navigationRef = createNavigationContainerRef();
+export const navigationRef = createNavigationContainerRef<ParamListBase>();
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
   return (

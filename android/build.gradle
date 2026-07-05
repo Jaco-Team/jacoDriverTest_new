@@ -20,6 +20,22 @@ buildscript {
 
 apply plugin: "com.facebook.react.rootproject"
 
+def deleteFinderDuplicateBuildFiles = { Project project ->
+  def buildDirFile = project.layout.buildDirectory.asFile.get()
+
+  if (!buildDirFile.exists()) {
+    return
+  }
+
+  project.fileTree(buildDirFile) {
+    include "**/* 2.*"
+  }.files.each { duplicateFile ->
+    if (!duplicateFile.delete()) {
+      logger.warn("Could not delete duplicate generated file: ${duplicateFile}")
+    }
+  }
+}
+
 subprojects {
   configurations.configureEach {
     resolutionStrategy {
@@ -27,5 +43,12 @@ subprojects {
       force 'com.google.android.gms:play-services-location:21.0.1'
     }
   }
-}
 
+  tasks.configureEach { task ->
+    if (task.name.matches(/compile.*JavaWithJavac/) || task.name.matches(/compile.*Kotlin/)) {
+      task.doFirst {
+        deleteFinderDuplicateBuildFiles(project)
+      }
+    }
+  }
+}

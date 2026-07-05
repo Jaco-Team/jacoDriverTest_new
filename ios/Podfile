@@ -1,3 +1,5 @@
+require 'fileutils'
+
 # Resolve react_native_pods.rb with node to allow for hoisting
 # require Pod::Executable.execute_command('node', ['-p',
 #  'require.resolve(
@@ -15,6 +17,19 @@ def node_require(script)
 end
 
 $RNFirebaseAsStaticFramework = true
+ENV['RCT_NEW_ARCH_ENABLED'] = '0'
+
+def cleanup_finder_duplicates!(root_dir)
+  return unless Dir.exist?(root_dir)
+
+  Dir.glob(File.join(root_dir, '**', '*'), File::FNM_DOTMATCH)
+    .select { |path| File.basename(path).match?(/ 2(\.[^\/]+)?\z/) }
+    .sort
+    .reverse_each { |path| FileUtils.rm_rf(path) }
+end
+
+cleanup_finder_duplicates!(File.join(__dir__, 'Pods'))
+cleanup_finder_duplicates!(File.join(__dir__, 'build', 'generated'))
 
 pod 'Firebase', :modular_headers => true
 pod 'FirebaseCoreInternal', :modular_headers => true
@@ -58,7 +73,7 @@ if linkage != nil
 end
 
 target 'jacoDriverTest' do
-  config = use_native_modules!
+  config = use_native_modules!(['node', '../node_modules/.bin/react-native', 'config', '--platform', 'ios'])
 
   use_react_native!(
     :path => config[:reactNativePath],
