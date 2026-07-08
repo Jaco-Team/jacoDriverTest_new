@@ -4,7 +4,7 @@ const CONFIG: AppMetricaConfig = {
   apiKey: '3a2ee98f-b748-47d7-9222-39b2b71a7f24',
   appVersion: '1.0',
   sessionTimeout: 120,
-  logs: true,
+  logs: false,
   locationTracking: false,
   statisticsSending: true,
 };
@@ -123,7 +123,6 @@ class AppMetricaService {
   /** Универсальный метод отправки события */
   log(type: AnalyticsEvent, event: string) {
     try {
-      console.log('AnalyticsEvent [AppMetrica] reportEvent', event)
       AppMetrica.reportEvent(event);
     } catch (e) {
       console.error('[AppMetrica] reportEvent error', e);
@@ -143,8 +142,6 @@ class AppMetricaService {
 
       const reason = parts.join('\n');
 
-      console.log('[AppMetrica] reportError →', title, '\n', reason);
-
       AppMetrica.reportError(`${title}\n${reason}`);
       if (__DEV__) AppMetrica.sendEventsBuffer();
     } catch (e) {
@@ -161,14 +158,10 @@ export function installJsCrashHandler() {
   if ((globalThis as any).__jsCrashHandlerInstalled) return;
   (globalThis as any).__jsCrashHandlerInstalled = true;
 
-  console.log('[AppMetrica] Установка JS crash handler…');
-
   const prev = (global as any).ErrorUtils?.getGlobalHandler?.();
 
   (global as any).ErrorUtils?.setGlobalHandler?.((error: any, isFatal?: boolean) => {
     try {
-      console.log('[AppMetrica] JS Global Error → isFatal:', !!isFatal, 'error:', error?.message ?? error);
-
       // ФАТАЛЬНЫЕ не репортим вручную — SDK сам отправляет
       if (!isFatal) {
         const parts: string[] = [];
@@ -197,7 +190,6 @@ export function installJsCrashHandler() {
 
       const payload = `UnhandledPromiseRejection\n${parts.join('\n')}`;
 
-      console.log('[AppMetrica] Unhandled Promise Rejection →', err.message);
       AppMetrica.reportError(payload);
       if (__DEV__) AppMetrica.sendEventsBuffer();
     } catch (ex) {

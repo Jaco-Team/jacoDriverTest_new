@@ -8,11 +8,10 @@ import {Analytics, installJsCrashHandler} from '@/analytics/AppMetricaService';
 import * as Sentry from "@sentry/react-native";
 
 Sentry.init({
-  dsn: "https://46fd354338d2a29a928cda10c1f0acb8@sentry.jacochef.ru/3",
+  dsn: "https://55969b9f226cda7d6ed21a48b5e4d776@o4505941569830912.ingest.us.sentry.io/4511698859458560",
   release: "jacoDriverTest@0.0.2",
-  // Adds more context data to events (IP address, cookies, user, etc.)
-  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
   sendDefaultPii: true,
+  debug: false,
 });
 
 import "./global.css"

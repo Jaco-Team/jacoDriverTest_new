@@ -9,6 +9,10 @@ const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
 const exclusionList = require("metro-config/src/defaults/exclusionList");
 const { withNativeWind } = require("nativewind/metro");
 
+const {
+  withSentryConfig
+} = require("@sentry/react-native/metro");
+
 const config = mergeConfig(getDefaultConfig(__dirname), {
   resolver: {
     blockList: exclusionList([
@@ -22,4 +26,4 @@ const config = mergeConfig(getDefaultConfig(__dirname), {
   },
 });
 
-module.exports = withNativeWind(config, { input: "./global.css" });
+module.exports = withSentryConfig(withNativeWind(config, { input: "./global.css" }));
