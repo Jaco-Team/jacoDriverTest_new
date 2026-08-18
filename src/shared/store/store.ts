@@ -950,6 +950,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
   orders: [],
   home: null,
+  mapHomeCenterRequestId: 0,
 
   update_interval: 30,
   driver_need_gps: true,
@@ -1046,13 +1047,22 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
           orders = get().filterOrdersByTypes(orders, type_dop);
         }
 
+        const nextHome = json.data?.home
+        const prevHome = get().home
+        const homeUnchanged = !!(
+          prevHome &&
+          nextHome &&
+          Number(prevHome.lat) === Number(nextHome.lat) &&
+          Number(prevHome.lon) === Number(nextHome.lon)
+        )
+
         set({
           orders: orders,
           limit_summ: json.data?.limit,
           limit_count: json.data?.limit_count,
           update_interval: json.data?.update_interval,
           driver_need_gps: json.data?.driver_need_gps == 1 ? true : false,
-          home: json.data?.home,
+          home: homeUnchanged ? prevHome : (nextHome ?? prevHome),
           //del_orders: json?.arr_del_list,
           //driver_pay: json?.driver_pay,
         });
@@ -1173,6 +1183,10 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
         get().showOrdersMap(-1);  // свернуть/закрыть карту/модалку
       }
 
+      if (type === 1 || type === 2) {
+        get().requestMapHomeCenter();
+      }
+
       get().getOrders(); // ручной рефреш списка
 
       // закрываем confirm только если он был открыт
@@ -1244,6 +1258,14 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
       is_modalConfirm: active,
       order_confirm_is_delete
     });
+  },
+
+  requestMapHomeCenter: () => {
+    if (useSettingsStore.getState().action_centered_map == 1) {
+      set({
+        mapHomeCenterRequestId: get().mapHomeCenterRequestId + 1
+      })
+    }
   },
 
   // открытие заказа на карте

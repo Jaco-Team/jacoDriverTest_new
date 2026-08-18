@@ -23,6 +23,7 @@ jest.mock('@/analytics/AppMetricaService', () => ({
 
 import { useMapLogic } from '@/features/orders-map/model/useMapLogic';
 import { useGEOStore, useOrdersStore, useSettingsStore } from '@/shared/store/store';
+import { resetYaMapInit } from '@/shared/lib/yaMapInit';
 
 describe('useMapLogic: traffic layer and refresh behavior', () => {
   let api: ReturnType<typeof useMapLogic> | null = null;
@@ -47,9 +48,19 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
     return null as any;
   }
 
+  async function renderProbe() {
+    const view = render(<Probe />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    return view;
+  }
+
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    resetYaMapInit();
     api = null;
     mockUseIsFocused.mockReturnValue(true);
 
@@ -73,6 +84,7 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
       ],
       type_dop: ['1', '2', '3'],
       isOpenOrderMap: false,
+      mapHomeCenterRequestId: 0,
     } as any);
     useGEOStore.setState({
       showLocationDriver,
@@ -82,12 +94,14 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
   });
 
   afterEach(() => {
-    jest.runOnlyPendingTimers();
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
     jest.useRealTimers();
   });
 
-  it('toggles Yandex traffic layer through map ref and exposes current state', () => {
-    render(<Probe />);
+  it('toggles Yandex traffic layer through map ref and exposes current state', async () => {
+    const view = await renderProbe();
     attachMapRef();
 
     expect(api!.trafficVisible).toBe(false);
@@ -105,10 +119,11 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
 
     expect(setTrafficVisible).toHaveBeenCalledWith(false);
     expect(api!.trafficVisible).toBe(false);
+    view.unmount();
   });
 
-  it('loads map data on focus and refreshes orders by update_interval while focused', () => {
-    render(<Probe />);
+  it('loads map data on focus and refreshes orders by update_interval while focused', async () => {
+    const view = await renderProbe();
     attachMapRef();
 
     expect(getOrders).toHaveBeenCalledWith();
@@ -119,12 +134,13 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
     });
 
     expect(getOrders).toHaveBeenCalledWith(false);
+    view.unmount();
   });
 
-  it('does not start interval refresh when screen is not focused', () => {
+  it('does not start interval refresh when screen is not focused', async () => {
     mockUseIsFocused.mockReturnValue(false);
 
-    render(<Probe />);
+    const view = await renderProbe();
 
     expect(getOrders).toHaveBeenCalledTimes(1);
 
@@ -133,10 +149,11 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
     });
 
     expect(getOrders).toHaveBeenCalledTimes(1);
+    view.unmount();
   });
 
   it('updates native map zoom and centers on home point', async () => {
-    render(<Probe />);
+    const view = await renderProbe();
     attachMapRef();
 
     await act(async () => {
@@ -151,5 +168,70 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
     });
 
     expect(setCenter).toHaveBeenCalledWith({ lon: 20.5, lat: 54.7 }, 12, 0, 0, 0, 0);
+    view.unmount();
+  });
+
+  it('centers map after native onMapLoaded and exposes ready-to-render flag', async () => {
+    const view = await renderProbe();
+    attachMapRef();
+
+    expect(api!.mapInitStatus).toBe('ready');
+
+    act(() => {
+      api!.handleMapLoaded();
+    });
+
+    expect(api!.isMapLoaded).toBe(true);
+    expect(setCenter).toHaveBeenCalledWith({ lon: 20.5, lat: 54.7 }, 12, 0, 0, 0, 0);
+    view.unmount();
+  });
+
+  it('does not recenter after load when server only refreshes the same home point', async () => {
+    const view = await renderProbe();
+    attachMapRef();
+
+    act(() => {
+      api!.handleMapLoaded();
+    });
+
+    setCenter.mockClear();
+
+    act(() => {
+      useOrdersStore.setState({
+        home: { lon: 20.5, lat: 54.7 },
+      } as any);
+    });
+
+    expect(setCenter).not.toHaveBeenCalled();
+    view.unmount();
+  });
+
+  it('recenters to home only when take/cancel requested it via settings', async () => {
+    const view = await renderProbe();
+    attachMapRef();
+
+    act(() => {
+      api!.handleMapLoaded();
+    });
+
+    setCenter.mockClear();
+
+    act(() => {
+      useOrdersStore.setState({
+        mapHomeCenterRequestId: 1,
+      } as any);
+    });
+
+    expect(setCenter).toHaveBeenCalledWith({ lon: 20.5, lat: 54.7 }, 12, 0, 0, 0, 0);
+    view.unmount();
+  });
+
+  it('does not render map until the screen is focused', async () => {
+    mockUseIsFocused.mockReturnValue(false);
+
+    const view = await renderProbe();
+
+    expect(api!.shouldRenderMap).toBe(false);
+    view.unmount();
   });
 });

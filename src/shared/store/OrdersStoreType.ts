@@ -24,6 +24,7 @@ export interface OrdersStore {
   limit_count: string,
   orders: Array<Order>,
   home: null|XY,
+  mapHomeCenterRequestId: number,
 
   update_interval: number,
 
@@ -56,6 +57,7 @@ export interface OrdersStore {
   actionOrderFake: (params: actionOrderFakeType) => Promise<void>,
   setActiveConfirm: (active: boolean, order_id?: number, type_confirm?: typeConfirm, order_confirm_is_delete?: boolean) => void,
   showOrdersMap: (id: number) => void,
+  requestMapHomeCenter: () => void,
 }
 
 export interface GetOrdersResponse {

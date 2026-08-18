@@ -1,4 +1,6 @@
 import React, { ReactNode } from 'react'
+import { StyleSheet } from 'react-native'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { UiProvider } from './UiProviders'
 import { NavigationProvider } from './NavigationProvider'
 
@@ -8,22 +10,26 @@ import { CustomAlert } from '@/shared/ui/CustomAlert'
 import { ModalText } from '@/shared/ui/ModalText'
 //import { ConnectivityLocationIndicator } from '@/shared/ui/ConnectivityLocationIndicator'
 
+const rootStyle = StyleSheet.create({
+  root: { flex: 1 },
+})
+
 export function AppProviders({ children }: { children: ReactNode }) {
 
   //<ConnectivityLocationIndicator />
 
   return (
-    <UiProvider>
-      <NavigationProvider>
-        {children}
+    <GestureHandlerRootView style={rootStyle.root}>
+      <UiProvider>
+        <NavigationProvider>
+          {children}
 
-        <CustomSpinner />
-        <CustomSpinner_hidden />
-        <CustomAlert />
-        <ModalText />
-        
-        
-      </NavigationProvider>
-    </UiProvider>
+          <CustomSpinner />
+          <CustomSpinner_hidden />
+          <CustomAlert />
+          <ModalText />
+        </NavigationProvider>
+      </UiProvider>
+    </GestureHandlerRootView>
   )
 }

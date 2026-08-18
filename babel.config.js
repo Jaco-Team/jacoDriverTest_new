@@ -57,8 +57,6 @@ module.exports = function (api) {
     plugins: [
       ['module-resolver', { root: ['./src'], alias: { '@': './src' } }],
 
-      'react-native-worklets-core/plugin',
-
       // reanimated — строго последним
       'react-native-reanimated/plugin',
     ],

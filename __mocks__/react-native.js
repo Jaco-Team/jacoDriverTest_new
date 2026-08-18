@@ -80,6 +80,17 @@ const LayoutAnimation = {
 };
 def(rn, 'LayoutAnimation', LayoutAnimation);
 
+def(rn, 'InteractionManager', {
+  runAfterInteractions: (cb) => {
+    if (typeof cb === 'function') {
+      cb();
+    }
+    return { cancel: () => {} };
+  },
+  createInteractionHandle: jest.fn(() => 1),
+  clearInteractionHandle: jest.fn(),
+});
+
 /** StyleSheet — страховка */
 if (!rn.StyleSheet || typeof rn.StyleSheet.create !== 'function') {
   const StyleSheet = {

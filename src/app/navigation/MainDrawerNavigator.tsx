@@ -164,6 +164,7 @@ export function MainDrawerNavigator() {
           title: 'Карта заказов',
           headerShown: true,
           swipeEnabled: true,
+          freezeOnBlur: false,
           drawerItemStyle: {backgroundColor: '#fff'},
           drawerLabelStyle: { fontSize: globalFontSize },
         }}

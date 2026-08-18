@@ -16,6 +16,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         const route = navigationRef.getCurrentRoute();
         const name = route?.name ?? 'Unknown';
         const screen = RU_SCREEN_NAMES[name] ?? name;
+        Analytics.setErrorContext?.('screen', screen);
         Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${screen}`);
       }}
 
@@ -25,6 +26,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         while (r?.state) r = r.state.routes[r.state.index];
         const name = r?.name ?? 'Unknown';
         const screen = RU_SCREEN_NAMES[name] ?? name;
+        Analytics.setErrorContext?.('screen', screen);
         Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${screen}`);
       }}
       

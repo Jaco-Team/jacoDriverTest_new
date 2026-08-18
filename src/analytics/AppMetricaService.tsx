@@ -2,11 +2,14 @@ import AppMetrica, {AppMetricaConfig} from '@appmetrica/react-native-analytics';
 
 const CONFIG: AppMetricaConfig = {
   apiKey: '3a2ee98f-b748-47d7-9222-39b2b71a7f24',
-  appVersion: '1.0',
+  appVersion: '4.0',
   sessionTimeout: 120,
   logs: false,
   locationTracking: false,
   statisticsSending: true,
+  crashReporting: true,
+  nativeCrashReporting: true,
+  sessionsAutoTracking: true,
 };
 
 export enum AnalyticsEvent {
@@ -107,6 +110,29 @@ function safeJSONString(value: unknown): string {
   }
 }
 
+const reportedErrors = new WeakSet<object>();
+
+function toError(error: unknown, fallback: string): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+  if (typeof error === 'string' && error) {
+    return new Error(error);
+  }
+  if (error && typeof error === 'object' && 'message' in error) {
+    return new Error(String((error as { message?: unknown }).message ?? fallback));
+  }
+  return new Error(String(error ?? fallback));
+}
+
+function markReported(error: Error): boolean {
+  if (reportedErrors.has(error)) {
+    return true;
+  }
+  reportedErrors.add(error);
+  return false;
+}
+
 class AppMetricaService {
   private initialized = false;
 
@@ -118,32 +144,54 @@ class AppMetricaService {
     AppMetrica.activate(CONFIG);
     (globalThis as any).__appMetricaActivated = true;
     this.initialized = true;
+    try {
+      AppMetrica.putErrorEnvironmentValue('appVersion', CONFIG.appVersion);
+    } catch {}
   }
 
   /** Универсальный метод отправки события */
   log(type: AnalyticsEvent, event: string) {
     try {
+      this.init();
       AppMetrica.reportEvent(event);
     } catch (e) {
       console.error('[AppMetrica] reportEvent error', e);
     }
   }
 
-  // Универсальная отправка ошибок (бизнес + ручные try/catch)
-  reportError(name: string, error?: unknown, ctx?: Record<string, any>) {
+  setErrorContext(key: string, value?: string) {
     try {
-      const err = error instanceof Error ? error : new Error(String(error ?? name));
-      const title = `JSError: ${name}`;
-      const parts: string[] = [];
+      this.init();
+      AppMetrica.putErrorEnvironmentValue(key, value);
+    } catch (e) {
+      console.error('[AppMetrica] putErrorEnvironmentValue failed:', e);
+    }
+  }
 
-      if (err.message) parts.push(String(err.message));
-      if (err.stack) parts.push(String(err.stack));
-      if (ctx) parts.push(`context=${safeJSONString(ctx)}`);
+  reportError(
+    name: string,
+    error?: unknown,
+    ctx?: Record<string, any>,
+    options?: { fatal?: boolean },
+  ) {
+    try {
+      this.init();
+      const err = toError(error, name);
+      if (markReported(err)) {
+        return;
+      }
 
-      const reason = parts.join('\n');
+      const messageParts = [err.message || name];
+      if (ctx) {
+        messageParts.push(`context=${safeJSONString(ctx)}`);
+      }
+      const message = messageParts.join('\n');
 
-      AppMetrica.reportError(`${title}\n${reason}`);
-      if (__DEV__) AppMetrica.sendEventsBuffer();
+      AppMetrica.reportError(name, message, err);
+      if (options?.fatal) {
+        AppMetrica.reportUnhandledException(err);
+      }
+      AppMetrica.sendEventsBuffer();
     } catch (e) {
       console.error('[AppMetrica] reportError failed:', e);
     }
@@ -153,49 +201,71 @@ class AppMetricaService {
 
 export const Analytics = new AppMetricaService();
 
+export function resetAppMetricaServiceForTests() {
+  (Analytics as unknown as { initialized: boolean }).initialized = false;
+  (globalThis as { __appMetricaActivated?: boolean }).__appMetricaActivated = false;
+}
+
+type GlobalErrorHandler = (error: any, isFatal?: boolean) => void;
+
+let previousGlobalHandler: GlobalErrorHandler | undefined;
+let previousUnhandled: ((e: any) => void) | undefined;
+
 /** Установка глобальных хендлеров JS-крашей и "тихих" промис-ошибок */
 export function installJsCrashHandler() {
   if ((globalThis as any).__jsCrashHandlerInstalled) return;
   (globalThis as any).__jsCrashHandlerInstalled = true;
 
-  const prev = (global as any).ErrorUtils?.getGlobalHandler?.();
+  Analytics.init();
 
-  (global as any).ErrorUtils?.setGlobalHandler?.((error: any, isFatal?: boolean) => {
+  const errorUtils = (globalThis as any).ErrorUtils;
+  previousGlobalHandler = errorUtils?.getGlobalHandler?.();
+
+  errorUtils?.setGlobalHandler?.((error: any, isFatal?: boolean) => {
     try {
-      // ФАТАЛЬНЫЕ не репортим вручную — SDK сам отправляет
-      if (!isFatal) {
-        const parts: string[] = [];
-        if (error?.message) parts.push(String(error.message));
-        if (error?.stack) parts.push(String(error.stack));
-        parts.push('isFatal=false');
-
-        const payload = `JSError\n${parts.join('\n')}`;
-        AppMetrica.reportError(payload);
-        if (__DEV__) AppMetrica.sendEventsBuffer();
-      }
+      Analytics.reportError(
+        isFatal ? 'JSFatal' : 'JSError',
+        error,
+        { isFatal: !!isFatal },
+        { fatal: !!isFatal },
+      );
     } catch (e) {
       console.error('[AppMetrica] JS Global Error report failed:', e);
     } finally {
-      prev && prev(error, isFatal);
+      previousGlobalHandler?.(error, isFatal);
     }
   });
 
-  const origUnhandled = (global as any).onunhandledrejection;
-  (global as any).onunhandledrejection = (e: any) => {
+  previousUnhandled = (globalThis as any).onunhandledrejection;
+  (globalThis as any).onunhandledrejection = (e: any) => {
     try {
       const err = e?.reason instanceof Error ? e.reason : new Error(String(e?.reason ?? 'UnhandledRejection'));
-      const parts: string[] = [];
-      if (err.message) parts.push(String(err.message));
-      if (err.stack) parts.push(String(err.stack));
-
-      const payload = `UnhandledPromiseRejection\n${parts.join('\n')}`;
-
-      AppMetrica.reportError(payload);
-      if (__DEV__) AppMetrica.sendEventsBuffer();
+      Analytics.reportError('UnhandledPromiseRejection', err);
     } catch (ex) {
       console.error('[AppMetrica] UPR report failed:', ex);
     } finally {
-      origUnhandled?.(e);
+      previousUnhandled?.(e);
     }
   };
+}
+
+export function resetJsCrashHandler() {
+  const errorUtils = (globalThis as any).ErrorUtils;
+  if (previousGlobalHandler && errorUtils?.setGlobalHandler) {
+    errorUtils.setGlobalHandler(previousGlobalHandler);
+  }
+  if (previousUnhandled !== undefined) {
+    (globalThis as any).onunhandledrejection = previousUnhandled;
+  }
+  previousGlobalHandler = undefined;
+  previousUnhandled = undefined;
+  (globalThis as any).__jsCrashHandlerInstalled = false;
+}
+
+export function reportSentryEventToAppMetrica(hint?: { originalException?: unknown }, event?: { level?: string; message?: string }) {
+  const original = hint?.originalException;
+  Analytics.reportError('Sentry', original ?? (event?.message ? new Error(event.message) : undefined), {
+    level: event?.level,
+    source: 'sentry',
+  });
 }

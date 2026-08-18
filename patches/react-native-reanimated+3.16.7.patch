@@ -1,0 +1,91 @@
+diff --git a/node_modules/react-native-reanimated/Common/cpp/worklets/SharedItems/Shareables.cpp b/node_modules/react-native-reanimated/Common/cpp/worklets/SharedItems/Shareables.cpp
+--- a/node_modules/react-native-reanimated/Common/cpp/worklets/SharedItems/Shareables.cpp
++++ b/node_modules/react-native-reanimated/Common/cpp/worklets/SharedItems/Shareables.cpp
+@@ -10,13 +10,17 @@
+   return valueUnpacker.asObject(rt).asFunction(rt);
+ }
+ 
+-#ifndef NDEBUG
+-
+ static const auto callGuardLambda = [](facebook::jsi::Runtime &rt,
+                                        const facebook::jsi::Value &thisVal,
+                                        const facebook::jsi::Value *args,
+                                        size_t count) {
+-  return args[0].asObject(rt).asFunction(rt).call(rt, args + 1, count - 1);
++  try {
++    return args[0].asObject(rt).asFunction(rt).call(rt, args + 1, count - 1);
++  } catch (const facebook::jsi::JSError &) {
++    return facebook::jsi::Value::undefined();
++  } catch (...) {
++    return facebook::jsi::Value::undefined();
++  }
+ };
+ 
+ jsi::Function getCallGuard(jsi::Runtime &rt) {
+@@ -27,16 +31,11 @@
+     return callGuard.asObject(rt).asFunction(rt);
+   }
+ 
+-  // Otherwise, fallback to C++ JSI implementation. This is necessary so that we
+-  // can install `__callGuardDEV` itself and should happen only once. Note that
+-  // the C++ implementation doesn't intercept errors and simply throws them as
+-  // C++ exceptions which crashes the app. We assume that installing the guard
+-  // doesn't throw any errors.
++  // Fallback while `__callGuardDEV` is being installed. Swallow JS errors so
++  // a worklet exception cannot abort a release build.
+   return jsi::Function::createFromHostFunction(
+       rt, jsi::PropNameID::forAscii(rt, "callGuard"), 1, callGuardLambda);
+ }
+-
+-#endif // NDEBUG
+ 
+ jsi::Value makeShareableClone(
+     jsi::Runtime &rt,
+diff --git a/node_modules/react-native-reanimated/Common/cpp/worklets/SharedItems/Shareables.h b/node_modules/react-native-reanimated/Common/cpp/worklets/SharedItems/Shareables.h
+--- a/node_modules/react-native-reanimated/Common/cpp/worklets/SharedItems/Shareables.h
++++ b/node_modules/react-native-reanimated/Common/cpp/worklets/SharedItems/Shareables.h
+@@ -4,6 +4,7 @@
+ 
+ #include <jsi/jsi.h>
+ 
++#include <exception>
+ #include <memory>
+ #include <string>
+ #include <utility>
+@@ -15,9 +16,7 @@
+ 
+ jsi::Function getValueUnpacker(jsi::Runtime &rt);
+ 
+-#ifndef NDEBUG
+ jsi::Function getCallGuard(jsi::Runtime &rt);
+-#endif // NDEBUG
+ 
+ // If possible, please use `WorkletRuntime::runGuarded` instead.
+ template <typename... Args>
+@@ -25,15 +24,17 @@
+     jsi::Runtime &rt,
+     const jsi::Value &function,
+     Args &&...args) {
+-  // We only use callGuard in debug mode, otherwise we call the provided
+-  // function directly. CallGuard provides a way of capturing exceptions in
+-  // JavaScript and propagating them to the main React Native thread such that
+-  // they can be presented using RN's LogBox.
+-#ifndef NDEBUG
+-  return getCallGuard(rt).call(rt, function, args...);
+-#else
+-  return function.asObject(rt).asFunction(rt).call(rt, args...);
+-#endif
++  // Release used to call the worklet unguarded. A JS exception then became
++  // Hermes checkStatus -> SIGABRT.
++  try {
++    return getCallGuard(rt).call(rt, function, args...);
++  } catch (const jsi::JSError &) {
++    return jsi::Value::undefined();
++  } catch (const std::exception &) {
++    return jsi::Value::undefined();
++  } catch (...) {
++    return jsi::Value::undefined();
++  }
+ }
+ 
+ inline void cleanupIfRuntimeExists(

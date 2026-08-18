@@ -111,6 +111,32 @@ describe('orders-map filters and getOrders', () => {
     expect(useOrdersStore.getState().home).toEqual({ lon: 53.2, lat: 53.1 });
   });
 
+  it('getOrders: не создаёт новый объект home, если точка с сервера не изменилась', async () => {
+    const home = { lon: 53.2, lat: 53.1 };
+    useOrdersStore.setState({
+      home,
+      type: { id: 1, text: 'Активные' },
+      type_dop: ['1', '2', '3'],
+    } as any);
+
+    mockApi.mockResolvedValueOnce({
+      st: true,
+      text: '',
+      data: {
+        orders: [{ id: 1, status: 'В очереди' }],
+        limit: '5000',
+        limit_count: '7',
+        update_interval: 30,
+        driver_need_gps: 0,
+        home: { lon: 53.2, lat: 53.1 },
+      },
+    });
+
+    await useOrdersStore.getState().getOrders(true);
+
+    expect(useOrdersStore.getState().home).toBe(home);
+  });
+
   it('getOrders: без auth token не делает API-запрос', async () => {
     useGlobalStore.setState({ tokenAuth: '' });
 

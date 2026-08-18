@@ -402,6 +402,9 @@ jest.mock('react-native-reanimated', () => {
       return x1 === x0 ? y1 : y0 + ((y1 - y0) * (x - x0)) / (x1 - x0);
     });
 
+  Reanimated.configureReanimatedLogger = Reanimated.configureReanimatedLogger ?? jest.fn();
+  Reanimated.ReanimatedLogLevel = Reanimated.ReanimatedLogLevel ?? { warn: 1, error: 2 };
+
   return Reanimated;
 });
 
@@ -436,7 +439,7 @@ jest.mock('@react-native-clipboard/clipboard', () => {
 jest.mock('react-native-yamap', () => {
   const React = require('react');
   const YaMap = (props: any) => React.createElement(React.Fragment, null, props?.children);
-  (YaMap as any).init = jest.fn();
+  (YaMap as any).init = jest.fn(() => Promise.resolve());
   (YaMap as any).setLocale = jest.fn();
   (YaMap as any).setCenter = jest.fn();
   (YaMap as any).setZoom = jest.fn();
@@ -755,9 +758,12 @@ jest.mock('@/app/providers/AppProviders', () => {
 
 jest.mock('@/analytics/AppMetricaService', () => {
   const service = {
-    Analytics: { init: jest.fn(), log: jest.fn(), setUserId: jest.fn() },
+    Analytics: { init: jest.fn(), log: jest.fn(), setUserId: jest.fn(), reportError: jest.fn(), setErrorContext: jest.fn() },
     AnalyticsEvent: new Proxy({}, { get: (_: any, k: any) => String(k) }),
-    installJsCrashHandler: jest.fn(), // <-- ВАЖНО
+    installJsCrashHandler: jest.fn(),
+    resetJsCrashHandler: jest.fn(),
+    reportSentryEventToAppMetrica: jest.fn(),
+    resetAppMetricaServiceForTests: jest.fn(),
   };
   return {
     __esModule: true,

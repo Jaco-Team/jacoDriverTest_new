@@ -1,5 +1,5 @@
-import React from 'react'
-import { Dimensions, StyleSheet, TouchableOpacity } from 'react-native'
+import React, { useState } from 'react'
+import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import YaMap from 'react-native-yamap'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
@@ -20,9 +20,12 @@ const MAP_CONTROL_RIGHT = 20
 import { useMapLogic } from '../model/useMapLogic'
 
 import { ScreenLayout } from '@/shared/ui/ScreenLayout'
+import { Center } from '@/components/ui/center'
+import { Spinner } from '@/components/ui/spinner'
 
 export function MapScreen() {
-  const { mapRef, zoom, updateZoom, getHome, home, showLocationDriver, night_map, is_scaleMap, rotate_map, setRotateMap, showModalTypeDop, is_showModalTypeDop, isActiveFilter, isOpenOrderMap, set_type_location, type_location, trafficVisible, toggleTrafficVisible } = useMapLogic()
+  const { mapRef, zoom, updateZoom, getHome, home, showLocationDriver, night_map, is_scaleMap, rotate_map, setRotateMap, showModalTypeDop, is_showModalTypeDop, isActiveFilter, isOpenOrderMap, set_type_location, type_location, trafficVisible, toggleTrafficVisible, mapInitStatus, mapInstanceKey, handleMapLoaded, retryMap, shouldRenderMap } = useMapLogic()
+  const [hasViewport, setHasViewport] = useState(false)
 
   const mtop = (height - 300) / 4
 
@@ -110,17 +113,44 @@ export function MapScreen() {
       </TouchableOpacity>
 
       {/* Яндекс-карта */}
-      <YaMap
-        showUserPosition={false}
-        ref={mapRef}
+      <View
         style={styles1.ymap}
-        rotateGesturesEnabled={rotate_map}
-        nightMode={night_map == 1}
+        collapsable={false}
+        onLayout={(event) => {
+          const { width, height } = event.nativeEvent.layout
+          setHasViewport(width > 1 && height > 1)
+        }}
       >
-        {home && <HomeMarker point={home} getHome={getHome} />}
-        <DriverMarker />
-        <ListOrders />
-      </YaMap>
+        {shouldRenderMap && hasViewport ? (
+          <YaMap
+            key={mapInstanceKey}
+            showUserPosition={false}
+            ref={mapRef}
+            style={StyleSheet.absoluteFill}
+            rotateGesturesEnabled={rotate_map}
+            nightMode={night_map == 1}
+            initialRegion={home ? { lat: home.lat, lon: home.lon, zoom: 12 } : undefined}
+            onMapLoaded={handleMapLoaded}
+            collapsable={false}
+          >
+            {home && <HomeMarker point={home} getHome={getHome} />}
+            <DriverMarker />
+            <ListOrders />
+          </YaMap>
+        ) : (
+          <Center className='w-full h-full'>
+            {mapInitStatus === 'error' ? (
+              <TouchableOpacity onPress={retryMap} style={{ padding: 12 }}>
+                <Text style={{ fontSize: 16, color: night_map == 1 ? '#fff' : '#000' }}>
+                  Карта не загрузилась. Нажмите, чтобы повторить
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <Spinner size={'large'} />
+            )}
+          </Center>
+        )}
+      </View>
       
 
       <TypeLimit />
