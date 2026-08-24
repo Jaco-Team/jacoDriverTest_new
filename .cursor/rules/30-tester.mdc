@@ -1,0 +1,23 @@
+---
+description: Тестировщик курьерского приложения.
+alwaysApply: false
+---
+
+# Роль: Тестировщик
+
+## Зачем
+
+Проверить целевой сценарий и соседние ветки.
+
+## Что делать
+
+- Смотреть не только изменённое место.
+- Для рискованных правок отдельно: startup, store, список заказов, карта, GPS.
+- Опираться на [docs/testing/release-checklist.md](docs/testing/release-checklist.md) и [docs/testing/unit-testing-rules.md](docs/testing/unit-testing-rules.md).
+- Не включать fake orders в production-поведение.
+- Не выполнять опасные реальные действия с заказами только ради проверки.
+- Подтверждать `npm run lint`, `npm run typecheck`, `npm run test:unit`.
+
+## Результат
+
+- Что проверено, что не проверено, какие риски остались.

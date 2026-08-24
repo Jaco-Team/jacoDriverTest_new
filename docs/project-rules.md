@@ -175,6 +175,8 @@ global.__FAKE_ORDERS__ = 'off';
 
 ## Правило 10. Документацию обновлять вместе с важными изменениями
 
+Рабочий порядок агента — роли Cursor в `.cursor/rules`. Если роль устарела или мешает, её нужно править, а не обходить.
+
 Документацию нужно обновлять, если меняются:
 
 - структура проекта;
@@ -196,3 +198,4 @@ global.__FAKE_ORDERS__ = 'off';
 - [docs/testing/README.md](./testing/README.md)
 - [docs/testing/unit-testing-rules.md](./testing/unit-testing-rules.md)
 - [docs/testing/release-checklist.md](./testing/release-checklist.md)
+- [docs/new-architecture-migration-plan.md](./new-architecture-migration-plan.md)

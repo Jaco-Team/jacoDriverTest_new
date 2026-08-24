@@ -43,6 +43,18 @@
 - порядок стабилизации;
 - что считать готовым состоянием.
 
+[docs/new-architecture-migration-plan.md](./new-architecture-migration-plan.md)
+
+План переезда курьерского приложения на RN `0.86` и New Architecture / Fabric:
+
+- ветка `new_architecture`;
+- целевой стек;
+- этапы и текущий статус;
+- курьерские риски;
+- чеклист для Битрикс;
+- что не входит в эту миграцию;
+- оркестратор ролей Cursor в `.cursor/rules`.
+
 ### Раздел тестирования
 
 [docs/testing/README.md](./testing/README.md)
@@ -66,6 +78,7 @@
 5. Для проверки при заливке в Git смотреть [docs/testing/git-checks.md](./testing/git-checks.md).
 6. Для текущего статуса смотреть [docs/testing/testing-progress.md](./testing/testing-progress.md).
 7. Перед релизом проходить [docs/testing/release-checklist.md](./testing/release-checklist.md).
+8. Для переезда на New Architecture смотреть [docs/new-architecture-migration-plan.md](./new-architecture-migration-plan.md).
 
 ## Правило оформления ссылок
 
