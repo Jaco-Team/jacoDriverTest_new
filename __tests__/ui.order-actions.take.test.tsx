@@ -61,33 +61,33 @@ function makeProps(overrides: Partial<OrderActionsProps> = {}): OrderActionsProp
   };
 }
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   jest.clearAllTimers(); // на всякий случай прибираем фейковые таймеры
 });
 
 /* ========= ТЕСТЫ ========= */
 describe('OrderActions — кнопка «Взять»', () => {
-  it('is_get=0: видна и вызывает actionButtonOrder(1, id)', () => {
+  it('is_get=0: видна и вызывает actionButtonOrder(1, id)', async () => {
     const { OrderActions } = require('@/entities/CardOrder/ui/OrderActions');
 
     const props = makeProps();
-    const { unmount } = render(<OrderActions {...props} />);
+    const { unmount } = await render(<OrderActions {...props} />);
 
     const takeBtn = screen.getByTestId(`order-${props.item.id}-take`);
-    fireEvent.press(takeBtn);
+    await fireEvent.press(takeBtn);
 
     expect(props.actionButtonOrder).toHaveBeenCalledTimes(1);
     expect(props.actionButtonOrder).toHaveBeenCalledWith(1, props.item.id);
 
     const phoneBtn = screen.getByTestId(`order-${props.item.id}-phone`);
-    fireEvent.press(phoneBtn);
+    await fireEvent.press(phoneBtn);
     expect(props.dialCall).toHaveBeenCalledWith(props.item.number);
 
-    unmount();
+    await unmount();
   });
 
-  it('мой/чужой заказ: «Взять» отсутствует', () => {
+  it('мой/чужой заказ: «Взять» отсутствует', async () => {
     const { OrderActions } = require('@/entities/CardOrder/ui/OrderActions');
 
     // --- мой заказ ---
@@ -107,9 +107,9 @@ describe('OrderActions — кнопка «Взять»', () => {
       }),
     });
 
-    const utilsMine = render(<OrderActions {...propsMine} />);
+    const utilsMine = await render(<OrderActions {...propsMine} />);
     expect(screen.queryByTestId(`order-${propsMine.item.id}-take`)).toBeNull();
-    utilsMine.unmount();
+    await utilsMine.unmount();
 
     //--- чужой заказ ---
     const propsOther = makeProps({
@@ -128,9 +128,9 @@ describe('OrderActions — кнопка «Взять»', () => {
       }),
     });
 
-    const utilsOther = render(<OrderActions {...propsOther} />);
+    const utilsOther = await render(<OrderActions {...propsOther} />);
     expect(screen.queryByTestId(`order-${propsOther.item.id}-take`)).toBeNull();
-    utilsOther.unmount();
+    await utilsOther.unmount();
   });
 
 

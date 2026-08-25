@@ -38,7 +38,7 @@ jest.mock('@/analytics/AppMetricaService', () => ({
 import { useGEOStore, useGlobalStore, useOrdersStore } from '@/shared/store/store';
 
 describe('useGEOStore location flow', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     mockRequest.mockResolvedValue('granted');
@@ -60,7 +60,7 @@ describe('useGEOStore location flow', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
   });
@@ -170,7 +170,7 @@ describe('useGEOStore location flow', () => {
     expect(useGlobalStore.getState().loadSpinner).toBe(false);
   });
 
-  it('check_pos_fake: отдает нулевые координаты и завершает spinner по таймеру', () => {
+  it('check_pos_fake: отдает нулевые координаты и завершает spinner по таймеру', async () => {
     const payload = { order_id: 456 };
     const callback = jest.fn();
 
@@ -221,7 +221,7 @@ describe('useGEOStore location flow', () => {
     expect(useGEOStore.getState().location_driver_time_text).toMatch(/^\d{1,2}:\d{2}$/);
   });
 
-  it('set_type_location: из watch режима очищает watcher и сбрасывает состояние', () => {
+  it('set_type_location: из watch режима очищает watcher и сбрасывает состояние', async () => {
     useGEOStore.setState({
       type_location: 'watch',
       id_watch: 77,

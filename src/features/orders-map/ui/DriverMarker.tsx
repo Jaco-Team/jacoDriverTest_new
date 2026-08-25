@@ -5,7 +5,7 @@ import {View, StyleSheet} from 'react-native';
 import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome';
 import { faTruckFast } from '@fortawesome/free-solid-svg-icons';
 
-import { Marker } from 'react-native-yamap';
+import { Marker } from 'react-native-yamap-plus';
 
 import { useDriverMarkerLogic } from '../model/useDriverMarkerLogic';
 

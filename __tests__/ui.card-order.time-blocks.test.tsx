@@ -43,27 +43,27 @@ const commonProps = {
   setActiveConfirm: jest.fn(),
 };
 
-test('status_order=1: видны «Начнут готовить» и «Осталось», нет «Отдали»', () => {
+test('status_order=1: видны «Начнут готовить» и «Осталось», нет «Отдали»', async () => {
   const item = { ...baseItem, status_order: 1 } as Order;
-  render(<CardOrder item={item} {...commonProps} />);
+  await render(<CardOrder item={item} {...commonProps} />);
 
   expect(screen.getByTestId('order-time-start')).toBeTruthy();
   expect(screen.getByTestId('order-time-left')).toBeTruthy();
   expect(screen.queryByTestId('order-time-close')).toBeNull();
 });
 
-test('status_order=6: виден «Отдали», скрыты «Начнут готовить» и «Осталось»', () => {
+test('status_order=6: виден «Отдали», скрыты «Начнут готовить» и «Осталось»', async () => {
   const item = { ...baseItem, status_order: 6 } as Order;
-  render(<CardOrder item={item} {...commonProps} />);
+  await render(<CardOrder item={item} {...commonProps} />);
 
   expect(screen.getByTestId('order-time-close')).toBeTruthy();
   expect(screen.queryByTestId('order-time-start')).toBeNull();
   expect(screen.queryByTestId('order-time-left')).toBeNull();
 });
 
-test('status_order=0 (прочее): виден «Осталось», скрыты «Начнут готовить» и «Отдали»', () => {
+test('status_order=0 (прочее): виден «Осталось», скрыты «Начнут готовить» и «Отдали»', async () => {
   const item = { ...baseItem, status_order: 0 } as Order;
-  render(<CardOrder item={item} {...commonProps} />);
+  await render(<CardOrder item={item} {...commonProps} />);
 
   expect(screen.getByTestId('order-time-left')).toBeTruthy();
   expect(screen.queryByTestId('order-time-start')).toBeNull();

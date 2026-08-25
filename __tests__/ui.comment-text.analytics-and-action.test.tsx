@@ -48,11 +48,11 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import { CommentText } from '@/entities/CardOrder/ui/CommentText';
 import Clipboard from '@react-native-clipboard/clipboard';
 
-test('есть номер: звонок, иконка Copy видна, логируется OrderCallClient', () => {
+test('есть номер: звонок, иконка Copy видна, логируется OrderCallClient', async () => {
   const dialCall = jest.fn();
   const { Analytics } = require('@/analytics/AppMetricaService');
 
-  render(
+  await render(
     <CommentText
       comment="tel:+79990000000"
       showAlertText={jest.fn()}
@@ -65,19 +65,19 @@ test('есть номер: звонок, иконка Copy видна, логи�
   expect(screen.getByTestId('Copy')).toBeTruthy();
 
   // Нажимаем по тексту блока комментария
-  fireEvent.press(screen.getByTestId('comment-touch'));
+  await fireEvent.press(screen.getByTestId('comment-touch'));
 
   // Вызван звонок и корректная аналитика
   expect(dialCall).toHaveBeenCalledWith('tel:+79990000000');
   expect(Analytics.log).toHaveBeenCalledWith('OrderCallClient', 'Звонок клиенту из комментария');
 });
 
-test('нет номера: копирование и алерт, логируется OrderClipboard; иконки Copy нет', () => {
+test('нет номера: копирование и алерт, логируется OrderClipboard; иконки Copy нет', async () => {
   const showAlertText = jest.fn();
   const dialCall = jest.fn();
   const { Analytics } = require('@/analytics/AppMetricaService');
 
-  render(
+  await render(
     <CommentText
       comment="без телефона"
       showAlertText={showAlertText}
@@ -90,7 +90,7 @@ test('нет номера: копирование и алерт, логируе�
   expect(screen.queryByTestId('Copy')).toBeNull();
 
   // Нажимаем по тексту блока комментария
-  fireEvent.press(screen.getByTestId('comment-touch'));
+  await fireEvent.press(screen.getByTestId('comment-touch'));
 
   // Скопировано в буфер, показан алерт, звонка нет, аналитика корректная
   expect(Clipboard.setString).toHaveBeenCalledWith('без телефона');

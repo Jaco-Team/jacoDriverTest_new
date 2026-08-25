@@ -3,6 +3,15 @@
 // 🔔 таймеры
 jest.useFakeTimers();
 
+{
+  const hostNames = require('@testing-library/react-native/dist/helpers/host-component-names');
+  for (const extra of ['RN_TEXT', 'RCTText', 'Text']) {
+    if (!hostNames.HOST_TEXT_NAMES.includes(extra)) {
+      hostNames.HOST_TEXT_NAMES.push(extra);
+    }
+  }
+}
+
 // — жёстко замокаем локальные UI-обёртки
 jest.mock('@/components/ui/modal',   () => require('./__mocks__/ui/modalMock.js'));
 jest.mock('@/components/ui/vstack',  () => require('./__mocks__/ui/vstackMock.js'));
@@ -74,7 +83,7 @@ jest.mock('react-native/Libraries/ReactNative/NativeI18nManager', () => ({
   },
 }));
 
-jest.mock('react-native/src/private/specs/modules/NativePlatformConstantsIOS', () => {
+jest.mock('react-native/src/private/specs_DEPRECATED/modules/NativePlatformConstantsIOS', () => {
   const constants = {
     forceTouchAvailable: false,
     interfaceIdiom: 'phone',
@@ -104,7 +113,7 @@ jest.mock('react-native/Libraries/Utilities/NativePlatformConstantsIOS', () => {
   };
 });
 
-jest.mock('react-native/src/private/specs/modules/NativeDeviceInfo', () => {
+jest.mock('react-native/src/private/specs_DEPRECATED/modules/NativeDeviceInfo', () => {
   const constants = {
     Dimensions: {
       window: { width: 375, height: 667, scale: 2, fontScale: 2 },
@@ -436,7 +445,7 @@ jest.mock('@react-native-clipboard/clipboard', () => {
   return { __esModule: true, default: api, ...api };
 });
 
-jest.mock('react-native-yamap', () => {
+jest.mock('react-native-yamap-plus', () => {
   const React = require('react');
   const YaMap = (props: any) => React.createElement(React.Fragment, null, props?.children);
   (YaMap as any).init = jest.fn(() => Promise.resolve());
@@ -444,7 +453,8 @@ jest.mock('react-native-yamap', () => {
   (YaMap as any).setCenter = jest.fn();
   (YaMap as any).setZoom = jest.fn();
   const Animation = { SMOOTH: 0 };
-  return { __esModule: true, default: YaMap, Animation };
+  const YamapInstance = { init: jest.fn(() => Promise.resolve()) };
+  return { __esModule: true, default: YaMap, Animation, YamapInstance, Marker: YaMap };
 });
 
 jest.mock('@sentry/react-native', () => {

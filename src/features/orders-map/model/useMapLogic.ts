@@ -3,7 +3,7 @@ import { InteractionManager } from 'react-native'
 import { useFocusEffect, useIsFocused } from '@react-navigation/native'
 import { useShallow } from 'zustand/react/shallow'
 
-import YaMap, { Animation } from 'react-native-yamap'
+import YaMap, { Animation } from 'react-native-yamap-plus'
 
 import { useOrdersStore, useGEOStore, useSettingsStore } from '@/shared/store/store'
 import { initYaMap } from '@/shared/lib/yaMapInit'
@@ -13,7 +13,7 @@ import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
 const MAP_LOAD_RETRY_MS = 2500
 
 export function useMapLogic() {
-  const mapRef = useRef<YaMap>(null)
+  const mapRef = useRef<React.ElementRef<typeof YaMap>>(null)
   const didAutoRemountRef = useRef(false)
   const didCenterOnLoadRef = useRef(false)
   const [zoom, setZoom] = useState<number>(12)

@@ -38,26 +38,26 @@ describe('useStatisticsTable.onRefresh', () => {
     return null as any;
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     jest.setSystemTime(Date.parse('2025-10-27T00:00:00Z'));
     jest.clearAllMocks();
     api = null;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     try { jest.runOnlyPendingTimers(); } catch {}
     jest.useRealTimers();
   });
 
-  it('isRefreshing -> true сразу, затем false через 500ms', () => {
-    render(<Probe />);
+  it('isRefreshing -> true сразу, затем false через 500ms', async () => {
+    await render(<Probe />);
 
     getStatistics.mockClear();
     expect(api!.isRefreshing).toBe(false);
 
     // дергаем onRefresh
-    act(() => {
+    await act(async () => {
       api!.onRefresh();
     });
 
@@ -66,7 +66,7 @@ describe('useStatisticsTable.onRefresh', () => {
     expect(getStatistics).toHaveBeenCalledWith(fmt(today), fmt(today));
 
     // через 500мс переключается обратно в false
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(500);
     });
     expect(api!.isRefreshing).toBe(false);

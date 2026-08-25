@@ -36,11 +36,11 @@ const makeOrder = (patch: Partial<Order>): Order =>
     ...patch,
   } as Order);
 
-test('is_delete=1: все экшены передают is_delete=true в setActiveConfirm', () => {
+test('is_delete=1: все экшены передают is_delete=true в setActiveConfirm', async () => {
   const item = makeOrder({});
   const setActiveConfirm = jest.fn();
 
-  render(
+  await render(
     <OrderActions
       item={item}
       dialCall={jest.fn()}
@@ -51,15 +51,15 @@ test('is_delete=1: все экшены передают is_delete=true в setAct
   );
 
   // cancel
-  fireEvent.press(screen.getByTestId(`order-${item.id}-cancel`));
+  await fireEvent.press(screen.getByTestId(`order-${item.id}-cancel`));
   expect(setActiveConfirm).toHaveBeenNthCalledWith(1, true, item.id, 'cancel', true);
 
   // finish
-  fireEvent.press(screen.getByTestId(`order-${item.id}-finish`));
+  await fireEvent.press(screen.getByTestId(`order-${item.id}-finish`));
   expect(setActiveConfirm).toHaveBeenNthCalledWith(2, true, item.id, 'finish', true);
 
   // fake
-  fireEvent.press(screen.getByTestId(`order-${item.id}-fake`));
+  await fireEvent.press(screen.getByTestId(`order-${item.id}-fake`));
   expect(setActiveConfirm).toHaveBeenNthCalledWith(3, true, item.id, 'fake', true);
 
   expect(setActiveConfirm).toHaveBeenCalledTimes(3);

@@ -58,7 +58,7 @@ describe('auth/reset hooks', () => {
     };
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     setupStore();
     mockCheckToken.mockResolvedValue(false);
@@ -76,7 +76,7 @@ describe('auth/reset hooks', () => {
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
 
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('List_orders'));
     expect(api!.showPassword).toBe(false);
@@ -94,7 +94,7 @@ describe('auth/reset hooks', () => {
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('Auth'));
     mockNavigate.mockClear();
 
@@ -108,7 +108,7 @@ describe('auth/reset hooks', () => {
     );
     expect(mockAuth).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(async () => {
       api!.handleTogglePassword();
     });
 
@@ -124,7 +124,7 @@ describe('auth/reset hooks', () => {
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('Auth'));
     mockNavigate.mockClear();
 
@@ -146,7 +146,7 @@ describe('auth/reset hooks', () => {
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('Auth'));
     mockNavigate.mockClear();
 
@@ -157,7 +157,7 @@ describe('auth/reset hooks', () => {
     expect(mockAnalyticsLog).toHaveBeenCalledWith('AuthLoginFail', 'Ошибка авторизации');
     expect(mockNavigate).not.toHaveBeenCalledWith('List_orders');
 
-    act(() => {
+    await act(async () => {
       api!.GoToResetPWD();
     });
 
@@ -177,7 +177,7 @@ describe('auth/reset hooks', () => {
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
     await waitFor(() => expect(mockCheckToken).toHaveBeenCalled());
 
     await act(async () => {
@@ -206,7 +206,7 @@ describe('auth/reset hooks', () => {
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
     await waitFor(() => expect(mockCheckToken).toHaveBeenCalled());
     mockNavigate.mockClear();
 

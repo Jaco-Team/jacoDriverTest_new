@@ -16,7 +16,7 @@ jest.mock('@/analytics/AppMetricaService', () => ({
 import { useGlobalStore, useSettingsStore } from '@/shared/store/store';
 
 describe('useSettingsStore.saveSettings', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     useGlobalStore.setState({
@@ -34,7 +34,7 @@ describe('useSettingsStore.saveSettings', () => {
     } as any);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
   });

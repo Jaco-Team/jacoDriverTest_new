@@ -25,9 +25,9 @@ const makeOrder = (p: Partial<Order>): Order => ({
   ...p,
 } as Order);
 
-test('online_pay=1: QR отсутствует, «Завершить» есть', () => {
+test('online_pay=1: QR отсутствует, «Завершить» есть', async () => {
   const item = makeOrder({});
-  render(
+  await render(
     <OrderActions
       item={item}
       dialCall={jest.fn()}

@@ -54,45 +54,45 @@ function TestComp({
 }
 
 describe('useOrdersUpdater: поведение интервала', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers();
     jest.clearAllTimers();
     jest.useRealTimers();
   });
 
-  it('при interval=0: getOrders ровно 1 раз и больше не тикает', () => {
+  it('при interval=0: getOrders ровно 1 раз и больше не тикает', async () => {
     const getOrders = jest.fn();
 
-    const { unmount } = render(<TestComp getOrders={getOrders} interval={0} />);
+    const { unmount } = await render(<TestComp getOrders={getOrders} interval={0} />);
 
     // вызов на маунте
     expect(getOrders).toHaveBeenCalledTimes(1);
 
     // проматываем время — ничего не должно добавиться
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(60_000);
     });
     expect(getOrders).toHaveBeenCalledTimes(1);
 
     // после unmount тоже тишина
-    unmount();
-    act(() => {
+    await unmount();
+    await act(async () => {
       jest.advanceTimersByTime(60_000);
     });
     expect(getOrders).toHaveBeenCalledTimes(1);
   });
 
-  it('при interval>0: тикает по интервалу и останавливается после unmount', () => {
+  it('при interval>0: тикает по интервалу и останавливается после unmount', async () => {
     const getOrders = jest.fn();
     const intervalSec = 2; // секунды
     const TICK = intervalSec * 1_000;
 
-    const { unmount } = render(
+    const { unmount } = await render(
       <TestComp getOrders={getOrders} interval={intervalSec} />
     );
 
@@ -100,16 +100,16 @@ describe('useOrdersUpdater: поведение интервала', () => {
     expect(getOrders).toHaveBeenCalledTimes(1);
 
     // три тика по 2 секунды
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(3 * TICK);
     });
     expect(getOrders).toHaveBeenCalledTimes(1 + 3);
 
     // unmount — новых вызовов быть не должно
-    unmount();
+    await unmount();
     const callsBefore = getOrders.mock.calls.length;
 
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(5 * TICK);
     });
     expect(getOrders).toHaveBeenCalledTimes(callsBefore);

@@ -60,8 +60,8 @@ dependencies {
     implementation("com.facebook.react:react-android")
 
     constraints {
-        implementation("com.yandex.android:maps.mobile:4.19.0-navikit") {
-            because("нужна поддержка 16 KB page size")
+        implementation("com.yandex.android:maps.mobile:4.42.0-full") {
+            because("yamap-plus 6.10.1 требует MapKit 4.42; 16 KB page size есть в 4.19+")
         }
     }
 
@@ -75,11 +75,11 @@ dependencies {
 subprojects {
     configurations.configureEach {
         resolutionStrategy {
-            force "com.yandex.android:maps.mobile:4.8.0-full"
+            force "com.yandex.android:maps.mobile:4.42.0-full"
             eachDependency { details ->
                 if (details.requested.group == "com.yandex.android" &&
                         details.requested.name == "maps.mobile") {
-                    details.useVersion("4.8.0-full")
+                    details.useVersion("4.42.0-full")
                 }
             }
         }

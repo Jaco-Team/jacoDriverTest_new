@@ -11,10 +11,10 @@ import { PdEtKv } from '@/entities/CardOrder/ui/PdEtKv';
 
 const textStyle = { fontSize: 16 } as const;
 
-test('пустые/нулевые поля скрыты, запятая только между блоками', () => {
+test('пустые/нулевые поля скрыты, запятая только между блоками', async () => {
   const item = { pd: '1', et: '', kv: '45' } as any;
 
-  render(<PdEtKv item={item} textStyle={textStyle} />);
+  await render(<PdEtKv item={item} textStyle={textStyle} />);
 
   // Контейнер есть
   expect(screen.getByTestId('pdetkv')).toBeTruthy();

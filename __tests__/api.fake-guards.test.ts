@@ -7,7 +7,7 @@ describe('api.ts: фейк-сторажи', () => {
   const realEnv = process.env.NODE_ENV;
   const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
     (axios.post as jest.Mock).mockReset().mockResolvedValue({
       data: { st: true, text: '', data: { ok: true } },
@@ -16,7 +16,7 @@ describe('api.ts: фейк-сторажи', () => {
     (global as any).__FAKE_HIDDEN_IDS__ = undefined;
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     process.env.NODE_ENV = realEnv;
     logSpy.mockRestore();
   });

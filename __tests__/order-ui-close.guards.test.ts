@@ -17,7 +17,7 @@ import * as Store from '@/shared/store/store';
 import * as ApiMod from '@/shared/store/api';
 
 describe('Закрытие UI по условиям', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
   });
 
@@ -87,7 +87,7 @@ describe('Закрытие UI по условиям', () => {
       is_modalConfirm: false,
     });
 
-    act(() => {
+    await act(async () => {
       useOrdersStore.getState().actionButtonOrder(1, 101); // "Взять"
     });
 
@@ -101,7 +101,7 @@ describe('Закрытие UI по условиям', () => {
       is_modalConfirm: false,
     });
 
-    act(() => {
+    await act(async () => {
       useOrdersStore.getState().actionButtonOrder(1, 102);
     });
 
@@ -115,7 +115,7 @@ describe('Закрытие UI по условиям', () => {
       is_modalConfirm: true,
     });
 
-    act(() => {
+    await act(async () => {
       useOrdersStore.getState().actionButtonOrder(1, 103);
     });
 
@@ -129,7 +129,7 @@ describe('Закрытие UI по условиям', () => {
       is_modalConfirm: false,
     });
 
-    act(() => {
+    await act(async () => {
       useOrdersStore.getState().actionButtonOrder(1, 104);
     });
 

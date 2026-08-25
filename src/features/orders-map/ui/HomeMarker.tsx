@@ -3,7 +3,7 @@ import React, { memo } from 'react';
 import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome';
 import { faHouse } from '@fortawesome/free-solid-svg-icons';
 
-import { Marker } from 'react-native-yamap';
+import { Marker } from 'react-native-yamap-plus';
 
 import { MapPointHouse } from '../model/types'
 

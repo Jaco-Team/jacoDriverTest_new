@@ -24,7 +24,7 @@ import * as Store from '@/shared/store/store';
 import * as ApiMod from '@/shared/store/api';
 
 describe('Автообновление=0: после "Взять" происходит ручной рефреш UI', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
   });
 

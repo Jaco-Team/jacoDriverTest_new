@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGlobalStore } from '@/shared/store/store';
 
 describe('useGlobalStore state helpers', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     useGlobalStore.setState({
@@ -23,7 +23,7 @@ describe('useGlobalStore state helpers', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
   });
@@ -54,7 +54,7 @@ describe('useGlobalStore state helpers', () => {
     expect(useGlobalStore.getState().tokenAuth).toBe('stored-token');
   });
 
-  it('showModalText/showAlertText: обновляет тексты и auto-hide alert по таймеру', () => {
+  it('showModalText/showAlertText: обновляет тексты и auto-hide alert по таймеру', async () => {
     useGlobalStore.getState().showModalText(true, 'Ошибка');
 
     expect(useGlobalStore.getState().is_show_modal_text).toBe(true);
@@ -74,7 +74,7 @@ describe('useGlobalStore state helpers', () => {
     expect(useGlobalStore.getState().is_show_alert_text).toBe(false);
   });
 
-  it('setters: обновляют глобальные настройки и service flags', () => {
+  it('setters: обновляют глобальные настройки и service flags', async () => {
     const phones = { point: 'Центр', phone: '+70000000000' } as any;
 
     useGlobalStore.getState().setSpinner(true);

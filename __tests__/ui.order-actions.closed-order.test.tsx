@@ -35,9 +35,9 @@ const makeOrder = (patch: Partial<Order>): Order =>
     ...patch,
   } as Order);
 
-test('закрытый заказ: все action-кнопки скрыты, телефон виден', () => {
+test('закрытый заказ: все action-кнопки скрыты, телефон виден', async () => {
   const item = makeOrder({});
-  render(
+  await render(
     <OrderActions
       item={item}
       dialCall={jest.fn()}

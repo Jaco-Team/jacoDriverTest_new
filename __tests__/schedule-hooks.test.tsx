@@ -32,7 +32,7 @@ import {
 } from '@/features/schedule/model/useError';
 
 describe('schedule hooks', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     jest.setSystemTime(Date.parse('2026-06-30T10:00:00Z'));
     jest.clearAllMocks();
@@ -60,7 +60,7 @@ describe('schedule hooks', () => {
     };
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
   });
@@ -73,7 +73,7 @@ describe('schedule hooks', () => {
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
 
     expect(mockGetGraph).toHaveBeenCalledWith('2026-06');
     expect(api!.isRefreshing).toBe(false);
@@ -94,16 +94,16 @@ describe('schedule hooks', () => {
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
 
     await waitFor(() => expect(api!.activeMounth).toBe('Июнь'));
 
-    act(() => {
+    await act(async () => {
       api!.setIsOpenDateMenu(true);
     });
     expect(api!.isOpenDateMenu).toBe(true);
 
-    act(() => {
+    await act(async () => {
       api!.onSelectMonth('2026-05', 'Май');
     });
 
@@ -121,13 +121,13 @@ describe('schedule hooks', () => {
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
 
     await waitFor(() =>
       expect(api!.transformedArray).toEqual([{ uri: 'a.jpg' }, { uri: 'b.jpg' }]),
     );
 
-    act(() => {
+    await act(async () => {
       api!.openImage(1);
       api!.setTextError('Комментарий');
     });
@@ -135,7 +135,7 @@ describe('schedule hooks', () => {
     expect(api!.visible).toBe(true);
     expect(api!.indexImg).toBe(1);
 
-    act(() => {
+    await act(async () => {
       api!.onSubmitError();
       api!.closeModal();
     });
@@ -152,16 +152,16 @@ describe('schedule hooks', () => {
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
 
     await waitFor(() => expect(api!.transformedArray).toEqual([{ uri: 'c.jpg' }]));
 
-    act(() => {
+    await act(async () => {
       api!.openImage(0);
       api!.setTextError('Апелляция');
     });
 
-    act(() => {
+    await act(async () => {
       api!.submitError();
       api!.closeModal();
     });
@@ -171,7 +171,7 @@ describe('schedule hooks', () => {
     expect(mockShowModalErrOrder).toHaveBeenCalledWith(false);
   });
 
-  it('useError list hooks: возвращают списки ошибок и handlers', () => {
+  it('useError list hooks: возвращают списки ошибок и handlers', async () => {
     let cam: ReturnType<typeof useErrorCameraList> | null = null;
     let orders: ReturnType<typeof useErrorOrdersList> | null = null;
 
@@ -181,7 +181,7 @@ describe('schedule hooks', () => {
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
 
     expect(cam!.err_cam).toEqual([{ id: 1, imgs: ['cam-1.jpg'] }]);
     expect(cam!.showModalErrCam).toBe(mockShowModalErrCam);

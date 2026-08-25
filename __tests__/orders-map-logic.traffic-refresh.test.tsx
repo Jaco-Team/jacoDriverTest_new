@@ -49,7 +49,7 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
   }
 
   async function renderProbe() {
-    const view = render(<Probe />);
+    const view = await render(<Probe />);
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
@@ -57,7 +57,7 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
     return view;
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     resetYaMapInit();
@@ -93,8 +93,8 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
     } as any);
   });
 
-  afterEach(() => {
-    act(() => {
+  afterEach(async () => {
+    await act(async () => {
       jest.runOnlyPendingTimers();
     });
     jest.useRealTimers();
@@ -106,20 +106,20 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
 
     expect(api!.trafficVisible).toBe(false);
 
-    act(() => {
+    await act(async () => {
       api!.toggleTrafficVisible();
     });
 
     expect(setTrafficVisible).toHaveBeenCalledWith(true);
     expect(api!.trafficVisible).toBe(true);
 
-    act(() => {
+    await act(async () => {
       api!.toggleTrafficVisible();
     });
 
     expect(setTrafficVisible).toHaveBeenCalledWith(false);
     expect(api!.trafficVisible).toBe(false);
-    view.unmount();
+    await view.unmount();
   });
 
   it('loads map data on focus and refreshes orders by update_interval while focused', async () => {
@@ -129,12 +129,12 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
     expect(getOrders).toHaveBeenCalledWith();
     expect(getSettings).toHaveBeenCalledTimes(1);
 
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(2_000);
     });
 
     expect(getOrders).toHaveBeenCalledWith(false);
-    view.unmount();
+    await view.unmount();
   });
 
   it('does not start interval refresh when screen is not focused', async () => {
@@ -144,12 +144,12 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
 
     expect(getOrders).toHaveBeenCalledTimes(1);
 
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(6_000);
     });
 
     expect(getOrders).toHaveBeenCalledTimes(1);
-    view.unmount();
+    await view.unmount();
   });
 
   it('updates native map zoom and centers on home point', async () => {
@@ -163,12 +163,12 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
     expect(setZoom).toHaveBeenCalledWith(14, 0, 0);
     expect(api!.zoom).toBe(14);
 
-    act(() => {
+    await act(async () => {
       api!.getHome();
     });
 
     expect(setCenter).toHaveBeenCalledWith({ lon: 20.5, lat: 54.7 }, 12, 0, 0, 0, 0);
-    view.unmount();
+    await view.unmount();
   });
 
   it('centers map after native onMapLoaded and exposes ready-to-render flag', async () => {
@@ -177,53 +177,53 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
 
     expect(api!.mapInitStatus).toBe('ready');
 
-    act(() => {
+    await act(async () => {
       api!.handleMapLoaded();
     });
 
     expect(api!.isMapLoaded).toBe(true);
     expect(setCenter).toHaveBeenCalledWith({ lon: 20.5, lat: 54.7 }, 12, 0, 0, 0, 0);
-    view.unmount();
+    await view.unmount();
   });
 
   it('does not recenter after load when server only refreshes the same home point', async () => {
     const view = await renderProbe();
     attachMapRef();
 
-    act(() => {
+    await act(async () => {
       api!.handleMapLoaded();
     });
 
     setCenter.mockClear();
 
-    act(() => {
+    await act(async () => {
       useOrdersStore.setState({
         home: { lon: 20.5, lat: 54.7 },
       } as any);
     });
 
     expect(setCenter).not.toHaveBeenCalled();
-    view.unmount();
+    await view.unmount();
   });
 
   it('recenters to home only when take/cancel requested it via settings', async () => {
     const view = await renderProbe();
     attachMapRef();
 
-    act(() => {
+    await act(async () => {
       api!.handleMapLoaded();
     });
 
     setCenter.mockClear();
 
-    act(() => {
+    await act(async () => {
       useOrdersStore.setState({
         mapHomeCenterRequestId: 1,
       } as any);
     });
 
     expect(setCenter).toHaveBeenCalledWith({ lon: 20.5, lat: 54.7 }, 12, 0, 0, 0, 0);
-    view.unmount();
+    await view.unmount();
   });
 
   it('does not render map until the screen is focused', async () => {
@@ -232,6 +232,6 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
     const view = await renderProbe();
 
     expect(api!.shouldRenderMap).toBe(false);
-    view.unmount();
+    await view.unmount();
   });
 });

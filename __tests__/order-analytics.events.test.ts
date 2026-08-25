@@ -28,7 +28,7 @@ jest.mock('@/analytics/AppMetricaService', () => {
 });
 
 describe('Analytics: события для действий и UI', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
     jest.clearAllMocks();
   });
@@ -177,7 +177,7 @@ describe('Analytics: события для действий и UI', () => {
     expect(approveCalls[0][1]).toBe('Заказ завершен');
   });
 
-  it('OrderMapOpen/OrderMapClose — логируются по факту открытия/закрытия', () => {
+  it('OrderMapOpen/OrderMapClose — логируются по факту открытия/закрытия', async () => {
     const { useOrdersStore } = require('@/shared/store/store');
     const log = getLogMock();
 
@@ -207,7 +207,7 @@ describe('Analytics: события для действий и UI', () => {
     expect(closeCallsAfter).toHaveLength(before);
   });
 
-  it('ConfirmModalOpen/ConfirmModalClose — логируются при открытии/закрытии', () => {
+  it('ConfirmModalOpen/ConfirmModalClose — логируются при открытии/закрытии', async () => {
     const { useOrdersStore } = require('@/shared/store/store');
     const log = getLogMock();
 

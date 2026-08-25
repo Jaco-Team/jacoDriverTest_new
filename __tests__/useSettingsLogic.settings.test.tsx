@@ -33,7 +33,7 @@ describe('useSettingsLogic: локальное состояние и сохра�
     return null as any;
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     api = null;
     mockSettingsState = {
@@ -52,8 +52,8 @@ describe('useSettingsLogic: локальное состояние и сохра�
     };
   });
 
-  it('инициализирует локальный state из store и сохраняет старое parseInt/parseFloat-поведение', () => {
-    render(<Probe />);
+  it('инициализирует локальный state из store и сохраняет старое parseInt/parseFloat-поведение', async () => {
+    await render(<Probe />);
 
     expect(mockGetSettings).toHaveBeenCalledTimes(1);
     expect(api!.globalFontSize).toBe(18);
@@ -68,10 +68,10 @@ describe('useSettingsLogic: локальное состояние и сохра�
     expect(api!.groupTypeThemeState).toBe('white_border');
   });
 
-  it('saveSettingsFunc передает в store актуальные значения локальной формы', () => {
-    render(<Probe />);
+  it('saveSettingsFunc передает в store актуальные значения локальной формы', async () => {
+    await render(<Probe />);
 
-    act(() => {
+    await act(async () => {
       api!.setType_show_del('min');
       api!.setCentered_map([]);
       api!.setFontSize(22);
@@ -84,7 +84,7 @@ describe('useSettingsLogic: локальное состояние и сохра�
       api!.setScale_map([]);
     });
 
-    act(() => {
+    await act(async () => {
       api!.saveSettingsFunc();
     });
 

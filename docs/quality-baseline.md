@@ -172,13 +172,13 @@ npm run test:unit
 Он запускается:
 
 - на `pull_request`;
-- на `push` в `main`.
+- на `push` в `main` и `new_architecture`.
 
 Параметры:
 
 - name: `CI Baseline`
 - job name: `lint-typecheck-unit`
-- Node.js: `20`
+- Node.js: `24`
 - install: `npm ci`
 - checks:
   - `npm run lint`

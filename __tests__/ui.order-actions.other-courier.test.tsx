@@ -20,11 +20,11 @@ const mkOrder = (p: Partial<Order>): Order => ({
   ...p,
 } as Order);
 
-test('у другого курьера: имя/логин видны; клик по логину -> dialCall(number); action-кнопок нет', () => {
+test('у другого курьера: имя/логин видны; клик по логину -> dialCall(number); action-кнопок нет', async () => {
   const item = mkOrder({});
   const dialCall = jest.fn();
 
-  render(
+  await render(
     <OrderActions
       item={item}
       dialCall={dialCall}
@@ -40,7 +40,7 @@ test('у другого курьера: имя/логин видны; клик �
   expect(loginBtn).toBeTruthy();
 
   // Клик по логину вызывает звонок
-  fireEvent.press(loginBtn);
+  await fireEvent.press(loginBtn);
   expect(dialCall).toHaveBeenCalledWith(item.number);
 
   // Action-кнопок нет

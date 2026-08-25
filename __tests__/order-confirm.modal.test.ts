@@ -15,12 +15,12 @@ jest.mock('@/analytics/AppMetricaService', () => ({
 }));
 
 describe('Модалка подтверждения: setActiveConfirm и автозакрытие на success', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
     jest.clearAllMocks();
   });
 
-  it('setActiveConfirm: true — не сбрасывает; false — сбрасывает type_confirm', () => {
+  it('setActiveConfirm: true — не сбрасывает; false — сбрасывает type_confirm', async () => {
     const { useOrdersStore } = require('@/shared/store/store');
 
     // Открываем модалку

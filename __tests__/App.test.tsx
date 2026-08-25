@@ -4,15 +4,14 @@ import { render, cleanup } from '@testing-library/react-native';
 import App from '../App';
 
 describe('App root', () => {
-  afterEach(() => {
-    cleanup();
-    try { jest.runOnlyPendingTimers(); } catch {}
+  afterEach(async () => {
+    await cleanup();
     jest.clearAllTimers();
   });
 
-  it('монтируется и демонтируется без сбоев', () => {
-    const { unmount } = render(<App />); // render сам оборачивает в act()
+  it('монтируется и демонтируется без сбоев', async () => {
+    const { unmount } = await render(<App />); // render сам оборачивает в act()
     expect(typeof unmount).toBe('function'); // рендер прошёл — не упало
-    unmount(); // корректно размонтируется — без ошибок
+    await unmount(); // корректно размонтируется — без ошибок
   });
 });

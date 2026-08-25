@@ -19,7 +19,7 @@ import * as Store from '@/shared/store/store';
 import * as ApiMod from '@/shared/store/api';
 
 describe('Действия с заказом: обработка ошибок API (st=false)', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
   });
 
@@ -64,7 +64,7 @@ describe('Действия с заказом: обработка ошибок AP
       .mockResolvedValueOnce({ st: false, text: 'Ошибка сервера' });
 
     // Действие
-    act(() => {
+    await act(async () => {
       useOrdersStore.getState().actionButtonOrder(1, 111); // "Взять"
     });
 
@@ -122,7 +122,7 @@ describe('Действия с заказом: обработка ошибок AP
       .spyOn(api, 'api')
       .mockResolvedValueOnce({ st: false, text: 'Fake-ошибка' });
 
-    act(() => {
+    await act(async () => {
       useOrdersStore.getState().actionButtonOrder(1, 222);
     });
 

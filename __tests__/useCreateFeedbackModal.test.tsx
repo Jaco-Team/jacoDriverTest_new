@@ -49,7 +49,7 @@ describe('useCreateFeedbackModal: форма и image picker', () => {
     return null as any;
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(jest.fn());
     api = null;
@@ -66,14 +66,14 @@ describe('useCreateFeedbackModal: форма и image picker', () => {
     };
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     consoleLogSpy.mockRestore();
   });
 
-  it('не отправляет пустую форму и показывает ошибку заголовка', () => {
-    render(<Probe />);
+  it('не отправляет пустую форму и показывает ошибку заголовка', async () => {
+    await render(<Probe />);
 
-    act(() => {
+    await act(async () => {
       api!.handleSubmit();
     });
 
@@ -81,13 +81,13 @@ describe('useCreateFeedbackModal: форма и image picker', () => {
     expect(mockCreateFeedback).not.toHaveBeenCalled();
   });
 
-  it('не отправляет форму без описания', () => {
-    render(<Probe />);
+  it('не отправляет форму без описания', async () => {
+    await render(<Probe />);
 
-    act(() => {
+    await act(async () => {
       api!.setTitle('Идея');
     });
-    act(() => {
+    await act(async () => {
       api!.handleSubmit();
     });
 
@@ -95,18 +95,18 @@ describe('useCreateFeedbackModal: форма и image picker', () => {
     expect(mockCreateFeedback).not.toHaveBeenCalled();
   });
 
-  it('отправляет createFeedback с текущими полями, уведомлением и изображениями', () => {
+  it('отправляет createFeedback с текущими полями, уведомлением и изображениями', async () => {
     const image = { uri: 'file://photo.jpg', fileName: 'photo.jpg', type: 'image/jpeg' };
-    render(<Probe />);
+    await render(<Probe />);
 
-    act(() => {
+    await act(async () => {
       api!.setTitle('Ошибка');
       api!.setDescription('Описание проблемы');
       api!.setType('ошибка');
       api!.setIs_need_notification(['is_need_notification']);
       api!.handleImagePickerResponse({ assets: [image] } as any);
     });
-    act(() => {
+    await act(async () => {
       api!.handleSubmit();
     });
 
@@ -120,10 +120,10 @@ describe('useCreateFeedbackModal: форма и image picker', () => {
     });
   });
 
-  it('вызывает gallery picker с ожидаемыми photo options', () => {
-    render(<Probe />);
+  it('вызывает gallery picker с ожидаемыми photo options', async () => {
+    await render(<Probe />);
 
-    act(() => {
+    await act(async () => {
       api!.pickImageFromGallery();
     });
 
@@ -139,10 +139,10 @@ describe('useCreateFeedbackModal: форма и image picker', () => {
     expect(typeof mockLaunchImageLibrary.mock.calls[0][1]).toBe('function');
   });
 
-  it('вызывает camera picker с ожидаемыми photo options', () => {
-    render(<Probe />);
+  it('вызывает camera picker с ожидаемыми photo options', async () => {
+    await render(<Probe />);
 
-    act(() => {
+    await act(async () => {
       api!.takePhoto();
     });
 
@@ -158,11 +158,11 @@ describe('useCreateFeedbackModal: форма и image picker', () => {
     expect(typeof mockLaunchCamera.mock.calls[0][1]).toBe('function');
   });
 
-  it('показывает Alert при ошибке image picker и не добавляет изображение', () => {
+  it('показывает Alert при ошибке image picker и не добавляет изображение', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
-    render(<Probe />);
+    await render(<Probe />);
 
-    act(() => {
+    await act(async () => {
       api!.handleImagePickerResponse({
         errorCode: 'camera_unavailable',
         errorMessage: 'Камера недоступна',

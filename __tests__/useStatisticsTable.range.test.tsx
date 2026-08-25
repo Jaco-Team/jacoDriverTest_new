@@ -49,7 +49,7 @@ describe('useStatisticsTable: нормализация дат, алёрты и �
   const getStatistics: jest.Mock = useStatStore((s: any) => s).getStatistics;
   const showAlertText: jest.Mock = useGlobalStore.getState().showAlertText;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     // Полдень по UTC, чтобы не ловить сдвиги дат
     jest.setSystemTime(Date.parse('2025-10-27T12:00:00Z'));
@@ -57,14 +57,14 @@ describe('useStatisticsTable: нормализация дат, алёрты и �
     api = null;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     // На всякий случай, чтобы воркер завершался без ворнингов
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
   });
 
-  it('маунт: сразу вызывает getStatistics(сегодня, сегодня)', () => {
-    render(<Probe />);
+  it('маунт: сразу вызывает getStatistics(сегодня, сегодня)', async () => {
+    await render(<Probe />);
 
     expect(getStatistics).toHaveBeenCalledTimes(1);
     expect(getStatistics).toHaveBeenLastCalledWith(fmt(fixedToday), fmt(fixedToday));
@@ -72,12 +72,12 @@ describe('useStatisticsTable: нормализация дат, алёрты и �
     expect(api!.dateEnd).toBe(fmt(fixedToday));
   });
 
-  it('chooseDateStart: раньше минимума → подрезаем до [minDate; today], показываем алёрт', () => {
-    render(<Probe />);
+  it('chooseDateStart: раньше минимума → подрезаем до [minDate; today], показываем алёрт', async () => {
+    await render(<Probe />);
     getStatistics.mockClear();
     showAlertText.mockClear();
 
-    act(() => {
+    await act(async () => {
       api!.chooseDateStart('2025-01-01'); // слишком рано
     });
 
@@ -94,15 +94,15 @@ describe('useStatisticsTable: нормализация дат, алёрты и �
     expect(String(msg)).toContain(fmt(fixedToday));
   });
 
-  it('chooseDateEnd: дата в будущем → конец = сегодня (старт не меняем, если span ≤ 93)', () => {
-    render(<Probe />);
+  it('chooseDateEnd: дата в будущем → конец = сегодня (старт не меняем, если span ≤ 93)', async () => {
+    await render(<Probe />);
 
-    act(() => {
+    await act(async () => {
       api!.chooseDateStart(fixedToday.subtract(20, 'day').toDate());
     });
     getStatistics.mockClear();
 
-    act(() => {
+    await act(async () => {
       api!.chooseDateEnd('2025-12-31'); // будущее
     });
 
@@ -111,15 +111,15 @@ describe('useStatisticsTable: нормализация дат, алёрты и �
     expect(api!.dateStart).toBe(fmt(fixedToday.subtract(20, 'day')));
   });
 
-  it('диапазон > 93 дней: конец далеко вперёд → сдвигаем обе границы под правило 93 дней', () => {
-    render(<Probe />);
+  it('диапазон > 93 дней: конец далеко вперёд → сдвигаем обе границы под правило 93 дней', async () => {
+    await render(<Probe />);
 
-    act(() => {
+    await act(async () => {
       api!.chooseDateStart('2025-06-01'); // рано
     });
     getStatistics.mockClear();
 
-    act(() => {
+    await act(async () => {
       api!.chooseDateEnd('2025-12-31'); // сильно вперёд
     });
 
@@ -128,15 +128,15 @@ describe('useStatisticsTable: нормализация дат, алёрты и �
     expect(api!.dateStart).toBe(fmt(minDate)); // today - 93
   });
 
-  it('конец раньше старта: chooseDateEnd < start → конец поднимается до старта', () => {
-    render(<Probe />);
+  it('конец раньше старта: chooseDateEnd < start → конец поднимается до старта', async () => {
+    await render(<Probe />);
 
-    act(() => {
+    await act(async () => {
       api!.chooseDateStart('2025-10-20');
     });
     getStatistics.mockClear();
 
-    act(() => {
+    await act(async () => {
       api!.chooseDateEnd('2025-10-10');
     });
 
@@ -145,14 +145,14 @@ describe('useStatisticsTable: нормализация дат, алёрты и �
     expect(api!.dateEnd).toBe('2025-10-20');
   });
 
-  it('валидные даты без нормализации → алёрт не показывается', () => {
-    render(<Probe />);
+  it('валидные даты без нормализации → алёрт не показывается', async () => {
+    await render(<Probe />);
     showAlertText.mockClear();
 
-    act(() => {
+    await act(async () => {
       api!.chooseDateStart(fixedToday.subtract(10, 'day').toDate());
     });
-    act(() => {
+    await act(async () => {
       api!.chooseDateEnd(fixedToday.subtract(5, 'day').toDate());
     });
 

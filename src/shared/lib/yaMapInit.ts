@@ -1,4 +1,4 @@
-import YaMap from 'react-native-yamap'
+import { YamapInstance } from 'react-native-yamap-plus'
 
 export const YAMAP_API_KEY = 'c7ad032b-5368-4449-9e21-c50d73ea0026'
 
@@ -15,7 +15,7 @@ export function initYaMap(options?: { force?: boolean }): Promise<boolean> {
 
   if (!initPromise) {
     initPromise = Promise.resolve()
-      .then(() => YaMap.init(YAMAP_API_KEY))
+      .then(() => YamapInstance.init(YAMAP_API_KEY))
       .then(() => true)
       .catch((error) => {
         console.log(error)

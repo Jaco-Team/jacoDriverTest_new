@@ -20,7 +20,7 @@ import { useAvgTimeUpdater } from '@/shared/lib/useAvgTimeUpdater';
 import { useSettingsUpdater } from '@/shared/lib/useSettingsUpdater';
 
 describe('shared updater hooks', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     mockStatState = {
@@ -31,69 +31,69 @@ describe('shared updater hooks', () => {
     };
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers();
     jest.clearAllTimers();
     jest.useRealTimers();
   });
 
-  it('useAvgTimeUpdater: при disabled не вызывает getAvgTime', () => {
+  it('useAvgTimeUpdater: при disabled не вызывает getAvgTime', async () => {
     function Probe() {
       useAvgTimeUpdater(false);
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
 
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(5 * 120_000);
     });
 
     expect(mockGetAvgTime).not.toHaveBeenCalled();
   });
 
-  it('useAvgTimeUpdater: при enabled вызывает сразу и каждые 120 секунд, cleanup останавливает interval', () => {
+  it('useAvgTimeUpdater: при enabled вызывает сразу и каждые 120 секунд, cleanup останавливает interval', async () => {
     function Probe() {
       useAvgTimeUpdater(true);
       return null as any;
     }
 
-    const { unmount } = render(<Probe />);
+    const { unmount } = await render(<Probe />);
 
     expect(mockGetAvgTime).toHaveBeenCalledTimes(1);
 
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(3 * 120_000);
     });
 
     expect(mockGetAvgTime).toHaveBeenCalledTimes(4);
 
-    unmount();
-    act(() => {
+    await unmount();
+    await act(async () => {
       jest.advanceTimersByTime(2 * 120_000);
     });
 
     expect(mockGetAvgTime).toHaveBeenCalledTimes(4);
   });
 
-  it('useSettingsUpdater: вызывает getSettings сразу и каждые 10 минут, cleanup останавливает interval', () => {
+  it('useSettingsUpdater: вызывает getSettings сразу и каждые 10 минут, cleanup останавливает interval', async () => {
     function Probe() {
       useSettingsUpdater();
       return null as any;
     }
 
-    const { unmount } = render(<Probe />);
+    const { unmount } = await render(<Probe />);
 
     expect(mockGetSettings).toHaveBeenCalledTimes(1);
 
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(2 * 10 * 60_000);
     });
 
     expect(mockGetSettings).toHaveBeenCalledTimes(3);
 
-    unmount();
-    act(() => {
+    await unmount();
+    await act(async () => {
       jest.advanceTimersByTime(10 * 60_000);
     });
 

@@ -5,7 +5,7 @@ import {View, StyleSheet} from 'react-native';
 import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome';
 import { faMapMarkerAlt, faDotCircle } from '@fortawesome/free-solid-svg-icons';
 
-import { Marker } from 'react-native-yamap';
+import { Marker } from 'react-native-yamap-plus';
 
 import { Path, G, Svg } from 'react-native-svg';
 

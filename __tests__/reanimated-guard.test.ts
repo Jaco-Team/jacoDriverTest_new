@@ -58,15 +58,18 @@ describe('reanimatedGuard', () => {
     installReanimatedGuard();
 
     const workletError = makeReanimatedError();
-    (globalThis as { ErrorUtils: { reportFatalError: (error: Error) => void } }).ErrorUtils.reportFatalError(
-      workletError,
-    );
+    const errorUtils = (
+      globalThis as unknown as {
+        ErrorUtils: { reportFatalError: (error: Error) => void };
+      }
+    ).ErrorUtils;
+    errorUtils.reportFatalError(workletError);
 
     expect(passthrough).not.toHaveBeenCalled();
     expect(Sentry.captureException).toHaveBeenCalled();
 
     const other = new Error('native fatal');
-    (globalThis as { ErrorUtils: { reportFatalError: (error: Error) => void } }).ErrorUtils.reportFatalError(other);
+    errorUtils.reportFatalError(other);
     expect(passthrough).toHaveBeenCalledWith(other);
   });
 

@@ -1,6 +1,6 @@
 buildscript {
     ext {
-        buildToolsVersion = "35.0.0"
+        buildToolsVersion = "36.0.0"
         minSdkVersion     = 26
         compileSdkVersion = 36
         targetSdkVersion  = 36
@@ -39,7 +39,7 @@ def deleteFinderDuplicateBuildFiles = { Project project ->
 subprojects {
   configurations.configureEach {
     resolutionStrategy {
-      force 'com.yandex.android:maps.mobile:4.19.0-navikit'
+      force 'com.yandex.android:maps.mobile:4.42.0-full'
       force 'com.google.android.gms:play-services-location:21.0.1'
     }
   }

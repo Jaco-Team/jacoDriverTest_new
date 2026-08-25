@@ -9,7 +9,7 @@ import * as Store from '@/shared/store/store';
 import * as ApiMod from '@/shared/store/api';
 
 describe('Кнопка "Взять" — номинальный путь', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
   });
 
@@ -48,7 +48,7 @@ describe('Кнопка "Взять" — номинальный путь', () => 
     const apiSpy = jest.spyOn(api, 'api').mockResolvedValueOnce({ st: true, text: '' });
 
     // --- Действие ---
-    act(() => {
+    await act(async () => {
       useOrdersStore.getState().actionButtonOrder(1, 123); // "Взять"
     });
 

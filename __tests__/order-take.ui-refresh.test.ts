@@ -17,7 +17,7 @@ type Ctx = {
 };
 
 describe('Взять → ручной рефреш UI (автообновление=0)', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
   });
 
@@ -66,7 +66,7 @@ describe('Взять → ручной рефреш UI (автообновлен�
       const apiSpy = jest.spyOn(api, 'api').mockResolvedValueOnce({ st: true, text: '' });
 
       // ДЕЙСТВИЕ: "Взять"
-      act(() => {
+      await act(async () => {
         useOrdersStore.getState().actionButtonOrder(1, 777);
       });
 

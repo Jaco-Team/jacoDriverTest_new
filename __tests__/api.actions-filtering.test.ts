@@ -15,14 +15,14 @@ describe('api.ts: режим actions — фильтрация скрытых id 
   const realEnv = process.env.NODE_ENV;
   const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
     // не трогаем axios.post тут — внутри isolate получим правильный инстанс
     (global as any).__FAKE_ORDERS__ = undefined;
     (global as any).__FAKE_HIDDEN_IDS__ = undefined;
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     process.env.NODE_ENV = realEnv;
     logSpy.mockRestore();
   });

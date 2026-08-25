@@ -37,7 +37,7 @@ import { useOrdersList } from '@/features/orders-list/model/useOrdersList';
 import { useTypeLimit } from '@/features/orders-list/model/useTypeLimit';
 
 describe('orders-list hooks', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     mockStatState = {
       FormatPrice: mockFormatPrice,
@@ -68,7 +68,7 @@ describe('orders-list hooks', () => {
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
 
     await waitFor(() => expect(mockGetSettings).toHaveBeenCalled());
     expect(mockGetSettings).toHaveBeenCalledTimes(2);
@@ -82,7 +82,7 @@ describe('orders-list hooks', () => {
     expect(api!.setActiveConfirm).toBe(mockSetActiveConfirm);
   });
 
-  it('useTypeLimit: возвращает лимиты, getOrders и размер шрифта', () => {
+  it('useTypeLimit: возвращает лимиты, getOrders и размер шрифта', async () => {
     let api: ReturnType<typeof useTypeLimit> | null = null;
 
     function Probe() {
@@ -90,7 +90,7 @@ describe('orders-list hooks', () => {
       return null as any;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
 
     expect(api!.getOrders).toBe(mockGetOrders);
     expect(api!.limit_summ).toBe('10000');

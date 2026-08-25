@@ -38,7 +38,7 @@
 | Этап | Статус |
 | --- | --- |
 | 0. Ветка и docs | сделан. Запуск Android и iOS из `new_architecture` ок, поведение как на `main` |
-| 1. Аудит и bump + флаги Fabric | не начат, нужен отдельный допуск на код |
+| 1. Аудит и bump + флаги Fabric | в работе: RN 0.86 / Fabric ON / yamap-plus |
 | 2. Native compile | не начат |
 | 3. Jest / TS хвост | не начат |
 | 4. Android debug smoke | не начат |
@@ -75,7 +75,7 @@ Babel: `react-native-worklets/plugin`. Не использовать `react-nati
 
 ### Карты: New Arch пробуем на `react-native-yamap-plus`
 
-Сейчас в проекте `react-native-yamap@4.8.3` (оригинал Волга-Волга, Paper). Для New Architecture **не опираемся на эту линейку**. На этапах native compile и smoke карты переходим на [react-native-yamap-plus](https://www.npmjs.com/package/react-native-yamap-plus) и **на ней** проверяем Fabric.
+В коде уже `react-native-yamap-plus@6.10.1`. Старая `react-native-yamap@4.8.3` снята. New Architecture проверяем на plus.
 
 Почему так: оригинал `4.8.3` — последний релиз ноября 2024, New Arch там нет. Plus живой (линейка 6 = New Arch, 5 = Paper + New Arch). Это не «сейчас», а решение плана на этапы 1–2 и карточный smoke.
 
@@ -83,7 +83,7 @@ Babel: `react-native-worklets/plugin`. Не использовать `react-nati
 
 - пакет другой: `react-native-yamap` → `react-native-yamap-plus`;
 - init и часть props не drop-in (`YaMap.init` → `YamapInstance.init`, жесты `*Enabled` → `*Disabled`);
-- старый патч [patches/react-native-yamap+4.8.3.patch](../patches/react-native-yamap+4.8.3.patch) к plus как есть не приклеится — смысл фиксов переносить только если plus их ещё не закрыл;
+- старый патч `react-native-yamap+4.8.3` удалён; смысл фиксов переносить только если plus их ещё не закрыл;
 - карта — основной экран: маркеры, grouping, tap, zoom, traffic.
 
 Это **не пакет Яндекса**, и **Волга-Волга тоже не Яндекс**. Официально Яндекс даёт MapKit для Android, iOS и Flutter: [MapKit SDK](https://yandex.ru/maps-api/products/mapkit), репозиторий [yandex/yandex_maps_mapkit](https://github.com/yandex/yandex_maps_mapkit). Отдельной официальной библиотеки React Native у Яндекса нет.

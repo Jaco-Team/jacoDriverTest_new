@@ -17,7 +17,7 @@ def node_require(script)
 end
 
 $RNFirebaseAsStaticFramework = true
-ENV['RCT_NEW_ARCH_ENABLED'] = '0'
+ENV['RCT_NEW_ARCH_ENABLED'] = '1'
 
 def cleanup_finder_duplicates!(root_dir)
   return unless Dir.exist?(root_dir)
@@ -96,9 +96,19 @@ target 'jacoDriverTest' do
         build_config.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
         build_config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
 
-        # fmt 11 can trip over consteval-related issues on newer Apple toolchains.
         if target.name == 'fmt'
           build_config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+          definitions = build_config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
+          definitions = [definitions] unless definitions.is_a?(Array)
+          definitions << 'FMT_USE_CONSTEVAL=0' unless definitions.include?('FMT_USE_CONSTEVAL=0')
+          build_config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = definitions
+        end
+
+        if ['RNYamap', 'react-native-yamap-plus'].include?(target.name)
+          ldflags = build_config.build_settings['OTHER_LDFLAGS']
+          flags = ldflags.is_a?(Array) ? ldflags.dup : [ldflags || '$(inherited)']
+          flags << '-ObjC' unless flags.include?('-ObjC')
+          build_config.build_settings['OTHER_LDFLAGS'] = flags
         end
       end
     end

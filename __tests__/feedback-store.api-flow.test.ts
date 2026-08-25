@@ -35,7 +35,7 @@ describe('useFeedbackStore api flow', () => {
     images: [],
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     global.fetch = originalFetch;
@@ -64,13 +64,13 @@ describe('useFeedbackStore api flow', () => {
     } as any);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
     global.fetch = originalFetch;
   });
 
-  it('setStatus/setSearchQuery: обновляет фильтры списка', () => {
+  it('setStatus/setSearchQuery: обновляет фильтры списка', async () => {
     useFeedbackStore.getState().setStatus('В работе');
     useFeedbackStore.getState().setSearchQuery('ошибка');
 
@@ -139,7 +139,7 @@ describe('useFeedbackStore api flow', () => {
     });
   });
 
-  it('modal helpers: открывает/закрывает create и view modal с аналитикой', () => {
+  it('modal helpers: открывает/закрывает create и view modal с аналитикой', async () => {
     useFeedbackStore.getState().openCreateModal();
 
     expect(useFeedbackStore.getState().modal.isCreateModalOpen).toBe(true);

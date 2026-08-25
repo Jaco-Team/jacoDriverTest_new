@@ -12,12 +12,12 @@ import * as Store from '@/shared/store/store';
 import * as ApiMod from '@/shared/store/api';
 
 describe('Взять (type=1): GPS-ветвления', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
     jest.useFakeTimers();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
     jest.clearAllMocks();

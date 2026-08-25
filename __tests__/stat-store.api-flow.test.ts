@@ -24,7 +24,7 @@ const originalShowModalErrCam = useStatStore.getState().showModalErrCam;
 const originalShowModalErrOrder = useStatStore.getState().showModalErrOrder;
 
 describe('useStatStore api flow', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
 
@@ -57,12 +57,12 @@ describe('useStatStore api flow', () => {
     } as any);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
   });
 
-  it('format helpers: форматирует цену и дату для UI', () => {
+  it('format helpers: форматирует цену и дату для UI', async () => {
     expect(useStatStore.getState().FormatPrice(1234567)).toBe('1 234 567');
     expect(useStatStore.getState().FormatDate('2026-06-30')).toBe('30 июня 2026');
   });

@@ -42,7 +42,7 @@
 - `Firebase Messaging` и локальная notification-обвязка
 - `AppMetrica` для аналитики
 - `Sentry` для crash/error reporting
-- `react-native-yamap` для карты
+- `react-native-yamap-plus` для карты
 - `Jest` и `React Native Testing Library` для unit/component-level тестов
 
 ## Платформы
@@ -279,7 +279,7 @@ API используется через store-методы и бизнес-ху�
 
 ### Карты
 
-Используется `react-native-yamap`.
+Используется `react-native-yamap-plus`.
 
 Инициализация находится в:
 

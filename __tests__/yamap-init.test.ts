@@ -1,11 +1,11 @@
-import YaMap from 'react-native-yamap';
+import { YamapInstance } from 'react-native-yamap-plus';
 import { initYaMap, resetYaMapInit, YAMAP_API_KEY } from '@/shared/lib/yaMapInit';
 
 describe('initYaMap', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetYaMapInit();
     jest.clearAllMocks();
-    (YaMap.init as jest.Mock).mockImplementation(() => Promise.resolve());
+    (YamapInstance.init as jest.Mock).mockImplementation(() => Promise.resolve());
   });
 
   it('инициализирует MapKit один раз и переиспользует тот же промис', async () => {
@@ -15,17 +15,17 @@ describe('initYaMap', () => {
     await expect(first).resolves.toBe(true);
     await expect(second).resolves.toBe(true);
     expect(first).toBe(second);
-    expect(YaMap.init).toHaveBeenCalledTimes(1);
-    expect(YaMap.init).toHaveBeenCalledWith(YAMAP_API_KEY);
+    expect(YamapInstance.init).toHaveBeenCalledTimes(1);
+    expect(YamapInstance.init).toHaveBeenCalledWith(YAMAP_API_KEY);
   });
 
   it('после ошибки позволяет принудительно повторить инициализацию', async () => {
-    (YaMap.init as jest.Mock)
+    (YamapInstance.init as jest.Mock)
       .mockImplementationOnce(() => Promise.reject(new Error('init failed')))
       .mockImplementationOnce(() => Promise.resolve());
 
     await expect(initYaMap()).resolves.toBe(false);
     await expect(initYaMap({ force: true })).resolves.toBe(true);
-    expect(YaMap.init).toHaveBeenCalledTimes(2);
+    expect(YamapInstance.init).toHaveBeenCalledTimes(2);
   });
 });

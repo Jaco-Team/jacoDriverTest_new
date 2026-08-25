@@ -36,11 +36,11 @@ const makeOrder = (patch: Partial<Order>): Order =>
     ...patch,
   } as Order);
 
-test('мой заказ: cancel/finish/fake → корректные setActiveConfirm', () => {
+test('мой заказ: cancel/finish/fake → корректные setActiveConfirm', async () => {
   const item = makeOrder({});
   const setActiveConfirm = jest.fn();
 
-  render(
+  await render(
     <OrderActions
       item={item}
       dialCall={jest.fn()}
@@ -50,21 +50,21 @@ test('мой заказ: cancel/finish/fake → корректные setActiveCo
     />
   );
 
-  fireEvent.press(screen.getByTestId(`order-${item.id}-cancel`));
+  await fireEvent.press(screen.getByTestId(`order-${item.id}-cancel`));
   expect(setActiveConfirm).toHaveBeenCalledWith(true, item.id, 'cancel', false);
 
-  fireEvent.press(screen.getByTestId(`order-${item.id}-finish`));
+  await fireEvent.press(screen.getByTestId(`order-${item.id}-finish`));
   expect(setActiveConfirm).toHaveBeenCalledWith(true, item.id, 'finish', false);
 
-  fireEvent.press(screen.getByTestId(`order-${item.id}-fake`));
+  await fireEvent.press(screen.getByTestId(`order-${item.id}-fake`));
   expect(setActiveConfirm).toHaveBeenCalledWith(true, item.id, 'fake', false);
 
   expect(setActiveConfirm).toHaveBeenCalledTimes(3);
 });
 
-test('при online_pay=0 рядом с «Завершить» есть кнопка QR', () => {
+test('при online_pay=0 рядом с «Завершить» есть кнопка QR', async () => {
   const item = makeOrder({ online_pay: 0 });
-  render(
+  await render(
     <OrderActions
       item={item}
       dialCall={jest.fn()}

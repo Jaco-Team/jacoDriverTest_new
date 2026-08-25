@@ -11,12 +11,12 @@ import * as Store from '@/shared/store/store';
 import * as ApiMod from '@/shared/store/api';
 
 describe('Кнопка "Отменить" — ветки GPS и карта', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
     jest.useFakeTimers();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
     jest.clearAllMocks();

@@ -18,7 +18,7 @@ import {
 } from '@/shared/store/store';
 
 describe('useSettingsStore.getSettings', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     useGlobalStore.setState({
       tokenAuth: 'test-token',

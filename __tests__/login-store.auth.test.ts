@@ -20,7 +20,7 @@ describe('useLoginStore auth flow', () => {
   const mockGetSettings = jest.fn();
   let consoleLogSpy: jest.SpyInstance;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -39,7 +39,7 @@ describe('useLoginStore auth flow', () => {
     } as any);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
     consoleLogSpy.mockRestore();
@@ -168,7 +168,7 @@ describe('useLoginStore auth flow', () => {
     expect(mockGetSettings).toHaveBeenCalledTimes(1);
   });
 
-  it('logogout: логирует выход и очищает token', () => {
+  it('logogout: логирует выход и очищает token', async () => {
     useGlobalStore.setState({ tokenAuth: 'auth-token' });
 
     useLoginStore.getState().logogout();

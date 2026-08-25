@@ -22,13 +22,13 @@ function deferred<T = any>() {
 }
 
 describe('Анти-дребезг actionButtonOrder', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
     jest.useFakeTimers();
     jest.clearAllMocks();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     try { jest.runOnlyPendingTimers(); } catch {}
     jest.useRealTimers();
   });

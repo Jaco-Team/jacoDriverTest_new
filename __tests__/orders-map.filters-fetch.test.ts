@@ -14,7 +14,7 @@ import { useGlobalStore, useOrdersStore } from '@/shared/store/store';
 const originalGetOrders = useOrdersStore.getState().getOrders;
 
 describe('orders-map filters and getOrders', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     useGlobalStore.setState({
@@ -41,12 +41,12 @@ describe('orders-map filters and getOrders', () => {
     } as any);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
   });
 
-  it('setTypeDop: пустой выбор сбрасывает фильтр на все типы и запускает reload', () => {
+  it('setTypeDop: пустой выбор сбрасывает фильтр на все типы и запускает reload', async () => {
     const getOrders = jest.fn();
     useOrdersStore.setState({
       type_dop: ['1'],
@@ -59,7 +59,7 @@ describe('orders-map filters and getOrders', () => {
     expect(getOrders).toHaveBeenCalledWith(true);
   });
 
-  it('filterOrdersByTypes фильтрует активные заказы по статусам доп-типов', () => {
+  it('filterOrdersByTypes фильтрует активные заказы по статусам доп-типов', async () => {
     const result = useOrdersStore.getState().filterOrdersByTypes(
       [
         { id: 1, status: 'В очереди' },

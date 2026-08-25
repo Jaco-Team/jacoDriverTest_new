@@ -7,7 +7,7 @@ describe('action_centered_map: центрирование после взяти�
   const originalRequestMapHomeCenter = useOrdersStore.getState().requestMapHomeCenter;
   const originalActionOrder = useOrdersStore.getState().actionOrder;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     useGlobalStore.setState({
       setSpinner: jest.fn(),

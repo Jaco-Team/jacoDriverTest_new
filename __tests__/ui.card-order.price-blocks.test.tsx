@@ -32,9 +32,9 @@ const common = {
   setActiveConfirm: jest.fn(),
 };
 
-test('online_pay=1: показывается «Оплачено», «Сдача с:» скрыт', () => {
+test('online_pay=1: показывается «Оплачено», «Сдача с:» скрыт', async () => {
   const item = mkItem({ online_pay: 1, sdacha: 100, sum_sdacha: 50 });
-  render(<CardOrder item={item} {...common} />);
+  await render(<CardOrder item={item} {...common} />);
 
   // Есть блок суммы и метка "Оплачено"
   expect(screen.getByTestId('order-price-sum')).toBeTruthy();
@@ -47,9 +47,9 @@ test('online_pay=1: показывается «Оплачено», «Сдача 
   expect(screen.queryByTestId('order-price-sdacha')).toBeNull();
 });
 
-test('online_pay=0 + sdacha>0: показывается «Сдача с:» с данными', () => {
+test('online_pay=0 + sdacha>0: показывается «Сдача с:» с данными', async () => {
   const item = mkItem({ online_pay: 0, sdacha: 1000, sum_sdacha: 500 });
-  render(<CardOrder item={item} {...common} />);
+  await render(<CardOrder item={item} {...common} />);
 
   // Видны и сумма, и её числовое значение
   expect(screen.getByTestId('order-price-sum')).toBeTruthy();
@@ -60,9 +60,9 @@ test('online_pay=0 + sdacha>0: показывается «Сдача с:» с д
   expect(screen.getByTestId('order-price-sdacha-value')).toBeTruthy();
 });
 
-test('online_pay=0 + sdacha=0: «Сдача с:» скрыт', () => {
+test('online_pay=0 + sdacha=0: «Сдача с:» скрыт', async () => {
   const item = mkItem({ online_pay: 0, sdacha: 0, sum_sdacha: 0 });
-  render(<CardOrder item={item} {...common} />);
+  await render(<CardOrder item={item} {...common} />);
 
   expect(screen.getByTestId('order-price-sum')).toBeTruthy();
   expect(screen.getByTestId('order-price-sum-value')).toBeTruthy();

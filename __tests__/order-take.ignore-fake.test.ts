@@ -8,7 +8,7 @@ import * as Store from '@/shared/store/store';
 import * as ApiMod from '@/shared/store/api';
 
 describe('Кнопка "Взять" — игнорируем залипший type_confirm=fake', () => {
-  beforeEach(() => { jest.resetModules(); });
+  beforeEach(async () => { jest.resetModules(); });
 
   it('type=1: check_pos_fake -> actionOrder (а не actionOrderFake), при driver_need_gps=true', async () => {
     const { useOrdersStore, useGEOStore } = require('@/shared/store/store') as typeof Store;
@@ -28,7 +28,7 @@ describe('Кнопка "Взять" — игнорируем залипший ty
 
     const apiSpy = jest.spyOn(api, 'api').mockResolvedValueOnce({ st: true, text: '' });
 
-    act(() => {
+    await act(async () => {
       useOrdersStore.getState().actionButtonOrder(1, 42);
     });
 

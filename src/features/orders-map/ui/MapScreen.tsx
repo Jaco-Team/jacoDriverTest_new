@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
-import YaMap from 'react-native-yamap'
+import YaMap from 'react-native-yamap-plus'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faLocationDot, faLockOpen, faLock, faFilter, faLocationPin, faLocationPinLock, faRoad } from '@fortawesome/free-solid-svg-icons'
 
@@ -127,7 +127,7 @@ export function MapScreen() {
             showUserPosition={false}
             ref={mapRef}
             style={StyleSheet.absoluteFill}
-            rotateGesturesEnabled={rotate_map}
+            rotateGesturesDisabled={!rotate_map}
             nightMode={night_map == 1}
             initialRegion={home ? { lat: home.lat, lon: home.lon, zoom: 12 } : undefined}
             onMapLoaded={handleMapLoaded}

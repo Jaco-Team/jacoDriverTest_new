@@ -44,9 +44,9 @@ npm run test:unit
 - файл: [.github/workflows/ci-baseline.yml](../../.github/workflows/ci-baseline.yml);
 - name: `CI Baseline`;
 - запуск: на каждый `pull_request`;
-- запуск: на `push` в `main`;
+- запуск: на `push` в `main` и `new_architecture`;
 - job name: `lint-typecheck-unit`;
-- Node.js: `20`;
+- Node.js: `24`;
 - установка зависимостей: `npm ci`;
 - проверки:
   - `npm run lint`;
@@ -81,7 +81,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
