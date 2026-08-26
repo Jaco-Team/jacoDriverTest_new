@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text, TouchableOpacity, Platform } from 'react-native'
+import { Text, TouchableOpacity } from 'react-native'
 import {
   Actionsheet,
   ActionsheetContent,
@@ -57,11 +57,14 @@ export function ChooseMonth(): React.JSX.Element {
                 onSelectMonth(item.day, item.mounth);     
                 setIsOpenDateMenu(false);
               }}
-              className={ `${index === 0 || index === 1 ? 'border-b border-gray-200' : ''} flex-row items-center justify-center w-full ${Platform.OS === 'ios' ? 'h-12' : 'h-auto'}` }
+              className={`${index === 0 || index === 1 ? 'border-b border-gray-200' : ''} flex-row items-center justify-center w-full h-auto overflow-visible`}
             >
               <ActionsheetItemText
-                style={{ fontSize: globalFontSize * 1.2 }}
-                className="pt-2 pb-2 text-center h-auto leading-7"
+                style={{
+                  fontSize: globalFontSize * 1.2,
+                  lineHeight: globalFontSize * 1.2 * 1.35,
+                }}
+                className="py-2 text-center"
               >
                 {item.mounth}
               </ActionsheetItemText>

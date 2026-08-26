@@ -36,8 +36,8 @@ npm run lint
 
 - команда проходит успешно;
 - проект использует flat config [eslint.config.js](../eslint.config.js);
-- старый [.eslintrc.js](../.eslintrc.js) оставлен как исторический файл, но ESLint 9 берет `eslint.config.js`;
-- `@typescript-eslint`, `eslint-plugin-react-hooks` и `eslint-plugin-react-native` закреплены явными dev-зависимостями с поддержкой ESLint 9 / TypeScript 5.7;
+- старый [.eslintrc.js](../.eslintrc.js) оставлен как исторический файл, но ESLint 10 берет `eslint.config.js`;
+- `@typescript-eslint`, `eslint-plugin-react-hooks` и `eslint-plugin-react-native` закреплены явными dev-зависимостями с поддержкой ESLint 10 / TypeScript 5.7;
 - текущий lint baseline минимальный: он проверяет парсинг и базовые правила, но строгие RN/hooks правила пока не включены как обязательный gate.
 
 Вывод:

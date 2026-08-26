@@ -17,6 +17,7 @@ def node_require(script)
 end
 
 $RNFirebaseAsStaticFramework = true
+$RNFirebaseDisableSPM = true
 ENV['RCT_NEW_ARCH_ENABLED'] = '1'
 
 def cleanup_finder_duplicates!(root_dir)

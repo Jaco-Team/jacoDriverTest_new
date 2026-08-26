@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { InteractionManager } from 'react-native'
 import { useFocusEffect, useIsFocused } from '@react-navigation/native'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -11,6 +10,21 @@ import { initYaMap } from '@/shared/lib/yaMapInit'
 import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
 
 const MAP_LOAD_RETRY_MS = 2500
+
+function scheduleAfterInteractions(cb: () => void): () => void {
+  const g = globalThis as typeof globalThis & {
+    requestIdleCallback?: (callback: () => void) => number
+    cancelIdleCallback?: (handle: number) => void
+  }
+
+  if (typeof g.requestIdleCallback === 'function') {
+    const id = g.requestIdleCallback(cb)
+    return () => g.cancelIdleCallback?.(id)
+  }
+
+  const id = setTimeout(cb, 0)
+  return () => clearTimeout(id)
+}
 
 export function useMapLogic() {
   const mapRef = useRef<React.ElementRef<typeof YaMap>>(null)
@@ -128,14 +142,11 @@ export function useMapLogic() {
         }
       }
 
-      const task = InteractionManager?.runAfterInteractions?.(mountMap)
-      if (!task) {
-        mountMap()
-      }
+      const cancelSchedule = scheduleAfterInteractions(mountMap)
 
       return () => {
         cancelled = true
-        task?.cancel?.()
+        cancelSchedule()
         setMapMounted(false)
       };
     }, [getOrders, getSettings])

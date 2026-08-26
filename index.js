@@ -12,6 +12,7 @@
  * @format
  */
 import 'react-native-gesture-handler';
+import './src/shared/lib/interactionManagerCompat';
 import './src/shared/lib/reanimatedGuard';
 import {AppRegistry} from 'react-native';
 import App from './App';

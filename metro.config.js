@@ -14,7 +14,12 @@ const {
   withSentryConfig
 } = require("@sentry/react-native/metro");
 
-const config = mergeConfig(getDefaultConfig(__dirname), {
+const defaultConfig = getDefaultConfig(__dirname);
+const sourceExts = defaultConfig.resolver.sourceExts.includes("mjs")
+  ? defaultConfig.resolver.sourceExts
+  : [...defaultConfig.resolver.sourceExts, "mjs"];
+
+const config = mergeConfig(defaultConfig, {
   resolver: {
     blockList: exclusionList([
       /\/android\/\.gradle\/.*/,
@@ -24,6 +29,8 @@ const config = mergeConfig(getDefaultConfig(__dirname), {
       /\/ios\/DerivedData\/.*/,
       /\/ios\/Pods\/.*/,
     ]),
+    // lucide-react-native 1.x: поле react-native / exports указывает на .mjs
+    sourceExts,
   },
 });
 

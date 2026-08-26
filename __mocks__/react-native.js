@@ -66,6 +66,18 @@ const Keyboard = {
 };
 def(rn, 'Keyboard', Keyboard);
 
+/** RN 0.87 removed InteractionManager; drawer-layout 4.x still calls it. */
+def(rn, 'InteractionManager', {
+  createInteractionHandle: jest.fn(() => 1),
+  clearInteractionHandle: jest.fn(),
+  runAfterInteractions: jest.fn(task => {
+    if (typeof task === 'function') {
+      task()
+    }
+    return {then: jest.fn(), done: jest.fn(), cancel: jest.fn()}
+  }),
+});
+
 /** ✅ LayoutAnimation — некоторые либы его трогают */
 const LayoutAnimation = {
   configureNext: jest.fn(),
@@ -79,17 +91,6 @@ const LayoutAnimation = {
   setEnabled: jest.fn(),
 };
 def(rn, 'LayoutAnimation', LayoutAnimation);
-
-def(rn, 'InteractionManager', {
-  runAfterInteractions: (cb) => {
-    if (typeof cb === 'function') {
-      cb();
-    }
-    return { cancel: () => {} };
-  },
-  createInteractionHandle: jest.fn(() => 1),
-  clearInteractionHandle: jest.fn(),
-});
 
 /** StyleSheet — страховка */
 if (!rn.StyleSheet || typeof rn.StyleSheet.create !== 'function') {

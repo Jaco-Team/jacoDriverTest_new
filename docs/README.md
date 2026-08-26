@@ -45,7 +45,7 @@
 
 [docs/new-architecture-migration-plan.md](./new-architecture-migration-plan.md)
 
-План переезда курьерского приложения на RN `0.86` и New Architecture / Fabric:
+План переезда курьерского приложения на RN `0.87` и New Architecture / Fabric:
 
 - ветка `new_architecture`;
 - целевой стек;
