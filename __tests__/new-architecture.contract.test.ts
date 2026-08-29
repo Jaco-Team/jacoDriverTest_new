@@ -24,7 +24,7 @@ describe('New Architecture contract', () => {
     };
     const deps = pkg.dependencies;
 
-    expect(deps['react-native']).toBe('0.87.0');
+    expect(deps['react-native']).toBe('0.87.1');
     expect(deps['react-native-reanimated']).toMatch(/^4\.(6|7|8|9)/);
     expect(deps['react-native-worklets']).toBeTruthy();
     expect(deps['react-native-yamap-plus']).toMatch(/^\^?6\.11/);
@@ -80,6 +80,46 @@ describe('New Architecture contract', () => {
     expect(read('android/build.gradle')).toContain("maps.mobile:4.42.0-full");
     expect(read('android/app/build.gradle')).toContain("maps.mobile:4.42.0-full");
     expect(read('android/app/build.gradle')).not.toContain('4.19.0-full');
+  });
+
+  it('Android использует edge-to-edge и системный Splash в стиле Greeting', () => {
+    const pkg = JSON.parse(read('package.json')) as {
+      dependencies: Record<string, string>;
+    };
+    const manifest = read('android/app/src/main/AndroidManifest.xml');
+    const activity = read(
+      'android/app/src/main/java/com/jacodrivertest/MainActivity.kt',
+    );
+    const styles = read('android/app/src/main/res/values/styles.xml');
+    const debugStyles = read('android/app/src/debug/res/values/styles.xml');
+    const colors = read('android/app/src/main/res/values/colors.xml');
+    const splashIcon = read(
+      'android/app/src/main/res/drawable/splash_icon_padded.xml',
+    );
+
+    expect(pkg.dependencies['react-native-edge-to-edge']).toBe('1.8.1');
+    expect(read('android/gradle.properties')).toMatch(
+      /edgeToEdgeEnabled\s*=\s*true/,
+    );
+    expect(read('android/app/build.gradle')).toContain(
+      'androidx.core:core-splashscreen:1.0.1',
+    );
+    expect(manifest).toMatch(/android:theme="@style\/Theme\.App\.Starting"/);
+    expect(activity).toContain('installSplashScreen()');
+    expect(styles).toContain('name="AppTheme" parent="Theme.EdgeToEdge"');
+    expect(styles).toContain(
+      'name="Theme.App.Starting" parent="Theme.SplashScreen"',
+    );
+    expect(styles).toContain(
+      '<item name="postSplashScreenTheme">@style/AppTheme</item>',
+    );
+    expect(colors).toContain(
+      '<color name="splash_background">#CC0033</color>',
+    );
+    expect(splashIcon).toContain('@drawable/jaco_splash_logo');
+    expect(debugStyles).toContain(
+      '<item name="android:windowBackground">@color/splash_background</item>',
+    );
   });
 
   it('не включает индикатор сети/GPS в AppProviders', () => {

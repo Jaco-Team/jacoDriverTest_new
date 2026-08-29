@@ -1,6 +1,6 @@
 # План миграции на React Native 0.87 / Fabric
 
-Дата: 24 августа 2026 года. Обновлён 25 августа 2026: цель волны — RN `0.87.0`, не клиентский `0.86`. Волна зависимостей после `0.87`: Navigation 7.13.9, Sentry 8.23.0, Firebase 26.3.2, AppMetrica 4.2.0, async-storage 3.1.1, datetimepicker 9.1.0, netinfo 12.0.1, fontawesome RN 1.0.0, lucide-react-native 1.34.0, device-info 15.0.2, ESLint 10, screens 4.27, RNGH 3.2.1, yamap-plus 6.11.0, Babel 7.29.
+Дата: 24 августа 2026 года. Обновлён 27 августа 2026: текущая версия — RN `0.87.1`, не клиентский `0.86`. После отдельной проверки RN patch обновлены совместимые зависимости внутри текущих major. Tailwind 4, NativeWind 5 и остальные major-переходы в эту волну не входят.
 
 Ветка: `new_architecture`. Ветка `main` не меняется этим планом.
 
@@ -8,7 +8,7 @@
 
 На `main` проект был на RN `0.77.2` / React `18.3` / Paper, New Architecture выключена. Это тупик.
 
-На `new_architecture` фундамент уже поднят до RN `0.86` + Fabric. Дальше не копируем клиентский пин `0.86` (он был актуален, когда делали сайт). Цель волны: **RN `0.87.0`** — latest stable на момент 25 августа 2026.
+На `new_architecture` фундамент уже поднят до RN `0.86` + Fabric. Дальше не копируем клиентский пин `0.86` (он был актуален, когда делали сайт). Текущая версия волны: **RN `0.87.1`** — patch-релиз после первоначального перехода на `0.87.0`.
 
 Цель: тот же курьерский продукт на текущем фундаменте. Не новое приложение.
 
@@ -35,9 +35,9 @@
 | Этап | Статус |
 | --- | --- |
 | 0. Ветка и docs | сделан |
-| 1. Аудит и bump + флаги Fabric | сделан: RN `0.87.0` + Fabric, yamap-plus |
-| 2. Native compile | debug Android и iOS на `0.87` собираются (после Sentry 8 / Firebase 26 тоже) |
-| 3. Jest / TS хвост | lint / typecheck / unit зелёные на `0.87` + ESLint 10 |
+| 1. Аудит и bump + флаги Fabric | сделан: RN `0.87.1` + Fabric, yamap-plus |
+| 2. Native compile | debug Android и iOS на `0.87.1` собираются; повторно проверены после совместимых обновлений 27 августа |
+| 3. Jest / TS хвост | lint / typecheck / 179 unit-тестов зелёные на `0.87.1` + ESLint 10 |
 | 4. Android debug smoke | список, drawer, карта и маркеры на эмуляторе ок; GPS — на Samsung |
 | 5. iOS debug smoke | симулятор стартует, список ок; карту/drawer с симулятора не докликали (нет a11y-тапа); реального iPhone нет |
 | 6. Release smoke | не начат. Прод-выкладку делает не эта задача |
@@ -49,12 +49,12 @@
 Конкретные patch-версии сверять по этому репозиторию, не по клиентскому `package.json`.
 
 - Node `>=24 <25` (минимум RN 0.87 — `>= 22.13`; CI на Node 24)
-- React Native `0.87.0`
+- React Native `0.87.1`
 - React / React DOM `19.2.x` (не даунгрейдить патч ниже шаблонного)
 - New Architecture / Fabric / Hermes включены
 - Reanimated `4.6.x` + `react-native-worklets` `0.12.x` (4.5.x 0.87 не поддерживает) + Gesture Handler `3.2.1`
 - Screens `4.27.0` / Safe Area `5.9.1` — актуальные под RN `0.87`
-- Navigation: `@react-navigation/drawer` `^7.13.9`, `native` `^7.3.17`, `native-stack` `^7.18.9` (линейка 7; восьмёрка — alpha, не берём)
+- Navigation: `@react-navigation/drawer` `^7.13.10`, `native` `^7.3.18`, `native-stack` `^7.18.10` (линейка 7; восьмёрка — alpha, не берём)
 - Sentry `@sentry/react-native` `8.23.0` (патч `7.13.0` снят)
 - Firebase `@react-native-firebase/app` + `messaging` `26.3.2` (одна версия на оба)
 - ESLint `10.x`; Babel `^7.29.7` (не 8; пресет RN 0.87 на семёрке); TypeScript `5.9.3` (не 6/7)
@@ -65,7 +65,7 @@
 
 | Пакет | package.json |
 | --- | --- |
-| `react-native` | `0.87.0` |
+| `react-native` | `0.87.1` |
 | `react-native-reanimated` / `react-native-worklets` | `4.6.0` / `0.12.1` |
 | `react-native-gesture-handler` | `3.2.1` |
 | `react-native-screens` / `react-native-safe-area-context` | `4.27.0` / `5.9.1` |
@@ -80,10 +80,21 @@
 | `@react-native-community/netinfo` | `12.0.1` (индикатор сети в AppProviders выключен) |
 | `react-native-device-info` | `15.0.2` (`isLocationEnabled` в выключенном ConnectivityLocationIndicator; breaking 15 = compileSdk 34+, у нас 37) |
 | `@react-native-firebase/app` + `messaging` | `26.3.2` |
-| `@react-navigation/drawer` / `native` / `native-stack` | `^7.13.9` / `^7.3.17` / `^7.18.9` |
+| `@react-navigation/drawer` / `native` / `native-stack` | `^7.13.10` / `^7.3.18` / `^7.18.10` |
 | `eslint` | `^10.9.1` |
 | `@babel/core` | `^7.29.7` |
 | `typescript` | `5.9.3` |
+
+Совместимые обновления внутри текущих major от 27 августа 2026:
+
+- Font Awesome core/icons `7.3.1`, resolvers `5.9.1`, axios `1.20.0`;
+- dayjs `1.11.23`, query-string `9.5.0`, react-hook-form `7.86.0`, zustand `5.0.15`;
+- react-native-permissions `5.6.1`, baseline-browser-mapping `2.11.19`;
+- Tailwind `3.4.19` и NativeWind `4.2.6` оставлены без изменений.
+
+Контроль после обновлений: `npm run lint`, `npm run typecheck`, `npm run test:unit` (51 suite / 179 tests), Android `app:assembleDebug` и iOS Debug simulator build — успешно.
+
+`npm audit` после обновлений показывает 14 транзитивных проблем (2 low / 12 high). Автоматический `audit fix` не применялся: для RN/Metro он предлагает откат на RN `0.86.3`, а для Gluestack — несовместимый откат `@gluestack-ui/nativewind-utils`. Разбирать audit-хвост нужно отдельной задачей без изменения зафиксированного RN-фундамента.
 
 Костыли, которые остаются: shim `InteractionManager`; Strict TS `react-native-legacy-deep-imports` до RN 0.88; Metro `sourceExts` + `mjs` под lucide 1. Патч Sentry 7 снят.
 
@@ -138,7 +149,7 @@ Babel: `react-native-worklets/plugin`. Не использовать `react-nati
 - Android `newArchEnabled=true`, iOS `RCT_NEW_ARCH_ENABLED=1`;
 - клиентские файлы и пины не копировать.
 
-Ориентир: Upgrade Helper `0.86.0 → 0.87.0` и требования RN `0.87`. Не копировать клиентские пины.
+Ориентир нативной миграции: Upgrade Helper `0.86.0 → 0.87.0`, затем patch `0.87.1`, и требования RN `0.87`. Не копировать клиентские пины.
 
 ### Этап 2. Native compile
 
@@ -200,7 +211,7 @@ MiniCodePush в этом проекте нет.
 1. **Карта** — основной рабочий экран. New Arch проверяем на `react-native-yamap-plus`, не на старой `react-native-yamap@4.8.3`. Точки: [MapScreen.tsx](../src/features/orders-map/ui/MapScreen.tsx), `freezeOnBlur: false` в [MainDrawerNavigator.tsx](../src/app/navigation/MainDrawerNavigator.tsx).
 2. **Геолокация** — `@react-native-community/geolocation` в [store.ts](../src/shared/store/store.ts). Библиотеку не менять, пока 0.87 её не сломает.
 3. **Sentry** — `Sentry.wrap`, metro, [reanimatedGuard.ts](../src/shared/lib/reanimatedGuard.ts). На `8.23.0` iOS собирается без патча `RCTTextView.h` (патч `7.13.0` удалён).
-3a. **Drawer / InteractionManager** — RN `0.87` удалил `InteractionManager`. Drawer `7.13.9` / `react-native-drawer-layout` 4.2.x на RN ≥ 0.82 сами не дергают handle, но shim [interactionManagerCompat.ts](../src/shared/lib/interactionManagerCompat.ts) оставляем: жест меню на устройстве без shim не снимали. Navigation 8 — alpha, не берём.
+3a. **Drawer / InteractionManager** — RN `0.87` удалил `InteractionManager`. Drawer `7.13.10` / `react-native-drawer-layout` 4.2.x на RN ≥ 0.82 сами не дергают handle, но shim [interactionManagerCompat.ts](../src/shared/lib/interactionManagerCompat.ts) оставляем: жест меню на устройстве без shim не снимали. Navigation 8 — alpha, не берём.
 3b. **Firebase 26** — modular JS уже был (`getApp` / `getMessaging`). Native iOS: не SPM (статическая линковка), `$RNFirebaseDisableSPM = true`. Откат — парой `app`+`messaging`.
 4. **`react-native-reanimated-table`** в графике и статистике. Если сломается на Reanimated 4 — точечный фикс.
 5. **`@react-spring/native`** в [CustomAlert.tsx](../src/shared/ui/CustomAlert.tsx). Менять только при регрессии.
@@ -232,14 +243,14 @@ MiniCodePush в этом проекте нет.
 
 **Ещё нет или не стабильно**
 
-- `react-native` `0.88` — не выпущен; latest stable = `0.87.0`. Strict TS opt-out `react-native-legacy-deep-imports` в tsconfig живёт до будущего 0.88.
-- `@react-navigation/*` 8 (`@next`) — alpha. Последний stable drawer — семёрка (`^7.13.9`). Shim `InteractionManager` оставляем.
+- `react-native` `0.88` — не выпущен; текущий stable в проекте = `0.87.1`. Strict TS opt-out `react-native-legacy-deep-imports` в tsconfig живёт до будущего 0.88.
+- `@react-navigation/*` 8 (`@next`) — alpha. Последний stable drawer — семёрка (`^7.13.10`). Shim `InteractionManager` оставляем.
 - `nativewind` 5 — npm `preview` (`5.0.0-preview.4`). Stable = `4.2.6`.
 
 **Ломает текущий стек**
 
 - `tailwindcss` 4 — другой движок. NativeWind 4 и Gluestack `className` заточены под Tailwind 3. `^3.4.19` = последний 3.x (npm `v3-lts`).
-- `@babel/core` 8 — пресет `@react-native/babel-preset@0.87.0` на Babel 7 и плагинах семёрки. `^7.29.7` = последняя семёрка.
+- `@babel/core` 8 — пресет `@react-native/babel-preset@0.87.1` на Babel 7 и плагинах семёрки. `^7.29.7` = последняя семёрка.
 - `typescript` 7 — нативный Go-`tsc`, нет JS compiler API; `typescript-eslint@8` требует `>=4.8.4 <6.1.0` и на 7 падает. `5.9.3` = последняя пятёрка.
 - `@expo/html-elements` 55+ — нумерация Expo SDK, не drop-in с `^0.13.8`. Gluestack (Heading / Table / Actionsheet) сидит на 0.13.
 - Android `edgeToEdgeEnabled` / splash — не npm, флаг вёрстки; ломает системные инсеты (шапка, карта). С клиентского приложения не копировать.
@@ -257,7 +268,11 @@ MiniCodePush в этом проекте нет.
 
 ### UI-хвост
 
-Когда будет отдельный план вёрстки, не эта ветка:
+Отдельный план переноса интерфейса: [docs/driver-site-ui-migration-plan.md](./driver-site-ui-migration-plan.md).
+
+UI выполняется в ветке `new_architecture`, но отдельными согласованными этапами и не смешивается с волной обновления зависимостей.
+
+Исходный UI-хвост, который перенесён под контроль отдельного плана:
 
 - `ScreenLayout`: `SafeAreaView` из `react-native` deprecated на 0.87; перевести на `react-native-safe-area-context` (`SafeAreaProvider` в `AppProviders`, в layout по умолчанию `edges` без `top` — шапка drawer уже съела статус-бар; на `Auth` / `ResetPwd` — с `top`)
 - шапка: Android серый системный статус-бар, iOS красный `#c03` до верха — тема / `StatusBar`, не Fabric; на `main` в `styles.xml` `statusBarColor` тоже не было

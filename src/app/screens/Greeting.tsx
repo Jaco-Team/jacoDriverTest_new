@@ -1,34 +1,86 @@
-import React from 'react';
-
-import { View, Text } from 'react-native';
-
-import { Image } from '@/components/ui/image';
-import { Spinner } from "@/components/ui/spinner"
-import { Center } from "@/components/ui/center"
+import React from 'react'
+import {
+  ActivityIndicator,
+  Image,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
+import { useIsFocused } from '@react-navigation/native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useGreetingLogic } from '@/processes/auth/model/useGreetingLogic'
 
+const GREETING_BACKGROUND = '#CC0033'
+
 export function Greeting(): React.JSX.Element {
-  useGreetingLogic();
+  const isFocused = useIsFocused()
+
+  useGreetingLogic()
 
   return (
-    <View className='h-full w-full relative bg-gray-200'>
-      
-      <Image 
-        className={"absolute w-full min-h-[500px] top-0"}
-        source={require('@/shared/assets/wallpaper.png')}
-        alt="image"
-      /> 
-        
-      <Center className='w-full h-full mt-64'>
-        <Text className='font-roboto font-semibold text-5xl text-center'>Приложение курьера</Text>
-        <Text className='font-roboto font-semibold text-3xl'>сети кафе Жако</Text>
-      </Center>
+    <View style={styles.root} testID="greeting-screen">
+      {Platform.OS === 'ios' && isFocused ? (
+        <StatusBar barStyle="light-content" />
+      ) : null}
 
-      <Center className="absolute w-full h-full mt-20">
-        <Spinner size={'large'} />
-      </Center>
+      <SafeAreaView
+        edges={['top', 'right', 'bottom', 'left']}
+        style={styles.safeArea}
+      >
+        <View style={styles.content}>
+          <Image
+            accessibilityLabel="Логотип Жако"
+            resizeMode="contain"
+            source={require('@/shared/assets/logo.png')}
+            style={styles.logo}
+            testID="greeting-logo"
+          />
 
+          <Text accessibilityRole="header" style={styles.title}>
+            Приложение курьера{`\n`}сети кафе Жако
+          </Text>
+
+          <ActivityIndicator
+            accessibilityLabel="Проверка авторизации"
+            color="#FFFFFF"
+            size="large"
+            testID="greeting-spinner"
+          />
+        </View>
+      </SafeAreaView>
     </View>
-  );
+  )
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: GREETING_BACKGROUND,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  content: {
+    width: '100%',
+    height: '70%',
+    alignItems: 'center',
+    justifyContent: 'space-evenly',
+    paddingHorizontal: 24,
+  },
+  logo: {
+    width: 150,
+    height: 150,
+  },
+  title: {
+    width: '86%',
+    color: '#FFFFFF',
+    fontFamily: 'Roboto-Bold',
+    fontSize: 30,
+    fontWeight: '700',
+    lineHeight: 38,
+    textAlign: 'center',
+  },
+})

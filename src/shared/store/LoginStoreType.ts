@@ -8,11 +8,13 @@ export type LoginResponse = {
   st: Status;
   text?: string;
   token?: string;
+  captcha_required?: boolean;
 }
 
 export interface StatusTextType {
   st: Status;
   text: string;
+  captcha_required?: boolean;
 };
 
 export interface LoginTypes {

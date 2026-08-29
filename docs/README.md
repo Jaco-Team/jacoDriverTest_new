@@ -55,6 +55,16 @@
 - что не входит в эту миграцию;
 - оркестратор ролей Cursor в `.cursor/rules`.
 
+[docs/driver-site-ui-migration-plan.md](./driver-site-ui-migration-plan.md)
+
+План поэтапного переноса UI курьерского сайта в React Native-приложение:
+
+- эталонный проект, ветка и коммит;
+- порядок экранов;
+- визуальные и функциональные границы;
+- известные UI-недоработки;
+- критерии проверки Android и iOS.
+
 ### Раздел тестирования
 
 [docs/testing/README.md](./testing/README.md)
@@ -79,6 +89,7 @@
 6. Для текущего статуса смотреть [docs/testing/testing-progress.md](./testing/testing-progress.md).
 7. Перед релизом проходить [docs/testing/release-checklist.md](./testing/release-checklist.md).
 8. Для переезда на New Architecture смотреть [docs/new-architecture-migration-plan.md](./new-architecture-migration-plan.md).
+9. Для переноса UI курьерского сайта смотреть [docs/driver-site-ui-migration-plan.md](./driver-site-ui-migration-plan.md).
 
 ## Правило оформления ссылок
 

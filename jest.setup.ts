@@ -215,6 +215,7 @@ jest.mock('react-native-svg', () => {
     Rect: Mock,
     Defs: Mock,
     LinearGradient: Mock,
+    RadialGradient: Mock,
     Stop: Mock,
     ClipPath: Mock,
   };
@@ -236,6 +237,7 @@ jest.mock('@react-navigation/native', () => {
   const DefaultTheme = { dark: false, colors: {} };
   const ThemeProvider = ({ children }: any) => children;
   const useTheme = () => ({ colors: {} });
+  const useIsFocused = () => true;
   const createNavigationContainerRef = () => ({ current: null });
 
   return {
@@ -246,6 +248,7 @@ jest.mock('@react-navigation/native', () => {
     DefaultTheme,
     ThemeProvider,
     useTheme,
+    useIsFocused,
     createNavigationContainerRef,
   };
 });
@@ -254,6 +257,7 @@ jest.mock('@react-navigation/drawer', () => {
   const React = require('react');
   return {
     __esModule: true,
+    getDrawerStatusFromState: (state: any) => state?.default ?? 'closed',
     createDrawerNavigator: () => ({
       Navigator: ({ children }: any) => React.createElement(React.Fragment, null, children),
       Screen: ({ children }: any) => React.createElement(React.Fragment, null, children),

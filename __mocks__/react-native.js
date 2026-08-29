@@ -214,8 +214,63 @@ if (typeof rn.View !== 'function') {
   def(rn, 'View', mkHost('RN_VIEW'));
 }
 
+if (!rn.Animated || typeof rn.Animated.Value !== 'function') {
+  class AnimatedValue {
+    constructor(value) {
+      this.value = value;
+    }
+
+    setValue(value) {
+      this.value = value;
+    }
+  }
+
+  const runAnimation = (value, config = {}) => ({
+    start: (callback) => {
+      value?.setValue?.(config.toValue);
+      callback?.({ finished: true });
+    },
+    stop: jest.fn(),
+  });
+
+  def(rn, 'Animated', {
+    Value: AnimatedValue,
+    View: rn.View,
+    timing: jest.fn(runAnimation),
+    parallel: jest.fn((animations = []) => ({
+      start: (callback) => {
+        animations.forEach((animation) => animation?.start?.());
+        callback?.({ finished: true });
+      },
+      stop: jest.fn(),
+    })),
+  });
+}
+
 if (typeof rn.Text !== 'function') {
   def(rn, 'Text', mkHost('RN_TEXT'));
+}
+
+if (typeof rn.TextInput !== 'function') {
+  def(rn, 'TextInput', mkHost('RN_TEXT_INPUT'));
+}
+
+if (typeof rn.Image !== 'function') {
+  def(rn, 'Image', mkHost('RN_IMAGE'));
+}
+
+if (typeof rn.ActivityIndicator !== 'function') {
+  def(rn, 'ActivityIndicator', mkHost('RN_ACTIVITY_INDICATOR'));
+}
+
+if (typeof rn.KeyboardAvoidingView !== 'function') {
+  def(rn, 'KeyboardAvoidingView', mkHost('RN_KEYBOARD_AVOIDING_VIEW'));
+}
+
+if (typeof rn.StatusBar !== 'function') {
+  const StatusBar = mkHost('RN_STATUS_BAR');
+  Object.assign(StatusBar, rn.StatusBar || {});
+  def(rn, 'StatusBar', StatusBar);
 }
 
 if (typeof rn.TouchableOpacity !== 'function') {
@@ -233,5 +288,3 @@ if (typeof rn.ScrollView !== 'function') {
 }
 
 module.exports = rn;
-
-

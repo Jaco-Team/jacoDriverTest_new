@@ -59,7 +59,7 @@ describe('useLoginStore auth flow', () => {
       login: 'driver',
       pwd: '123456',
     });
-    expect(result).toEqual({ st: true, text: 'ok' });
+    expect(result).toEqual({ st: true, text: 'ok', captcha_required: false });
     expect(useGlobalStore.getState().tokenAuth).toBe('auth-token');
     expect(mockGetSettings).toHaveBeenCalledTimes(1);
     expect(useLoginStore.getState().is_load).toBe(true);
@@ -71,7 +71,7 @@ describe('useLoginStore auth flow', () => {
     expect(useGlobalStore.getState().loadSpinner).toBe(false);
   });
 
-  it('auth error: показывает modal text и не обновляет token', async () => {
+  it('auth error: возвращает текст для inline-ошибки и не обновляет token', async () => {
     mockApi.mockResolvedValueOnce({
       st: false,
       text: 'Неверный пароль',
@@ -79,16 +79,37 @@ describe('useLoginStore auth flow', () => {
 
     const result = await useLoginStore.getState().auth('driver', 'bad');
 
-    expect(result).toEqual({ st: false, text: 'Неверный пароль' });
+    expect(result).toEqual({
+      st: false,
+      text: 'Неверный пароль',
+      captcha_required: false,
+    });
     expect(useGlobalStore.getState().tokenAuth).toBe('');
     expect(mockGetSettings).not.toHaveBeenCalled();
-    expect(useGlobalStore.getState().is_show_modal_text).toBe(true);
-    expect(useGlobalStore.getState().modal_text).toBe('Неверный пароль');
+    expect(useGlobalStore.getState().is_show_modal_text).toBe(false);
+    expect(useGlobalStore.getState().modal_text).toBe('');
 
     jest.advanceTimersByTime(500);
 
     expect(useLoginStore.getState().is_load).toBe(false);
     expect(useGlobalStore.getState().loadSpinner).toBe(false);
+  });
+
+  it('auth captcha_required: передаёт UI требование показать CAPTCHA-заглушку', async () => {
+    mockApi.mockResolvedValueOnce({
+      st: false,
+      text: 'Требуется CAPTCHA',
+      data: { captcha_required: true },
+    });
+
+    const result = await useLoginStore.getState().auth('driver', 'bad');
+
+    expect(result).toEqual({
+      st: false,
+      text: 'Требуется CAPTCHA',
+      captcha_required: true,
+    });
+    expect(useGlobalStore.getState().tokenAuth).toBe('');
   });
 
   it('auth double click guard: пока is_load=true, API не вызывается повторно', async () => {
@@ -101,7 +122,7 @@ describe('useLoginStore auth flow', () => {
     expect(useGlobalStore.getState().loadSpinner).toBe(false);
   });
 
-  it('sendSMS success/error: логирует результат и на ошибке показывает modal text', async () => {
+  it('sendSMS success/error: логирует результат и возвращает ошибку для inline-блока', async () => {
     mockApi
       .mockResolvedValueOnce({ st: true, text: 'sent' })
       .mockResolvedValueOnce({ st: false, text: 'SMS недоступна' });
@@ -125,8 +146,8 @@ describe('useLoginStore auth flow', () => {
       'AuthSendSmsFail',
       'Ошибка отправки СМС-кода',
     );
-    expect(useGlobalStore.getState().is_show_modal_text).toBe(true);
-    expect(useGlobalStore.getState().modal_text).toBe('SMS недоступна');
+    expect(useGlobalStore.getState().is_show_modal_text).toBe(false);
+    expect(useGlobalStore.getState().modal_text).toBe('');
   });
 
   it('sendCode success: сохраняет token и запускает getSettings', async () => {
@@ -136,16 +157,38 @@ describe('useLoginStore auth flow', () => {
       data: { token: 'sms-token' },
     });
 
-    const result = await useLoginStore.getState().sendCode('driver', '0000');
+    const result = await useLoginStore.getState().sendCode('driver', '1107');
 
     expect(mockApi).toHaveBeenCalledWith('auth', {
       type: 'check_code',
       login: 'driver',
-      code: '0000',
+      code: '1107',
     });
     expect(result).toEqual({ st: true, text: 'ok' });
     expect(useGlobalStore.getState().tokenAuth).toBe('sms-token');
     expect(mockGetSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('sendCode error: возвращает inline-ошибку и не сохраняет token', async () => {
+    mockApi.mockResolvedValueOnce({
+      st: false,
+      text: 'Код из смс введен не верно',
+    });
+
+    const result = await useLoginStore.getState().sendCode('driver', '1107');
+
+    expect(mockApi).toHaveBeenCalledWith('auth', {
+      type: 'check_code',
+      login: 'driver',
+      code: '1107',
+    });
+    expect(result).toEqual({
+      st: false,
+      text: 'Код из смс введен не верно',
+    });
+    expect(useGlobalStore.getState().tokenAuth).toBe('');
+    expect(mockGetSettings).not.toHaveBeenCalled();
+    expect(useGlobalStore.getState().is_show_modal_text).toBe(false);
   });
 
   it('check_token: без token не дергает API, с token проверяет сервер и обновляет настройки', async () => {

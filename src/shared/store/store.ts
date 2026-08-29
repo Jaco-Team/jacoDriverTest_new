@@ -28,6 +28,29 @@ interface ExtendedGeolocationResponse extends GeolocationResponse {
   mocked?: boolean;
 }
 
+let authRecoveryRequestSequence = 0;
+
+function maskRecoveryLogin(login: string): string {
+  const normalizedLogin = login.trim();
+
+  if (normalizedLogin.length <= 4) {
+    return '*'.repeat(normalizedLogin.length);
+  }
+
+  return `${normalizedLogin.slice(0, 2)}***${normalizedLogin.slice(-2)}`;
+}
+
+function logAuthRecovery(
+  event: string,
+  details: Record<string, unknown>,
+): void {
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    // Временная безопасная диагностика: пароль, SMS-код и token не логируются.
+    // eslint-disable-next-line no-console
+    console.log(`[AUTH-RECOVERY] ${event}`, details);
+  }
+}
+
 export const useGlobalStore = create<globalTypes>()((set, get) => ({
   loadSpinner: false,
   loadSpinnerHidden: false,
@@ -129,8 +152,6 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
         useGlobalStore.getState().setTokenAuth(json.data?.token ?? '');
 
         useSettingsStore.getState().getSettings();
-      }else{
-        useGlobalStore.getState().showModalText(true, json?.text);
       }
 
       setTimeout( () => {
@@ -138,13 +159,24 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
         useGlobalStore.getState().setSpinner(false);
       }, 500 )
       
-      return { st: json.st, text: json?.text ?? '' };
+      return {
+        st: json.st,
+        text: json?.text ?? '',
+        captcha_required: json.data?.captcha_required === true,
+      };
     },
 
     sendSMS: async (login: string, pwd: string): Promise<StatusTextType> => {
+      const requestId = ++authRecoveryRequestSequence;
+
       if (!get().is_load) {
         set({is_load: true});
       } else {
+        logAuthRecovery('get_sms blocked', {
+          requestId,
+          login: maskRecoveryLogin(login),
+          reason: 'request_in_progress',
+        });
         return { st: false, text: "Пожалуйста, подождите..." };
       }
   
@@ -155,14 +187,26 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
         login,
         pwd,
       };
+
+      logAuthRecovery('get_sms request', {
+        requestId,
+        login: maskRecoveryLogin(login),
+        loginLength: login.length,
+        passwordLength: pwd.length,
+      });
   
       const json = await api<LoginResponse>('auth', data);
+
+      logAuthRecovery('get_sms response', {
+        requestId,
+        st: json.st,
+        text: json?.text ?? '',
+      });
 
       if (json.st === true) {
         Analytics.log(AnalyticsEvent.AuthSendSms, 'Отправка СМС-кода');
       } else {
         Analytics.log(AnalyticsEvent.AuthSendSmsFail, 'Ошибка отправки СМС-кода');
-        useGlobalStore.getState().showModalText(true, json.text);
       }
 
       setTimeout( () => {
@@ -174,9 +218,17 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
     },
 
     sendCode: async (login: string, code: string): Promise<StatusTextType> => {
+      const requestId = ++authRecoveryRequestSequence;
+
       if (!get().is_load) {
         set({is_load: true});
       } else {
+        logAuthRecovery('check_code blocked', {
+          requestId,
+          login: maskRecoveryLogin(login),
+          codeLength: code.length,
+          reason: 'request_in_progress',
+        });
         return { st: false, text: "Пожалуйста, подождите..." };
       }
   
@@ -187,15 +239,26 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
         login,
         code,
       };
+
+      logAuthRecovery('check_code request', {
+        requestId,
+        login: maskRecoveryLogin(login),
+        loginLength: login.length,
+        codeLength: code.length,
+      });
   
       const json = await api<LoginResponse>('auth', data);
+
+      logAuthRecovery('check_code response', {
+        requestId,
+        st: json.st,
+        text: json?.text ?? '',
+      });
   
       if (json.st === true) {
         useGlobalStore.getState().setTokenAuth(json.data?.token ?? '');
 
         useSettingsStore.getState().getSettings();
-      }else{
-        useGlobalStore.getState().showModalText(true, json.text);
       }
   
       setTimeout( () => {

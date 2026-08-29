@@ -2,7 +2,9 @@ import React from 'react';
 import { act, render, waitFor } from '@testing-library/react-native';
 
 const mockNavigate = jest.fn();
+const mockNavigation = { navigate: mockNavigate };
 const mockAnalyticsLog = jest.fn();
+let mockFocusCleanup: (() => void) | undefined;
 
 let mockLoginState: any;
 let mockGlobalState: any;
@@ -10,9 +12,19 @@ let mockGlobalState: any;
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
   return {
-    useNavigation: () => ({ navigate: mockNavigate }),
+    useNavigation: () => mockNavigation,
     useFocusEffect: (callback: any) => {
-      React.useEffect(() => (typeof callback === 'function' ? callback() : undefined), [callback]);
+      React.useEffect(() => {
+        const cleanup = typeof callback === 'function' ? callback() : undefined;
+        mockFocusCleanup = typeof cleanup === 'function' ? cleanup : undefined;
+
+        return () => {
+          cleanup?.();
+          if (mockFocusCleanup === cleanup) {
+            mockFocusCleanup = undefined;
+          }
+        };
+      }, [callback]);
     },
   };
 });
@@ -50,6 +62,7 @@ describe('auth/reset hooks', () => {
     mockLoginState = {
       check_token: mockCheckToken,
       auth: mockAuth,
+      is_load: false,
       sendSMS: mockSendSMS,
       sendCode: mockSendCode,
     };
@@ -60,6 +73,7 @@ describe('auth/reset hooks', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockFocusCleanup = undefined;
     setupStore();
     mockCheckToken.mockResolvedValue(false);
     mockAuth.mockResolvedValue({ st: false, text: 'fail' });
@@ -86,7 +100,7 @@ describe('auth/reset hooks', () => {
     );
   });
 
-  it('useAuthLogic: валидирует пустой логин/пароль и переключает показ пароля', async () => {
+  it('useAuthLogic: пустая форма не отправляется и переключает показ пароля', async () => {
     let api: ReturnType<typeof useAuthLogic> | null = null;
 
     function Probe() {
@@ -102,11 +116,9 @@ describe('auth/reset hooks', () => {
       await api!.LogIn('', '');
     });
 
-    expect(mockShowModalText).toHaveBeenCalledWith(
-      true,
-      'Номер телефона или пароль не должны быть пустыми',
-    );
+    expect(mockShowModalText).not.toHaveBeenCalled();
     expect(mockAuth).not.toHaveBeenCalled();
+    expect(api!.loginError).toBe('');
 
     await act(async () => {
       api!.handleTogglePassword();
@@ -139,7 +151,11 @@ describe('auth/reset hooks', () => {
 
   it('useAuthLogic: ошибка login логируется без перехода в список', async () => {
     let api: ReturnType<typeof useAuthLogic> | null = null;
-    mockAuth.mockResolvedValueOnce({ st: false, text: 'bad' });
+    mockAuth.mockResolvedValueOnce({
+      st: false,
+      text: 'bad',
+      captcha_required: true,
+    });
 
     function Probe() {
       api = useAuthLogic();
@@ -156,6 +172,8 @@ describe('auth/reset hooks', () => {
 
     expect(mockAnalyticsLog).toHaveBeenCalledWith('AuthLoginFail', 'Ошибка авторизации');
     expect(mockNavigate).not.toHaveBeenCalledWith('List_orders');
+    expect(api!.loginError).toBe('bad');
+    expect(api!.captchaRequired).toBe(true);
 
     await act(async () => {
       api!.GoToResetPWD();
@@ -168,7 +186,7 @@ describe('auth/reset hooks', () => {
     expect(mockNavigate).toHaveBeenCalledWith('ResetPwd');
   });
 
-  it('useResetPwdLogic: SMS flow валидирует форму и переводит на шаг кода при успехе', async () => {
+  it('useResetPwdLogic: валидирует сложный пароль и переводит на шаг кода при успехе', async () => {
     let api: ReturnType<typeof useResetPwdLogic> | null = null;
     mockSendSMS.mockResolvedValueOnce({ st: true, text: 'sent' });
 
@@ -181,23 +199,68 @@ describe('auth/reset hooks', () => {
     await waitFor(() => expect(mockCheckToken).toHaveBeenCalled());
 
     await act(async () => {
-      await api!.sendsms('', '');
+      await api!.requestRecoveryCode();
     });
 
-    expect(mockShowModalText).toHaveBeenCalledWith(
-      true,
-      'Номер телефона или пароль не должны быть пустыми',
-    );
+    expect(mockSendSMS).not.toHaveBeenCalled();
+    expect(api!.errorText).toBe('Введите номер телефона.');
 
     await act(async () => {
-      await api!.sendsms('79990000000', '123456');
+      api!.handleLoginChange('79990000000');
+      api!.handlePasswordChange('Password1');
     });
 
-    expect(mockSendSMS).toHaveBeenCalledWith('79990000000', '123456');
+    await act(async () => {
+      await api!.requestRecoveryCode();
+    });
+
+    expect(mockSendSMS).toHaveBeenCalledWith('79990000000', 'Password1');
     expect(api!.activeStep).toBe(1);
+
+    await act(async () => {
+      api!.handleCodeChange('1107');
+      api!.handleTogglePassword();
+    });
+
+    await act(async () => {
+      mockFocusCleanup?.();
+    });
+
+    expect(api!.activeStep).toBe(0);
+    expect(api!.myLogin).toBe('');
+    expect(api!.myPWD).toBe('');
+    expect(api!.myCode).toBe('');
+    expect(api!.showPassword).toBe(false);
+    expect(api!.errorText).toBe('');
   });
 
-  it('useResetPwdLogic: check_code игнорирует короткий код и при успехе ведет в список', async () => {
+  it('useResetPwdLogic: оставляет первый шаг и показывает ошибку отправки SMS', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    mockSendSMS.mockResolvedValueOnce({ st: false, text: 'SMS недоступна' });
+
+    function Probe() {
+      api = useResetPwdLogic();
+      return null as any;
+    }
+
+    await render(<Probe />);
+    await waitFor(() => expect(mockCheckToken).toHaveBeenCalled());
+
+    await act(async () => {
+      api!.handleLoginChange('79990000000');
+      api!.handlePasswordChange('Password1');
+    });
+
+    await act(async () => {
+      await api!.requestRecoveryCode();
+    });
+
+    expect(mockSendSMS).toHaveBeenCalledWith('79990000000', 'Password1');
+    expect(api!.activeStep).toBe(0);
+    expect(api!.errorText).toBe('SMS недоступна');
+  });
+
+  it('useResetPwdLogic: принимает только четыре цифры и при успехе ведет в список', async () => {
     let api: ReturnType<typeof useResetPwdLogic> | null = null;
     mockSendCode.mockResolvedValueOnce({ st: true, text: 'ok' });
 
@@ -211,16 +274,55 @@ describe('auth/reset hooks', () => {
     mockNavigate.mockClear();
 
     await act(async () => {
-      await api!.check_code('79990000000', '123');
+      api!.handleCodeChange('12ab');
+    });
+
+    await act(async () => {
+      await api!.confirmRecoveryCode();
     });
 
     expect(mockSendCode).not.toHaveBeenCalled();
+    expect(api!.errorText).toBe('Введите четырёхзначный код из SMS.');
 
     await act(async () => {
-      await api!.check_code('79990000000', '1234');
+      api!.handleCodeChange('11071');
     });
 
-    expect(mockSendCode).toHaveBeenCalledWith('79990000000', '1234');
+    await act(async () => {
+      await api!.confirmRecoveryCode();
+    });
+
+    expect(mockSendCode).toHaveBeenCalledWith('', '1107');
     expect(mockNavigate).toHaveBeenCalledWith('List_orders');
+  });
+
+  it('useResetPwdLogic: показывает backend-ошибку неверного SMS-кода без перехода', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    mockSendCode.mockResolvedValueOnce({
+      st: false,
+      text: 'Код из смс введен не верно',
+    });
+
+    function Probe() {
+      api = useResetPwdLogic();
+      return null as any;
+    }
+
+    await render(<Probe />);
+    await waitFor(() => expect(mockCheckToken).toHaveBeenCalled());
+    mockNavigate.mockClear();
+
+    await act(async () => {
+      api!.handleLoginChange('79990000000');
+      api!.handleCodeChange('1107');
+    });
+
+    await act(async () => {
+      await api!.confirmRecoveryCode();
+    });
+
+    expect(mockSendCode).toHaveBeenCalledWith('79990000000', '1107');
+    expect(api!.errorText).toBe('Код из смс введен не верно');
+    expect(mockNavigate).not.toHaveBeenCalledWith('List_orders');
   });
 });

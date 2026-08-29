@@ -1,6 +1,7 @@
 package com.jacodrivertest
 
 import android.os.Bundle
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -14,10 +15,10 @@ class MainActivity : ReactActivity() {
    */
   override fun getMainComponentName(): String = "jacoDriverTest"
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(null) // Передайте null вместо savedInstanceState
-        // Остальной код onCreate...
-    }
+  override fun onCreate(savedInstanceState: Bundle?) {
+    installSplashScreen()
+    super.onCreate(null) // Передайте null вместо savedInstanceState
+  }
 
   /**
    * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]

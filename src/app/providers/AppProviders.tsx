@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react'
 import { StyleSheet } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context'
 import { UiProvider } from './UiProviders'
 import { NavigationProvider } from './NavigationProvider'
 
@@ -11,7 +12,10 @@ import { ModalText } from '@/shared/ui/ModalText'
 //import { ConnectivityLocationIndicator } from '@/shared/ui/ConnectivityLocationIndicator'
 
 const rootStyle = StyleSheet.create({
-  root: { flex: 1 },
+  root: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
 })
 
 export function AppProviders({ children }: { children: ReactNode }) {
@@ -20,16 +24,18 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   return (
     <GestureHandlerRootView style={rootStyle.root}>
-      <UiProvider>
-        <NavigationProvider>
-          {children}
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <UiProvider>
+          <NavigationProvider>
+            {children}
 
-          <CustomSpinner />
-          <CustomSpinner_hidden />
-          <CustomAlert />
-          <ModalText />
-        </NavigationProvider>
-      </UiProvider>
+            <CustomSpinner />
+            <CustomSpinner_hidden />
+            <CustomAlert />
+            <ModalText />
+          </NavigationProvider>
+        </UiProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   )
 }

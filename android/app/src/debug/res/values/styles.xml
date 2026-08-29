@@ -1,0 +1,11 @@
+<resources>
+
+    <!-- Metro remains visible in Debug, while its loading window continues the
+         same red background as the system splash. -->
+    <style name="AppTheme" parent="Theme.EdgeToEdge">
+        <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="enforceNavigationBarContrast">false</item>
+    </style>
+
+</resources>

@@ -1,80 +1,166 @@
-import { useState, useCallback } from 'react'
-import { useFocusEffect, useNavigation, ParamListBase } from '@react-navigation/native'
+import { useCallback, useState } from 'react'
+import { ParamListBase, useFocusEffect, useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
-
-import { useLoginStore, useGlobalStore } from '@/shared/store/store'
 import { useShallow } from 'zustand/react/shallow'
+
+import { Analytics, AnalyticsEvent } from '@/analytics/AppMetricaService'
+import { RU_SCREEN_NAMES } from '@/app/navigation/types'
+import {
+  isPasswordStrong,
+  stripPasswordSpaces,
+} from '@/shared/lib/passwordRequirements'
+import { useLoginStore } from '@/shared/store/store'
+
+type RecoveryStep = 0 | 1
 
 export function useResetPwdLogic() {
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>()
-
-  // Методы из zustand
-  const [check_token, sendSMS, sendCode] = useLoginStore(
-    useShallow((state) => [state.check_token, state.sendSMS, state.sendCode])
+  const [checkToken, sendSMS, sendCode, isLoading] = useLoginStore(
+    useShallow((state) => [
+      state.check_token,
+      state.sendSMS,
+      state.sendCode,
+      state.is_load,
+    ])
   )
-  const [showModalText] = useGlobalStore(
-    useShallow((state) => [state.showModalText])
-  )
 
-  // Локальные стейты
-  const [activeStep, setActiveStep] = useState(0)
+  const [activeStep, setActiveStep] = useState<RecoveryStep>(0)
   const [myCode, setMyCode] = useState('')
   const [myLogin, setMyLogin] = useState('')
   const [myPWD, setMyPWD] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [errorText, setErrorText] = useState('')
 
-  // useFocusEffect: при фокусе проверяем токен
+  const isPasswordValid = isPasswordStrong(myPWD)
+  const canRequestCode =
+    myLogin.trim().length > 0 && isPasswordValid && !isLoading
+  const canConfirmCode = myCode.length === 4 && !isLoading
+
+  const resetRecoveryState = useCallback(() => {
+    setActiveStep(0)
+    setMyCode('')
+    setMyLogin('')
+    setMyPWD('')
+    setShowPassword(false)
+    setErrorText('')
+  }, [])
+
   useFocusEffect(
     useCallback(() => {
+      let isFocused = true
+
       const check = async () => {
-        const token = await check_token()
-        if (token === true) {
+        const token = await checkToken()
+        if (isFocused && token === true) {
           navigation.navigate('List_orders')
         }
       }
-      check()
-    }, [check_token, navigation])
+
+      void check()
+
+      return () => {
+        isFocused = false
+        resetRecoveryState()
+      }
+    }, [checkToken, navigation, resetRecoveryState])
   )
 
-  // Переключение видимости пароля
-  const handleTogglePassword = () => {
-    setShowPassword((prev) => !prev)
+  function handleLoginChange(value: string): void {
+    setMyLogin(value)
+    setErrorText('')
   }
 
-  // Отправить SMS
-  async function sendsms(login: string, pwd: string) {
-    if (login.length === 0 || pwd.length === 0) {
-      showModalText(true, 'Номер телефона или пароль не должны быть пустыми')
+  function handlePasswordChange(value: string): void {
+    setMyPWD(stripPasswordSpaces(value))
+    setErrorText('')
+  }
+
+  function handleCodeChange(value: string): void {
+    setMyCode(value.replace(/\D/g, '').slice(0, 4))
+    setErrorText('')
+  }
+
+  function handleTogglePassword(): void {
+    setShowPassword((currentValue) => !currentValue)
+  }
+
+  async function requestRecoveryCode(): Promise<void> {
+    if (!myLogin.trim()) {
+      setErrorText('Введите номер телефона.')
       return
     }
-    const res = await sendSMS(login, pwd)
-    if (res.st === true) {
+
+    if (!isPasswordValid) {
+      setErrorText('Новый пароль должен соответствовать всем требованиям.')
+      return
+    }
+
+    setErrorText('')
+    const result = await sendSMS(myLogin, myPWD)
+
+    if (result.st === true) {
       setActiveStep(1)
-    }
-  }
-
-  // Проверить код
-  async function check_code(login: string, code: string) {
-    if (code.length !== 4) {
       return
     }
-    const res = await sendCode(login, code)
-    if (res.st) {
-      navigation.navigate('List_orders')
-    }
+
+    setErrorText(result.text || 'Не удалось отправить код восстановления.')
   }
+
+  async function confirmRecoveryCode(): Promise<void> {
+    if (myCode.length !== 4) {
+      setErrorText('Введите четырёхзначный код из SMS.')
+      return
+    }
+
+    setErrorText('')
+    const result = await sendCode(myLogin, myCode)
+
+    if (result.st === true) {
+      const title = RU_SCREEN_NAMES.List_orders ?? 'Список заказов'
+      Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${title}`)
+      navigation.navigate('List_orders')
+      return
+    }
+
+    setErrorText(result.text || 'Не удалось подтвердить код восстановления.')
+  }
+
+  function goToAuth(): void {
+    Analytics.log(AnalyticsEvent.ScreenOpen, 'Открытие страницы Авторизации')
+    navigation.navigate('Auth')
+  }
+
+  const panelTitle =
+    activeStep === 0 ? 'Восстановление доступа' : 'Подтверждение по SMS'
+  const panelText =
+    activeStep === 0
+      ? 'Укажите номер телефона и новый пароль. После этого мы отправим код подтверждения.'
+      : 'Введите код из SMS, чтобы подтвердить номер и завершить восстановление пароля.'
+  const helperText =
+    activeStep === 0
+      ? 'Если номер зарегистрирован, отправим SMS с кодом. Пароль должен быть сложным.'
+      : 'Если код не пришел, проверьте номер телефона и повторите отправку позже.'
 
   return {
     activeStep,
+    panelTitle,
+    panelText,
+    helperText,
     myCode,
-    setMyCode,
+    handleCodeChange,
     myLogin,
-    setMyLogin,
+    handleLoginChange,
     myPWD,
-    setMyPWD,
+    handlePasswordChange,
     showPassword,
     handleTogglePassword,
-    sendsms,
-    check_code
+    errorText,
+    isPasswordValid,
+    isLoading,
+    canRequestCode,
+    canConfirmCode,
+    requestRecoveryCode,
+    confirmRecoveryCode,
+    goToAuth,
   }
 }
