@@ -1,109 +1,233 @@
 import React from 'react'
-import { Button, ButtonText } from '@/components/ui/button'
-import { View } from 'react-native'
-import { HStack } from '@/components/ui/hstack'
-import { VStack } from '@/components/ui/vstack'
-import { QrCode } from 'lucide-react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { QrCode } from 'lucide-react-native'
 
-import { OrderActionsProps } from "@/entities/CardOrder/model/types"
+import { toOrderInt } from '@/entities/CardOrder/model/normalizeOrderValue'
+import { OrderActionsProps } from '@/entities/CardOrder/model/types'
+import { appPalette } from '@/shared/styles/appPalette'
 
-export function OrderActions(props: OrderActionsProps) {
-  const { item, dialCall, setActiveConfirm, actionButtonOrder, globalFontSize } = props
-  const textStyle = { fontSize: globalFontSize };
+const BUTTON_HEIGHT = 44
+const BUTTON_FONT_SIZE = 14
+const PHONE_BUTTON_BACKGROUND = 'rgba(0, 0, 0, 0.08)'
 
-  // можно взять
-  if( item.is_get == 0 ){
+interface ActionButtonProps {
+  backgroundColor: string
+  children: React.ReactNode
+  flex?: number
+  minWidth?: number
+  paddingHorizontal?: number
+  testID: string
+  onPress?: () => void
+}
+
+function ActionButton({
+  backgroundColor,
+  children,
+  flex,
+  minWidth = 100,
+  paddingHorizontal = 16,
+  testID,
+  onPress,
+}: ActionButtonProps): React.JSX.Element {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      style={[
+        styles.button,
+        { backgroundColor },
+        flex === undefined ? null : { flex },
+        { minWidth, paddingHorizontal },
+      ]}
+      testID={testID}
+      onPress={onPress}
+    >
+      {children}
+    </Pressable>
+  )
+}
+
+interface ActionTextProps {
+  children: React.ReactNode
+  phone?: boolean
+}
+
+function ActionText({
+  children,
+  phone = false,
+}: ActionTextProps): React.JSX.Element {
+  return (
+    <Text
+      numberOfLines={1}
+      style={phone ? styles.phoneText : styles.actionText}
+    >
+      {children}
+    </Text>
+  )
+}
+
+export function OrderActions({
+  item,
+  dialCall,
+  setActiveConfirm,
+  actionButtonOrder,
+}: OrderActionsProps): React.JSX.Element {
+  const isGet = toOrderInt(item.is_get)
+  const isMy = toOrderInt(item.is_my)
+  const isDeleted = toOrderInt(item.is_delete) === 1
+  const statusOrder = toOrderInt(item.status_order)
+  const onlinePay = toOrderInt(item.online_pay)
+
+  if (isGet === 0) {
     return (
-      <>
-        <Button className="mt-5 h-auto bg-gray-400 rounded-xl" onPress={ () => dialCall(item.number) } testID={`order-${item.id}-phone`}>
-          <ButtonText style={textStyle} className="p-3">{item.number}</ButtonText>
-        </Button>
+      <View style={styles.actions}>
+        <ActionButton
+          backgroundColor={PHONE_BUTTON_BACKGROUND}
+          testID={`order-${item.id}-phone`}
+          onPress={() => dialCall(item.number)}
+        >
+          <ActionText phone>{item.number}</ActionText>
+        </ActionButton>
 
-        <Button className="mt-5 h-auto bg-green-600 rounded-xl" onPress={ () => actionButtonOrder(1, item.id) } testID={`order-${item.id}-take`}>
-          <ButtonText style={textStyle} className="p-3">Взять</ButtonText>
-        </Button>
-      </>
+        <ActionButton
+          backgroundColor="#4CAF50"
+          testID={`order-${item.id}-take`}
+          onPress={() => actionButtonOrder(1, item.id)}
+        >
+          <ActionText>ВЗЯТЬ</ActionText>
+        </ActionButton>
+      </View>
     )
   }
 
-  // мой заказ
-  if( item.is_get == 1 && item.is_my == 1 ){
+  if (isGet === 1 && isMy === 1) {
     return (
-      <View>
-        <HStack className="justify-between">
-          {item.status_order == 6 ? null : (
-            <Button 
-              className="mt-5 h-auto bg-primary-main rounded-xl" 
-              onPress={ () => setActiveConfirm(true, item.id, 'cancel', item.is_delete == 1 ? true : false) }
+      <View style={styles.actions}>
+        <View style={styles.row}>
+          {statusOrder === 6 ? null : (
+            <ActionButton
+              backgroundColor="#F44336"
+              flex={1}
               testID={`order-${item.id}-cancel`}
+              onPress={() =>
+                setActiveConfirm(true, item.id, 'cancel', isDeleted)
+              }
             >
-              <ButtonText style={textStyle} className="p-3 pl-1 pr-1 text-center">Отменить</ButtonText>
-            </Button>
+              <ActionText>ОТМЕНИТЬ</ActionText>
+            </ActionButton>
           )}
 
-          <Button 
-            className="mt-5 h-auto bg-gray-400 rounded-xl" 
-            onPress={ () => dialCall(item.number) }
+          <ActionButton
+            backgroundColor={PHONE_BUTTON_BACKGROUND}
+            flex={1}
             testID={`order-${item.id}-phone`}
+            onPress={() => dialCall(item.number)}
           >
-            <ButtonText style={textStyle} className="p-3 pl-2 pr-2 text-center">{item.number}</ButtonText>
-          </Button>
-        </HStack>
+            <ActionText phone>{item.number}</ActionText>
+          </ActionButton>
+        </View>
 
-        {item.status_order == 6 ? null : item.is_my === 1 && item.online_pay === 0 /*&& driver_pay === 1*/ ? (
-          <HStack>
-            <Button 
-              className="mt-5 h-auto bg-green-600 rounded-xl" 
-              onPress={ () => setActiveConfirm(true, item.id, 'finish', item.is_delete == 1 ? true : false) }
+        {statusOrder === 6 ? null : onlinePay === 0 ? (
+          <View style={styles.row}>
+            <ActionButton
+              backgroundColor="#2196F3"
+              flex={1}
               testID={`order-${item.id}-finish`}
+              onPress={() =>
+                setActiveConfirm(true, item.id, 'finish', isDeleted)
+              }
             >
-              <ButtonText style={textStyle} className="p-3">Завершить</ButtonText>
-            </Button>
+              <ActionText>ЗАВЕРШИТЬ</ActionText>
+            </ActionButton>
 
-            <Button className="mt-5 h-auto rounded-xl" testID={`order-${item.id}-qr`}>
-              <ButtonText style={textStyle} className="p-3"><QrCode /></ButtonText>
-            </Button>
-          </HStack>
+            <ActionButton
+              backgroundColor="#9C27B0"
+              minWidth={BUTTON_HEIGHT}
+              paddingHorizontal={12}
+              testID={`order-${item.id}-qr`}
+            >
+              <QrCode color="#FFFFFF" size={24} strokeWidth={2} />
+            </ActionButton>
+          </View>
         ) : (
-          <Button 
-            className="mt-5 h-auto bg-green-600 rounded-xl" 
-            onPress={ () => setActiveConfirm(true, item.id, 'finish', item.is_delete == 1 ? true : false) }
+          <ActionButton
+            backgroundColor="#2196F3"
             testID={`order-${item.id}-finish`}
+            onPress={() =>
+              setActiveConfirm(true, item.id, 'finish', isDeleted)
+            }
           >
-            <ButtonText style={textStyle} className="p-3">Завершить</ButtonText>
-          </Button>
+            <ActionText>ЗАВЕРШИТЬ</ActionText>
+          </ActionButton>
         )}
 
-        {item.status_order == 6 ? null : (
-          <Button 
-            className="mt-5 h-auto bg-yellow-400 rounded-xl" 
-            onPress={ () => setActiveConfirm(true, item.id, 'fake', item.is_delete == 1 ? true : false) }
+        {statusOrder === 6 ? null : (
+          <ActionButton
+            backgroundColor="#FF9800"
             testID={`order-${item.id}-fake`}
+            onPress={() => setActiveConfirm(true, item.id, 'fake', isDeleted)}
           >
-            <ButtonText style={textStyle} className="p-3 color-black">Клиент не вышел на связь</ButtonText>
-          </Button>
+            <ActionText>КЛИЕНТ НЕ ВЫШЕЛ НА СВЯЗЬ</ActionText>
+          </ActionButton>
         )}
       </View>
     )
   }
 
-  // у другого курьера
   return (
-    <VStack>
-      <Button 
-        className="mt-5 h-auto bg-gray-400 rounded-xl" 
+    <View style={styles.actions}>
+      <View
+        style={[styles.button, styles.driverInfo]}
         testID={`order-${item.id}-other-name`}
       >
-        <ButtonText style={textStyle} className="p-3">{item.driver_name}</ButtonText>
-      </Button>
+        <Text numberOfLines={1} style={styles.phoneText}>
+          Водитель: {item.driver_name}
+        </Text>
+      </View>
 
-      <Button 
-        className="mt-5 h-auto bg-gray-400 rounded-xl" 
-        onPress={ () => dialCall(item.number) } 
+      <ActionButton
+        backgroundColor={PHONE_BUTTON_BACKGROUND}
         testID={`order-${item.id}-other-login`}
+        onPress={() => dialCall(item.driver_login ?? '')}
       >
-        <ButtonText style={textStyle} className="p-3">{item.driver_login}</ButtonText>
-      </Button>
-    </VStack>
+        <ActionText phone>{item.driver_login}</ActionText>
+      </ActionButton>
+    </View>
   )
 }
+
+const styles = StyleSheet.create({
+  actions: {
+    width: '100%',
+    gap: 8,
+  },
+  row: {
+    width: '100%',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  button: {
+    height: BUTTON_HEIGHT,
+    minHeight: BUTTON_HEIGHT,
+    maxHeight: BUTTON_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  actionText: {
+    color: '#FFFFFF',
+    fontFamily: 'Roboto-Bold',
+    fontSize: BUTTON_FONT_SIZE,
+    lineHeight: 17,
+  },
+  phoneText: {
+    color: appPalette.text,
+    fontFamily: 'Roboto-Medium',
+    fontSize: BUTTON_FONT_SIZE,
+    lineHeight: 17,
+  },
+  driverInfo: {
+    minWidth: 0,
+    backgroundColor: PHONE_BUTTON_BACKGROUND,
+  },
+})

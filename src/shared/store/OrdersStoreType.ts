@@ -75,7 +75,7 @@ export type Order = {
   addr: string,
   comment: string,
   count_drink: number,
-  drink_list?: Array<{names: string}>,
+  drink_list?: Array<{name?: string, names?: string}>,
   count_other: number,
   count_pasta: number,
   count_pizza: number,
@@ -121,7 +121,7 @@ export type Order = {
   to_time_sec_min: number,
   unix_date_time_preorder: number,
   unix_time: number,
-  unix_time_to_client: number,
+  unix_time_to_client: number|string,
   unix_time_to_client_test: string,
   close_date_time_order?: string,
   xy: XY

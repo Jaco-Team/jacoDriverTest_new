@@ -1,171 +1,234 @@
-import { useState, useEffect } from 'react'
-import dayjs, { ConfigType } from 'dayjs'
-import { useStatStore, useGlobalStore } from '@/shared/store/store'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import dayjs, { type Dayjs } from 'dayjs'
+import 'dayjs/locale/ru'
 import { useShallow } from 'zustand/react/shallow'
-import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
 
-const MAX_SPAN_DAYS = 93;
+import { Analytics, AnalyticsEvent } from '@/analytics/AppMetricaService'
+import { useGlobalStore, useStatStore } from '@/shared/store/store'
+
+const MAX_SPAN_DAYS = 93
+const API_DATE_FORMAT = 'YYYY-MM-DD'
+const UI_DATE_FORMAT = 'D MMMM YYYY'
+
+type ActiveStatisticsPicker = 'start' | 'end' | null
 
 type ClampReason =
-  | 'afterToday'          // дата позже сегодня
-  | 'beforeMin'           // дата раньше доступного минимума
-  | 'endBeforeStart'      // конец раньше начала
-  | 'spanTooLong'         // диапазон > MAX_SPAN_DAYS
-  | 'spanTrimmedByToday'  // конец подрезан до сегодня
-  | 'spanTrimmedByMin';   // начало подрезано до minDate
+  | 'afterToday'
+  | 'beforeMin'
+  | 'endBeforeStart'
+  | 'spanTooLong'
+  | 'spanTrimmedByToday'
+  | 'spanTrimmedByMin'
+
+function formatApiDate(date: Dayjs): string {
+  return dayjs(date).format(API_DATE_FORMAT)
+}
+
+function minDay(first: Dayjs, second: Dayjs): Dayjs {
+  return first.isBefore(second) ? first : second
+}
+
+function maxDay(first: Dayjs, second: Dayjs): Dayjs {
+  return first.isAfter(second) ? first : second
+}
 
 export function useStatisticsTable() {
   const [getStatistics, statArr] = useStatStore(
-    useShallow((state) => [state.getStatistics, state.statArr])
+    useShallow((state) => [state.getStatistics, state.statArr]),
+  )
+  const [globalFontSize, showAlertText] = useGlobalStore(
+    useShallow((state) => [state.globalFontSize, state.showAlertText]),
   )
 
-  const [globalFontSize, showAlertText] = useGlobalStore(useShallow((state) => [state.globalFontSize, state.showAlertText]))
+  const [initialStartDate] = useState(() => dayjs().startOf('day').subtract(6, 'day'))
+  const [initialEndDate] = useState(() => dayjs().startOf('day'))
+  const [dateStart, setDateStart] = useState(initialStartDate)
+  const [dateEnd, setDateEnd] = useState(initialEndDate)
+  const [activePicker, setActivePicker] = useState<ActiveStatisticsPicker>(null)
 
-  // граничные даты
-  const today = dayjs().startOf('day');
-  const minDate = today.subtract(MAX_SPAN_DAYS, 'day');
+  const today = dayjs().startOf('day')
+  const globalMinDate = today.subtract(MAX_SPAN_DAYS, 'day')
 
-  // форматтер
-  const fmt = (d: dayjs.Dayjs) => d.format('YYYY-MM-DD');
-
-  const [dateStart, setDateStart] = useState(dayjs().format('YYYY-MM-DD'))
-  const [dateEnd, setDateEnd] = useState(dayjs().format('YYYY-MM-DD'))
-
-  const [showCalendarStart, setShowCalendarStart] = useState(false)
-  const [showCalendarEnd, setShowCalendarEnd] = useState(false)
-
-  const [isRefreshing, setIsRefreshing] = useState(false)
-
-  useEffect(() => {
-    getStatistics(dateStart, dateEnd)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // нормализуем выбранный диапазон и собираем причины корректировок
-  const normalizeRangeWithReasons = (start: dayjs.Dayjs, end: dayjs.Dayjs) => {
-    let s = start
-    let e = end
+  const normalizeRangeWithReasons = useCallback((start: Dayjs, end: Dayjs) => {
+    let normalizedStart = dayjs(start).startOf('day')
+    let normalizedEnd = dayjs(end).startOf('day')
     const reasons: ClampReason[] = []
 
-    // clamp по границам
-    if (s.isAfter(today)) {
-      s = today
+    if (normalizedStart.isAfter(today)) {
+      normalizedStart = today
       reasons.push('afterToday')
     }
-    if (s.isBefore(minDate)) {
-      s = minDate
+    if (normalizedStart.isBefore(globalMinDate)) {
+      normalizedStart = globalMinDate
       reasons.push('beforeMin')
     }
-    if (e.isAfter(today)) {
-      e = today
+    if (normalizedEnd.isAfter(today)) {
+      normalizedEnd = today
       reasons.push('spanTrimmedByToday')
     }
-    if (e.isBefore(minDate)) {
-      e = minDate
+    if (normalizedEnd.isBefore(globalMinDate)) {
+      normalizedEnd = globalMinDate
       reasons.push('spanTrimmedByMin')
     }
-
-    // не даём инвертировать
-    if (e.isBefore(s)) {
-      e = s
+    if (normalizedEnd.isBefore(normalizedStart)) {
+      normalizedEnd = normalizedStart
       reasons.push('endBeforeStart')
     }
 
-    // ограничение по длине
-    const span = e.diff(s, 'day')
-    if (span > MAX_SPAN_DAYS) {
-      e = s.add(MAX_SPAN_DAYS, 'day')
+    if (normalizedEnd.diff(normalizedStart, 'day') > MAX_SPAN_DAYS) {
+      normalizedEnd = normalizedStart.add(MAX_SPAN_DAYS, 'day')
       reasons.push('spanTooLong')
-      // на случай выхода за today после подрезания
-      if (e.isAfter(today)) {
-        e = today
-        s = e.subtract(MAX_SPAN_DAYS, 'day')
-        // пометим дополнительную причину в зависимости от того, что подрезали
-        if (e.isSame(today)) reasons.push('spanTrimmedByToday')
-        if (s.isSame(minDate)) reasons.push('spanTrimmedByMin')
+
+      if (normalizedEnd.isAfter(today)) {
+        normalizedEnd = today
+        normalizedStart = today.subtract(MAX_SPAN_DAYS, 'day')
+        reasons.push('spanTrimmedByToday')
       }
     }
 
-    return { s, e, reasons }
-  }
+    return { start: normalizedStart, end: normalizedEnd, reasons }
+  }, [globalMinDate, today])
 
-  // формируем сообщение по причинам корректировок
-  const reasonsToMessage = (reasons: ClampReason[], s: dayjs.Dayjs, e: dayjs.Dayjs) => {
-    if (!reasons.length) return null
+  const showAdjustmentIfNeeded = useCallback((
+    reasons: ClampReason[],
+    start: Dayjs,
+    end: Dayjs,
+  ) => {
+    if (reasons.length === 0) return
 
-    const parts: string[] = []
-    if (reasons.includes('afterToday')) parts.push('Дата “от” не может быть позже сегодняшней.')
-    if (reasons.includes('beforeMin')) parts.push(`Дата “от” не может быть раньше ${fmt(minDate)}.`)
-    if (reasons.includes('endBeforeStart')) parts.push('Дата “до” не может быть раньше “от”.')
-    if (reasons.includes('spanTooLong')) parts.push(`Диапазон не может превышать ${MAX_SPAN_DAYS} дней.`)
-    if (reasons.includes('spanTrimmedByToday')) parts.push('Дата “до” ограничена сегодняшним днём.')
-    if (reasons.includes('spanTrimmedByMin')) parts.push(`Дата “от” ограничена ${fmt(minDate)}.`)
-
-    const finalRange = `Выбран период: ${fmt(s)} — ${fmt(e)}`
-    return `${parts.join(' ')} ${finalRange}`
-  }
-
-  // показываем алерт с сообщением о корректировках
-  const showAdjustmentIfAny = (reasons: ClampReason[], s: dayjs.Dayjs, e: dayjs.Dayjs) => {
-    const msg = reasonsToMessage(reasons, s, e)
-    if (msg) {
-      showAlertText(true, msg);
+    const messages: string[] = []
+    if (reasons.includes('afterToday')) {
+      messages.push('Дата "от" не может быть позже сегодняшней.')
     }
-  }
-  
-  // обработчики выбора первой даты
-  const chooseDateStart = (data: ConfigType) => {
-    Analytics.log(AnalyticsEvent.StatisticsCalendarStartClose, 'Закрытие календаря (Статистика времени): Дата от');
-    Analytics.log(AnalyticsEvent.StatisticsDateSelected, 'Выбор даты (Статистика времени)');
+    if (reasons.includes('beforeMin')) {
+      messages.push(`Дата "от" не может быть раньше ${formatApiDate(globalMinDate)}.`)
+    }
+    if (reasons.includes('endBeforeStart')) {
+      messages.push('Дата "до" не может быть раньше "от".')
+    }
+    if (reasons.includes('spanTooLong')) {
+      messages.push(`Диапазон не может превышать ${MAX_SPAN_DAYS} дней.`)
+    }
+    if (reasons.includes('spanTrimmedByToday')) {
+      messages.push('Дата "до" ограничена сегодняшним днём.')
+    }
+    if (reasons.includes('spanTrimmedByMin')) {
+      messages.push(`Дата "от" ограничена ${formatApiDate(globalMinDate)}.`)
+    }
+    messages.push(`Выбран период: ${formatApiDate(start)} — ${formatApiDate(end)}`)
 
-    setShowCalendarStart(false);
+    showAlertText(true, messages.join('\n'))
+  }, [globalMinDate, showAlertText])
 
-    const picked = dayjs(data).startOf('day');
-    const currentEnd = dayjs(dateEnd, 'YYYY-MM-DD');
-    const { s, e, reasons } = normalizeRangeWithReasons(picked, currentEnd);
+  useEffect(() => {
+    getStatistics(formatApiDate(initialStartDate), formatApiDate(initialEndDate))
+  }, [getStatistics, initialEndDate, initialStartDate])
 
-    setDateStart(fmt(s));
-    setDateEnd(fmt(e));
-    showAdjustmentIfAny(reasons, s, e)
-    getStatistics(fmt(s), fmt(e));
-  }
+  const openPicker = useCallback((type: Exclude<ActiveStatisticsPicker, null>) => {
+    setActivePicker(type)
+    Analytics.log(
+      type === 'start'
+        ? AnalyticsEvent.StatisticsCalendarStartOpen
+        : AnalyticsEvent.StatisticsCalendarEndOpen,
+      type === 'start'
+        ? 'Открытие календаря (Статистика времени): Дата от'
+        : 'Открытие календаря (Статистика времени): Дата до',
+    )
+  }, [])
 
-  // обработчики выбора второй даты
-  const chooseDateEnd = (data: ConfigType) => {
-    Analytics.log(AnalyticsEvent.StatisticsCalendarEndClose, 'Закрытие календаря (Статистика времени): Дата до');
-    Analytics.log(AnalyticsEvent.StatisticsDateSelected, 'Выбор даты (Статистика времени)');
+  const closePicker = useCallback(() => {
+    if (activePicker === 'start') {
+      Analytics.log(
+        AnalyticsEvent.StatisticsCalendarStartClose,
+        'Закрытие календаря (Статистика времени): Дата от',
+      )
+    }
+    if (activePicker === 'end') {
+      Analytics.log(
+        AnalyticsEvent.StatisticsCalendarEndClose,
+        'Закрытие календаря (Статистика времени): Дата до',
+      )
+    }
+    setActivePicker(null)
+  }, [activePicker])
 
-    setShowCalendarEnd(false);
+  const selectPickerDate = useCallback((value: string) => {
+    if (!activePicker) return
 
-    const picked = dayjs(data).startOf('day');
-    const currentStart = dayjs(dateStart, 'YYYY-MM-DD');
-    const { s, e, reasons } = normalizeRangeWithReasons(currentStart, picked);
+    const picked = dayjs(value).startOf('day')
+    const normalized = activePicker === 'start'
+      ? normalizeRangeWithReasons(picked, dateEnd)
+      : normalizeRangeWithReasons(dateStart, picked)
 
-    setDateStart(fmt(s));
-    setDateEnd(fmt(e));
-    showAdjustmentIfAny(reasons, s, e);
-    getStatistics(fmt(s), fmt(e));
-  }
+    Analytics.log(
+      AnalyticsEvent.StatisticsDateSelected,
+      'Выбор даты (Статистика времени)',
+    )
+    setDateStart(normalized.start)
+    setDateEnd(normalized.end)
+    showAdjustmentIfNeeded(normalized.reasons, normalized.start, normalized.end)
+    getStatistics(formatApiDate(normalized.start), formatApiDate(normalized.end))
+    closePicker()
+  }, [
+    activePicker,
+    closePicker,
+    dateEnd,
+    dateStart,
+    getStatistics,
+    normalizeRangeWithReasons,
+    showAdjustmentIfNeeded,
+  ])
 
-  // обработчик обновления
-  const onRefresh = () => {
-    setIsRefreshing(true)
-    getStatistics(dateStart, dateEnd)
-    setTimeout(() => setIsRefreshing(false), 500) // или await если fetch
-  }
+  const getStat = useCallback(() => {
+    const normalized = normalizeRangeWithReasons(dateStart, dateEnd)
+
+    Analytics.log(
+      AnalyticsEvent.StatisticsShowClick,
+      'Показать статистику времени',
+    )
+    setDateStart(normalized.start)
+    setDateEnd(normalized.end)
+    showAdjustmentIfNeeded(normalized.reasons, normalized.start, normalized.end)
+    getStatistics(formatApiDate(normalized.start), formatApiDate(normalized.end))
+  }, [
+    dateEnd,
+    dateStart,
+    getStatistics,
+    normalizeRangeWithReasons,
+    showAdjustmentIfNeeded,
+  ])
+
+  const isSummaryRow = useCallback((row: (typeof statArr)[number]) => {
+    return !row?.driver_id && !row?.name
+  }, [])
+  const displayRows = useMemo(() => {
+    const courierRows = statArr.filter((row) => !isSummaryRow(row))
+    const summaryRows = statArr.filter((row) => isSummaryRow(row))
+    return [...courierRows, ...summaryRows]
+  }, [isSummaryRow, statArr])
+
+  const startMinAllowed = maxDay(globalMinDate, dateEnd.subtract(MAX_SPAN_DAYS, 'day'))
+  const startMaxAllowed = minDay(today, dateEnd)
+  const endMinAllowed = maxDay(globalMinDate, dateStart)
+  const endMaxAllowed = minDay(today, dateStart.add(MAX_SPAN_DAYS, 'day'))
 
   return {
+    activePicker,
+    closePicker,
+    dateEnd: formatApiDate(dateEnd),
+    dateEndLabel: dateEnd.locale('ru').format(UI_DATE_FORMAT),
+    dateStart: formatApiDate(dateStart),
+    dateStartLabel: dateStart.locale('ru').format(UI_DATE_FORMAT),
+    displayRows,
+    getStat,
+    globalFontSize,
+    isSummaryRow,
+    openPicker,
+    pickerMaxDate: formatApiDate(activePicker === 'start' ? startMaxAllowed : endMaxAllowed),
+    pickerMinDate: formatApiDate(activePicker === 'start' ? startMinAllowed : endMinAllowed),
+    pickerTitle: activePicker === 'start' ? 'Дата от' : activePicker === 'end' ? 'Дата до' : '',
+    pickerValue: formatApiDate(activePicker === 'start' ? dateStart : dateEnd),
+    selectPickerDate,
     statArr,
-    dateStart,
-    dateEnd,
-    showCalendarStart,
-    setShowCalendarStart,
-    showCalendarEnd,
-    setShowCalendarEnd,
-    isRefreshing,
-    onRefresh,
-    chooseDateStart,
-    chooseDateEnd,
-    globalFontSize
   }
 }

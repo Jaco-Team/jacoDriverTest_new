@@ -1,58 +1,107 @@
-import React from 'react';
+import React from 'react'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Video } from 'lucide-react-native'
 
-import { Text, View, TouchableOpacity } from 'react-native';
-
-import {   
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableData,
-  TableRow,
-} from '@/components/ui/table';
-
-import { ModalErrCam } from './ModalErrCam';
-
-import dayjs from 'dayjs';
-
+import { appPalette } from '@/shared/styles/appPalette'
 import { useErrorCamera } from '../model/useError'
+import { ModalErrCam } from './ModalErrCam'
+import { graphStyles } from './graphStyles'
 
 export function ErrCamera(): React.JSX.Element {
-  const { globalFontSize, err_cam, showModalErrCam } = useErrorCamera();
+  const { globalFontSize, err_cam, showModalErrCam } = useErrorCamera()
 
   return (
-    <View className='m-5 p-5 bg-white rounded-xl shadow-zinc-500 shadow'>
-
-      <View className='flex-row items-center text-center justify-center w-full'>
-        <Text className='font-bold text-lg'>Ошибки по камерам</Text>
+    <View style={graphStyles.card} testID="graph-camera-errors-card">
+      <View style={graphStyles.cardHeader}>
+        <View style={graphStyles.cardIcon}>
+          <Video color={appPalette.primary} size={23} />
+        </View>
+        <Text style={graphStyles.cardTitle}>Ошибки по камерам</Text>
       </View>
-      
-      <Table className="w-full">
-        <TableHeader>
-          <TableRow>
-            <TableHead className='w-5/12' style={{ fontSize: globalFontSize }}>Дата</TableHead>
-            <TableHead className='w-7/12' style={{ fontSize: globalFontSize }}>Ошибка</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          { err_cam.map((item, index) => {
-            return (
-              <TouchableOpacity key={index} onPress={ () => { showModalErrCam(true, item) } }>
-                <TableRow>
-                  <TableData useRNView={true} className='w-5/12 h-auto flex flex-row justify-start items-center text-left'>
-                    <View className=''>
-                      <Text style={{ fontSize: globalFontSize }} className='font-medium leading-[22px] text-typography-800 font-roboto'>{ dayjs(new Date(item.date_time_close)).format('YYYY-MM-DD') }</Text>
-                    </View>
-                  </TableData>
-                  <TableData style={{ fontSize: globalFontSize }} className='w-7/12'>{item.fine_name}</TableData>
-                </TableRow>
-              </TouchableOpacity>
-            )
-          })}
-        </TableBody>
-      </Table>
-      
+
+      <View style={graphStyles.tableShell}>
+        <View style={graphStyles.tableFrame}>
+          <View style={graphStyles.tableRow}>
+            <View style={[graphStyles.tableCell, graphStyles.headCell, styles.dateCell]}>
+              <Text style={[graphStyles.headText, { fontSize: globalFontSize }]}>
+                Дата и время
+              </Text>
+            </View>
+            <View
+              style={[
+                graphStyles.tableCell,
+                graphStyles.headCell,
+                graphStyles.lastColumn,
+                styles.errorCell,
+              ]}
+            >
+              <Text style={[graphStyles.headText, { fontSize: globalFontSize }]}>
+                Ошибка
+              </Text>
+            </View>
+          </View>
+
+          {err_cam.length === 0 ? (
+            <View style={graphStyles.empty}>
+              <Text style={[graphStyles.emptyText, { fontSize: globalFontSize }]}>
+                Ошибок по камерам за выбранный период нет.
+              </Text>
+            </View>
+          ) : (
+            err_cam.map((item, index) => {
+              const lastRow = index === err_cam.length - 1
+
+              return (
+                <Pressable
+                  accessibilityLabel={`Открыть ошибку ${item.id}`}
+                  accessibilityRole="button"
+                  key={`${item.id}-${index}`}
+                  style={graphStyles.tableRow}
+                  testID={`graph-camera-error-${index}`}
+                  onPress={() => showModalErrCam(true, item)}
+                >
+                  <View
+                    style={[
+                      graphStyles.tableCell,
+                      styles.dateCell,
+                      lastRow && graphStyles.lastRowCell,
+                    ]}
+                  >
+                    <Text style={[graphStyles.bodyText, { fontSize: globalFontSize }]}>
+                      {item.date_time_fine}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      graphStyles.tableCell,
+                      graphStyles.lastColumn,
+                      styles.errorCell,
+                      lastRow && graphStyles.lastRowCell,
+                    ]}
+                  >
+                    <Text style={[graphStyles.bodyText, { fontSize: globalFontSize }]}>
+                      {item.fine_name}
+                    </Text>
+                  </View>
+                </Pressable>
+              )
+            })
+          )}
+        </View>
+      </View>
+
       <ModalErrCam />
     </View>
-  );
+  )
 }
+
+const styles = StyleSheet.create({
+  dateCell: {
+    width: '46%',
+    alignItems: 'flex-start',
+  },
+  errorCell: {
+    width: '54%',
+    alignItems: 'flex-start',
+  },
+})

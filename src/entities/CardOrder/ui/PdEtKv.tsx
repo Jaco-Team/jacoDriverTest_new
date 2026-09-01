@@ -1,37 +1,65 @@
-import React from "react"
+import React from 'react'
+import { StyleSheet, Text } from 'react-native'
 
-import { HStack } from "@/components/ui/hstack";
-import { Text } from "@/components/ui/text";
+import { toOrderInt } from '@/entities/CardOrder/model/normalizeOrderValue'
+import { PdEtKvProps } from '@/entities/CardOrder/model/types'
 
-import { PdEtKvProps } from "@/entities/CardOrder/model/types"
-
-export const PdEtKv: React.FC<PdEtKvProps> = ({ item, textStyle }) => {
-  // Собираем элементы для отображения
+export const PdEtKv: React.FC<PdEtKvProps> = ({
+  item,
+  textColor = '#1F2D38',
+  textStyle,
+}) => {
   const displayItems = [
     { key: 'pd', label: 'Пд', value: item.pd },
     { key: 'et', label: 'Эт', value: item.et },
     { key: 'kv', label: 'Кв', value: item.kv },
-  ].filter(({ value }) => value !== '0' && value !== '');
+  ].filter(({ value }) => toOrderInt(value) > 0)
+
+  if (displayItems.length === 0) return null
 
   return (
-    <HStack className="pb-3" testID="pdetkv">
-      {displayItems.map((el, index) => (
-        <React.Fragment key={el.key}>
-          {index !== 0 && (
-            <Text style={textStyle} className="font-bold text-black" testID="pdetkv-sep">
+    <Text
+      style={[styles.row, textStyle, { color: textColor }]}
+      testID="pdetkv"
+    >
+      {displayItems.map((element, index) => (
+        <React.Fragment key={element.key}>
+          {index > 0 ? (
+            <Text
+              style={[styles.label, textStyle, { color: textColor }]}
+              testID="pdetkv-sep"
+            >
               ,{' '}
             </Text>
-          )}
-          <Text style={textStyle} testID={`pdetkv-${el.key}`}>
-            <Text style={textStyle} className="font-bold text-black" testID={`pdetkv-${el.key}-label`}>
-              {el.label}:{' '}
+          ) : null}
+          <Text testID={`pdetkv-${element.key}`}>
+            <Text
+              style={[styles.label, textStyle, { color: textColor }]}
+              testID={`pdetkv-${element.key}-label`}
+            >
+              {element.label}:{' '}
             </Text>
-            <Text style={textStyle} className="font-normal text-black" testID={`pdetkv-${el.key}-value`}>
-              {el.value}
+            <Text
+              style={[styles.value, textStyle, { color: textColor }]}
+              testID={`pdetkv-${element.key}-value`}
+            >
+              {element.value}
             </Text>
           </Text>
         </React.Fragment>
       ))}
-    </HStack>
-  );
-};
+    </Text>
+  )
+}
+
+const styles = StyleSheet.create({
+  row: {
+    marginBottom: 8,
+  },
+  label: {
+    fontFamily: 'Roboto-Medium',
+  },
+  value: {
+    fontFamily: 'Roboto-Regular',
+  },
+})

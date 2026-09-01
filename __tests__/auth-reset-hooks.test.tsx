@@ -2,7 +2,8 @@ import React from 'react';
 import { act, render, waitFor } from '@testing-library/react-native';
 
 const mockNavigate = jest.fn();
-const mockNavigation = { navigate: mockNavigate };
+const mockReset = jest.fn();
+const mockNavigation = { navigate: mockNavigate, reset: mockReset };
 const mockAnalyticsLog = jest.fn();
 let mockFocusCleanup: (() => void) | undefined;
 
@@ -92,7 +93,12 @@ describe('auth/reset hooks', () => {
 
     await render(<Probe />);
 
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('List_orders'));
+    await waitFor(() =>
+      expect(mockReset).toHaveBeenCalledWith({
+        index: 0,
+        routes: [{ name: 'List_orders' }],
+      }),
+    );
     expect(api!.showPassword).toBe(false);
     expect(mockAnalyticsLog).toHaveBeenCalledWith(
       'ScreenOpen',
@@ -109,8 +115,8 @@ describe('auth/reset hooks', () => {
     }
 
     await render(<Probe />);
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('Auth'));
-    mockNavigate.mockClear();
+    await waitFor(() => expect(mockCheckToken).toHaveBeenCalled());
+    mockReset.mockClear();
 
     await act(async () => {
       await api!.LogIn('', '');
@@ -137,16 +143,29 @@ describe('auth/reset hooks', () => {
     }
 
     await render(<Probe />);
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('Auth'));
-    mockNavigate.mockClear();
+    await waitFor(() => expect(mockCheckToken).toHaveBeenCalled());
+    mockReset.mockClear();
 
     await act(async () => {
-      await api!.LogIn('79990000000', '123456');
+      api!.handleLoginChange('79990000000');
+      api!.handlePasswordChange('123456');
+      api!.handleTogglePassword();
+    });
+
+    await act(async () => {
+      await api!.LogIn(api!.myLogin, api!.myPWD);
     });
 
     expect(mockAuth).toHaveBeenCalledWith('79990000000', '123456');
     expect(mockAnalyticsLog).toHaveBeenCalledWith('AuthLogin', 'Успешная авторизация');
-    expect(mockNavigate).toHaveBeenCalledWith('List_orders');
+    expect(mockReset).toHaveBeenCalledWith({
+      index: 0,
+      routes: [{ name: 'List_orders' }],
+    });
+    expect(api!.myLogin).toBe('');
+    expect(api!.myPWD).toBe('');
+    expect(api!.showPassword).toBe(false);
+    expect(api!.captchaRequired).toBe(false);
   });
 
   it('useAuthLogic: ошибка login логируется без перехода в список', async () => {
@@ -163,15 +182,15 @@ describe('auth/reset hooks', () => {
     }
 
     await render(<Probe />);
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('Auth'));
-    mockNavigate.mockClear();
+    await waitFor(() => expect(mockCheckToken).toHaveBeenCalled());
+    mockReset.mockClear();
 
     await act(async () => {
       await api!.LogIn('79990000000', 'bad');
     });
 
     expect(mockAnalyticsLog).toHaveBeenCalledWith('AuthLoginFail', 'Ошибка авторизации');
-    expect(mockNavigate).not.toHaveBeenCalledWith('List_orders');
+    expect(mockReset).not.toHaveBeenCalled();
     expect(api!.loginError).toBe('bad');
     expect(api!.captchaRequired).toBe(true);
 
@@ -293,7 +312,10 @@ describe('auth/reset hooks', () => {
     });
 
     expect(mockSendCode).toHaveBeenCalledWith('', '1107');
-    expect(mockNavigate).toHaveBeenCalledWith('List_orders');
+    expect(mockReset).toHaveBeenCalledWith({
+      index: 0,
+      routes: [{ name: 'List_orders' }],
+    });
   });
 
   it('useResetPwdLogic: показывает backend-ошибку неверного SMS-кода без перехода', async () => {
@@ -323,6 +345,6 @@ describe('auth/reset hooks', () => {
 
     expect(mockSendCode).toHaveBeenCalledWith('79990000000', '1107');
     expect(api!.errorText).toBe('Код из смс введен не верно');
-    expect(mockNavigate).not.toHaveBeenCalledWith('List_orders');
+    expect(mockReset).not.toHaveBeenCalled();
   });
 });

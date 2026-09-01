@@ -1,163 +1,258 @@
 import React from 'react'
-import { View, ScrollView, RefreshControl, Text } from 'react-native'
-import { Button } from '@/components/ui/button'
-import { Calendar } from '@/shared/ui/Calendar'
-import { Divider } from '@/components/ui/divider'
-import { TextDescription } from './TextDescription'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import { appPalette } from '@/shared/styles/appPalette'
 import { usePriceScreen } from '../model/usePriceScreen'
-
-import { ScreenLayout } from '@/shared/ui/ScreenLayout'
-
-import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
+import { PriceDatePickerSheet } from './PriceDatePickerSheet'
+import { TextDescription } from './TextDescription'
 
 export function PriceScreen(): React.JSX.Element {
-   const {
-    statPrice,
-    give_history,
-    FormatPrice,
-    dateStart,
-    dateEnd,
-    showDateStart,
+  const insets = useSafeAreaInsets()
+  const {
+    activePicker,
+    closePicker,
+    globalFontSize,
+    openEndPicker,
+    openStartPicker,
+    pickerMaxDate,
+    pickerMinDate,
+    pickerTitle,
+    pickerValue,
+    selectPickerDate,
+    settlementRows,
     showDateEnd,
-    showStartCalendar,
-    setShowStartCalendar,
-    showEndCalendar,
-    setShowEndCalendar,
-    isRefreshing,
-    refresh,
-    chooseStartDate,
-    chooseEndDate,
-
-    globalFontSize
+    showDateStart,
+    summaryRows,
+    totalPriceFontSize,
+    totalPriceLabel,
   } = usePriceScreen()
 
   return (
-    <ScreenLayout>
-      <Calendar
-        is_show={showStartCalendar}
-        date={dateStart}
-        changeDate={(d) => { chooseStartDate(d); setShowStartCalendar(false); Analytics.log(AnalyticsEvent.PriceStartCalendarClose, 'Закрытие календаря (Расчет): Дата от'); }}
-        setShowCalendar={setShowStartCalendar}
-      />
-      <Calendar
-        is_show={showEndCalendar}
-        date={dateEnd}
-        changeDate={(d) => { chooseEndDate(d); setShowEndCalendar(false); Analytics.log(AnalyticsEvent.PriceEndCalendarClose, 'Закрытие календаря (Расчет): Дата до'); }}
-        setShowCalendar={setShowEndCalendar}
-      />
-
+    <View style={styles.screen} testID="price-screen">
       <ScrollView
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} />}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 48 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        testID="price-scroll"
       >
-        <View className='m-5 mb-0'>
-          <Button
-            onPress={() => { setShowStartCalendar(true); Analytics.log(AnalyticsEvent.PriceStartCalendarOpen, 'Открытие календаря (Расчет): Дата от'); }}
-            variant='outline'
-            className='w-full rounded-lg border-gray-200 h-auto mb-3 bg-white'
-          >
-            <View className='flex-row items-center pt-3 pb-3'>
-              <Text className='font-bold' style={{ fontSize: globalFontSize }}>Дата от: </Text>
-              <Text style={{ fontSize: globalFontSize }}>{showDateStart}</Text>
-            </View>
-          </Button>
+        <View style={[styles.card, styles.hero]} testID="price-range-card">
+          <Text style={styles.title}>
+            Расчет
+          </Text>
 
-          <Button
-            onPress={() => {setShowEndCalendar(true); Analytics.log(AnalyticsEvent.PriceEndCalendarOpen, 'Открытие календаря (Расчет): Дата до'); }}
-            variant='outline'
-            className='w-full rounded-lg border-gray-200 h-auto bg-white'
-          >
-            <View className='flex-row items-center pt-3 pb-3'>
-              <Text className='font-bold' style={{ fontSize: globalFontSize }}>Дата до: </Text>
-              <Text style={{ fontSize: globalFontSize }}>{showDateEnd}</Text>
-            </View>
-          </Button>
+          <View style={styles.rangeControl}>
+            <Pressable
+              accessibilityLabel={`Дата от: ${showDateStart}`}
+              accessibilityRole="button"
+              style={styles.rangeButton}
+              testID="price-start-date"
+              onPress={openStartPicker}
+            >
+              <Text style={styles.rangePrefix}>С</Text>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.rangeValue,
+                  {
+                    fontSize: globalFontSize,
+                    lineHeight: Math.round(globalFontSize * 1.25),
+                  },
+                ]}
+              >
+                {showDateStart}
+              </Text>
+            </Pressable>
+
+            <Text style={styles.rangeDivider}>по</Text>
+
+            <Pressable
+              accessibilityLabel={`Дата до: ${showDateEnd}`}
+              accessibilityRole="button"
+              style={[styles.rangeButton, styles.rangeButtonEnd]}
+              testID="price-end-date"
+              onPress={openEndPicker}
+            >
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.rangeValue,
+                  styles.rangeValueEnd,
+                  {
+                    fontSize: globalFontSize,
+                    lineHeight: Math.round(globalFontSize * 1.25),
+                  },
+                ]}
+              >
+                {showDateEnd}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
-        <View className='m-5 p-5 bg-white rounded-xl shadow-zinc-500 shadow'>
-          <View className='flex-row items-center text-center justify-center w-full pt-3 pb-3'>
-            <Text className='font-bold text-5xl'>{FormatPrice(statPrice?.my_price ?? 0)} ₽</Text>
+        <View style={[styles.card, styles.metricsCard]} testID="price-summary-card">
+          <Text
+            adjustsFontSizeToFit
+            numberOfLines={1}
+            style={[
+              styles.total,
+              { fontSize: totalPriceFontSize, lineHeight: totalPriceFontSize },
+            ]}
+            testID="price-total"
+          >
+            {totalPriceLabel}
+          </Text>
+
+          <View style={styles.metrics}>
+            {summaryRows.map((row) => (
+              <TextDescription
+                key={row.label}
+                emphasize={row.emphasize}
+                globalFontSize={globalFontSize}
+                hideDivider={row.hideDivider}
+                text={row.label}
+                title={row.description}
+                value={row.value}
+              />
+            ))}
           </View>
-
-          <TextDescription text='Сумма налички' value={statPrice?.sum_cash ?? 0} type='price'
-            FormatPrice={FormatPrice} title='Сумма заказов за наличку за выбранный диапазон, включая стоимость доставки'
-            globalFontSize={globalFontSize}
-          />
-
-          <TextDescription text='Сумма безнала' value={statPrice?.sum_bank ?? 0} type='price'
-            FormatPrice={FormatPrice} title='Сумма заказов по безналичному расчету за выбранный диапазон, включая стоимость доставки'
-            globalFontSize={globalFontSize}
-          />
-
-          <TextDescription text='Заработал' value={statPrice?.my_price ?? 0} type='price'
-            FormatPrice={FormatPrice} title='Сумма стоимости доставки для курьера за выбранный диапазон + доплаты за период'
-            globalFontSize={globalFontSize}
-          />
-
-          <TextDescription text='Сдача' value={statPrice?.sdacha ?? 0} type='price'
-            FormatPrice={FormatPrice} title='Из графы Сумма налички вычитаем графу Заработал'
-            globalFontSize={globalFontSize}
-          />
-
-          <TextDescription text='Налички' value={statPrice?.my_cash ?? 0} type='price'
-            FormatPrice={FormatPrice} title='Разница между графой К сдаче и графой Сдал за весь период'
-            globalFontSize={globalFontSize}
-          />
-
-          <TextDescription text='Количество по наличке' value={statPrice?.count_cash ?? 0} type='count'
-            FormatPrice={FormatPrice} globalFontSize={globalFontSize}
-          />
-
-          <TextDescription text='Количество по безналу' value={statPrice?.count_bank ?? 0} type='count'
-            FormatPrice={FormatPrice} globalFontSize={globalFontSize}
-          />
-
-          <TextDescription text='Завершенных заказов' value={statPrice?.count ?? 0} type='count'
-            FormatPrice={FormatPrice} bottom_devider={false} globalFontSize={globalFontSize}
-          />
         </View>
 
-        <View className='m-5 p-5 mt-0 bg-white rounded-xl shadow-zinc-500 shadow'>
-          {(statPrice?.full_give ?? 0) > 0 && (
-            <>
-              <View className='flex-row items-center pb-3'>
-                <Text className='font-bold w-2/4' style={{ fontSize: globalFontSize }}>Время</Text>
-                <Text className='font-bold w-2/4 text-left' style={{ fontSize: globalFontSize }}>Сданная сумма</Text>
-              </View>
-              <Divider />
-            </>
-          )}
-
-          {give_history?.map((item, index) => (
-            <React.Fragment key={index}>
-              <View className='flex-row items-center pb-3 pt-3'>
-                <Text className='w-2/4' style={{ fontSize: globalFontSize }}>{item.time}</Text>
-                <Text className='w-2/4 text-left' style={{ fontSize: globalFontSize }}>
-                  {FormatPrice(item.give)} ₽
-                </Text>
-              </View>
-              {index < ((give_history?.length ?? 0) - 1) && <Divider />}
-            </React.Fragment>
-          ))}
-
-          {(statPrice?.full_give ?? 0) > 0 && <Divider />}
-
-          <View className={(statPrice?.full_give ?? 0) > 0 ? 'flex-row items-center pb-3 pt-3' : 'flex-row items-center pb-3'}>
-            <Text className='font-bold w-2/4' style={{ fontSize: globalFontSize }}>Всего сдал</Text>
-            <Text className='font-bold w-2/4 text-left' style={{ fontSize: globalFontSize }}>
-              {FormatPrice(statPrice?.full_give ?? 0)} ₽
-            </Text>
-          </View>
-
-          <Divider />
-
-          <View className='flex-row items-center pt-3'>
-            <Text className='font-bold w-2/4' style={{ fontSize: globalFontSize }}>Осталось сдать</Text>
-            <Text className='font-bold w-2/4 text-left' style={{ fontSize: globalFontSize }}>
-              {FormatPrice(statPrice?.my_cash ?? 0)} ₽
-            </Text>
+        <View
+          style={[styles.card, styles.metricsCard]}
+          testID="price-settlement-card"
+        >
+          <View style={styles.metrics}>
+            {settlementRows.map((row, index) => (
+              <TextDescription
+                key={`${row.label}-${index}`}
+                emphasize={row.emphasize}
+                globalFontSize={globalFontSize}
+                hideDivider={row.hideDivider || index === settlementRows.length - 1}
+                text={row.label}
+                value={row.value}
+              />
+            ))}
           </View>
         </View>
       </ScrollView>
-    </ScreenLayout>
+
+      <PriceDatePickerSheet
+        isOpen={activePicker !== null}
+        maxDate={pickerMaxDate}
+        minDate={pickerMinDate}
+        title={pickerTitle}
+        value={pickerValue}
+        onClose={closePicker}
+        onSelect={selectPickerDate}
+      />
+    </View>
   )
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: appPalette.surface,
+  },
+  content: {
+    width: '100%',
+    gap: 16,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+  },
+  card: {
+    width: '100%',
+    overflow: 'hidden',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(37, 18, 22, 0.08)',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#181114',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 3,
+  },
+  hero: {
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+  },
+  title: {
+    marginBottom: 18,
+    color: '#1E1216',
+    fontFamily: 'Roboto-Bold',
+    fontSize: 32,
+    lineHeight: 38,
+    textAlign: 'center',
+  },
+  rangeControl: {
+    width: '100%',
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    padding: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(66, 98, 125, 0.22)',
+    backgroundColor: '#FFFFFF',
+  },
+  rangeButton: {
+    minWidth: 0,
+    minHeight: 42,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+  },
+  rangeButtonEnd: {
+    justifyContent: 'flex-end',
+    paddingRight: 4,
+  },
+  rangePrefix: {
+    flexShrink: 0,
+    color: appPalette.textMuted,
+    fontFamily: 'Roboto-Bold',
+    fontSize: 13,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  rangeValue: {
+    minWidth: 0,
+    flexShrink: 1,
+    color: appPalette.primaryDeep,
+    fontFamily: 'Roboto-Bold',
+  },
+  rangeValueEnd: {
+    textAlign: 'right',
+  },
+  rangeDivider: {
+    flexShrink: 0,
+    paddingHorizontal: 4,
+    color: appPalette.textMuted,
+    fontFamily: 'Roboto-Bold',
+    fontSize: 13,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  metricsCard: {
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  total: {
+    marginVertical: 20,
+    paddingHorizontal: 18,
+    color: appPalette.primaryDeep,
+    fontFamily: 'Roboto-Bold',
+    textAlign: 'center',
+  },
+  metrics: {
+    width: '100%',
+    paddingHorizontal: 18,
+  },
+})

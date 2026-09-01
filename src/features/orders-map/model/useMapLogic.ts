@@ -31,7 +31,6 @@ export function useMapLogic() {
   const didAutoRemountRef = useRef(false)
   const didCenterOnLoadRef = useRef(false)
   const [zoom, setZoom] = useState<number>(12)
-  const [isActiveFilter, setActiveFilter] = useState<boolean>(false);
   const [trafficVisible, setTrafficVisible] = useState<boolean>(false)
   const [mapInitStatus, setMapInitStatus] = useState<'pending' | 'ready' | 'error'>('pending')
   const [isMapMounted, setMapMounted] = useState(false)
@@ -40,23 +39,16 @@ export function useMapLogic() {
 
   const [ getSettings, night_map, is_scaleMap, rotate_map, setRotateMap ] = useSettingsStore( useShallow( state => [ state.getSettings, state.night_map, state.is_scaleMap, state.rotate_map, state.setRotateMap ] ) )
 
-  const [getOrders, home, update_interval, showModalTypeDop, is_showModalTypeDop, types_dop, type_dop, isOpenOrderMap, mapHomeCenterRequestId ] = useOrdersStore(
+  const [getOrders, home, update_interval, is_showModalTypeDop, isOpenOrderMap, mapHomeCenterRequestId ] = useOrdersStore(
     useShallow((state) => [
       state.getOrders,
       state.home,
       state.update_interval,
-      state.showModalTypeDop,
       state.is_showModalTypeDop,
-      state.types_dop,
-      state.type_dop,
       state.isOpenOrderMap,
       state.mapHomeCenterRequestId
     ])
   );
-
-  useEffect(() => {
-    setActiveFilter( types_dop.length != type_dop.length )
-  }, [types_dop, type_dop])
 
   const [ showLocationDriver, set_type_location, type_location ] = useGEOStore( useShallow( state => [ state.showLocationDriver, state.set_type_location, state.type_location ] ) )
 
@@ -203,9 +195,7 @@ export function useMapLogic() {
     is_scaleMap,
     rotate_map, 
     setRotateMap,
-    showModalTypeDop,
     is_showModalTypeDop,
-    isActiveFilter,
     isOpenOrderMap,
     set_type_location,
     type_location,

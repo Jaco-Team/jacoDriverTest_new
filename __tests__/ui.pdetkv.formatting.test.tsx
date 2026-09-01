@@ -34,3 +34,11 @@ test('пустые/нулевые поля скрыты, запятая толь
   // Между двумя блоками — ровно один разделитель
   expect(screen.getAllByTestId('pdetkv-sep')).toHaveLength(1);
 });
+
+test('нулевые строки legacy API не выводятся', async () => {
+  const item = { pd: '00', et: '0', kv: '' } as any;
+
+  await render(<PdEtKv item={item} textStyle={textStyle} />);
+
+  expect(screen.queryByTestId('pdetkv')).toBeNull();
+});

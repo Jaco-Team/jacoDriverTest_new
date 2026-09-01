@@ -2,13 +2,10 @@ import React from 'react'
 import {
   ActivityIndicator,
   Image,
-  Platform,
-  StatusBar,
   StyleSheet,
   Text,
   View,
 } from 'react-native'
-import { useIsFocused } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useGreetingLogic } from '@/processes/auth/model/useGreetingLogic'
@@ -16,16 +13,10 @@ import { useGreetingLogic } from '@/processes/auth/model/useGreetingLogic'
 const GREETING_BACKGROUND = '#CC0033'
 
 export function Greeting(): React.JSX.Element {
-  const isFocused = useIsFocused()
-
   useGreetingLogic()
 
   return (
     <View style={styles.root} testID="greeting-screen">
-      {Platform.OS === 'ios' && isFocused ? (
-        <StatusBar barStyle="light-content" />
-      ) : null}
-
       <SafeAreaView
         edges={['top', 'right', 'bottom', 'left']}
         style={styles.safeArea}

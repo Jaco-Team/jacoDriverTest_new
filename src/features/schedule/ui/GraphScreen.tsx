@@ -1,39 +1,34 @@
 import React from 'react'
-import { View, ScrollView, RefreshControl } from 'react-native'
-
-import { GraphTable } from '@/features/schedule/ui/GraphTable'
-import { ChooseMonth } from '@/features/schedule/ui/ChooseMonth'
-import { ErrOrders } from '@/features/schedule/ui/ErrOrders'
-import { ErrCamera } from '@/features/schedule/ui/ErrCamera'
-
-import { ScreenLayout } from '@/shared/ui/ScreenLayout'
+import { ScrollView, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useGraphLogic } from '../model/useGraphLogic'
+import { ChooseMonth } from './ChooseMonth'
+import { ErrCamera } from './ErrCamera'
+import { ErrOrders } from './ErrOrders'
+import { GraphTable } from './GraphTable'
+import { graphStyles } from './graphStyles'
 
 export function GraphScreen(): React.JSX.Element {
-  const { isRefreshing, handleRefresh } = useGraphLogic()
+  const insets = useSafeAreaInsets()
+
+  useGraphLogic()
 
   return (
-    <ScreenLayout>
+    <View style={graphStyles.screen} testID="graph-screen">
       <ScrollView
-        horizontal={false}
-        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={[
+          graphStyles.content,
+          { paddingBottom: insets.bottom + 48 },
+        ]}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-          />
-        }
+        testID="graph-scroll"
       >
         <ChooseMonth />
         <GraphTable />
         <ErrOrders />
         <ErrCamera />
-
-        {/* Отступ внизу, чтобы можно было проскроллить */}
-        <View className="w-full h-20" />
       </ScrollView>
-    </ScreenLayout>
+    </View>
   )
 }

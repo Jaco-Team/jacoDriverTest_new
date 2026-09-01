@@ -39,7 +39,7 @@ export const CardTagPopover: React.FC<CardTagPopoverType> = ({ text, color, coun
           <VStack>
             {array.map((drink, idx) => (
               <Text className="text-black font-normal" key={idx} style={{ paddingBottom: idx + 1 === array.length ? 0 : 5, fontSize: globalFontSize }}>
-                {drink.names}
+                {drink.names || drink.name}
               </Text>
             ))}
           </VStack>

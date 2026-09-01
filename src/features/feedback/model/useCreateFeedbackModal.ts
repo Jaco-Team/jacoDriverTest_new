@@ -23,7 +23,7 @@ import {
 export function useCreateFeedbackModal() {
   const bottomSheetRef = useRef<BottomSheet>(null);
 
-  const [ modal, closeCreateModal, createFeedback, searchQuery, setSearchQuery ] = useFeedbackStore( useShallow( state => [ state.modal, state.closeCreateModal, state.createFeedback, state.searchQuery, state.setSearchQuery ]) );
+  const [ modal, closeCreateModal, createFeedback, isSaving ] = useFeedbackStore( useShallow( state => [ state.modal, state.closeCreateModal, state.createFeedback, state.is_click ]) );
   const { isCreateModalOpen } = modal;
 
   const [ globalFontSize, showModalText ] = useGlobalStore( useShallow( state => [ state.globalFontSize, state.showModalText ]) );
@@ -31,10 +31,12 @@ export function useCreateFeedbackModal() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<FeedbackType>('предложение');
-  const [is_need_notification, setIs_need_notification] = useState<['is_need_notification'] | []>([])
+  const [isNeedNotification, setIsNeedNotification] = useState(false)
   const [images, setImages] = useState<Asset[]>([]);
 
   const handleSubmit = () => {
+    if (isSaving) return
+
     if (!title.trim()) {
       showModalText(true, 'Пожалуйста, введите заголовок')
       return;
@@ -51,7 +53,7 @@ export function useCreateFeedbackModal() {
       title,
       description,
       type,
-      is_need_notification: is_need_notification.length == 1 ? 1 : 0,
+      is_need_notification: isNeedNotification ? 1 : 0,
       images: images
     });
   };
@@ -60,6 +62,7 @@ export function useCreateFeedbackModal() {
     setTitle('');
     setDescription('');
     setType('предложение');
+    setIsNeedNotification(false);
     setImages([]);
   }, []);
 
@@ -156,7 +159,8 @@ export function useCreateFeedbackModal() {
     title, setTitle,
     description, setDescription,
     type, setType,
-    is_need_notification, setIs_need_notification,
+    isNeedNotification, setIsNeedNotification,
+    isSaving,
     handleSubmit,
     feedbackTypes,
     handleSheetChanges,
@@ -168,6 +172,5 @@ export function useCreateFeedbackModal() {
     takePhoto,
     showImagePickerOptions,
     removeImage,
-    searchQuery, setSearchQuery
   }
 }

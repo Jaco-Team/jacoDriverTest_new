@@ -130,6 +130,13 @@ describe('New Architecture contract', () => {
     expect(providers).toContain('//<ConnectivityLocationIndicator />');
   });
 
+  it('поднимает единый SafeAreaProvider на корне приложения', () => {
+    const providers = read('src/app/providers/AppProviders.tsx');
+
+    expect(providers).toContain('SafeAreaProvider');
+    expect(providers).toContain('initialMetrics={initialWindowMetrics}');
+  });
+
   it('токен в store остаётся на default AsyncStorage, не createAsyncStorage', () => {
     const store = read('src/shared/store/store.ts');
     expect(store).toMatch(

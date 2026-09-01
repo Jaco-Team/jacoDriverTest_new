@@ -21,6 +21,7 @@ import { GraphScreen } from '@/features/schedule/ui/GraphScreen';
 import { StatisticsTableScreen } from '@/features/statistics/ui/StatisticsTableScreen';
 import { Greeting } from '@/app/screens/Greeting';
 import { FeedbackScreen } from '@/features/feedback/ui/FeedbackScreen';
+import { OrdersUiPreviewScreen } from '@/app/screens/OrdersUiPreviewScreen'
 
 import { CustomDrawerContent } from './CustomDrawerContent';
 
@@ -98,6 +99,7 @@ export function MainDrawerNavigator() {
   return (
     <Drawer.Navigator
       initialRouteName={"Greeting"}
+      backBehavior="history"
       screenOptions={({ navigation }) => {
         return {
           drawerActiveTintColor: appPalette.primary,
@@ -277,7 +279,9 @@ export function MainDrawerNavigator() {
           title: 'Статистика времени',
           headerShown: true,
           swipeEnabled: true,
-          drawerItemStyle: is_need_page_stat ? {backgroundColor: '#fff'} : {backgroundColor: '#fff', height: 0},
+          drawerItemStyle: __DEV__ || is_need_page_stat
+            ? {backgroundColor: '#fff'}
+            : {backgroundColor: '#fff', height: 0},
           drawerLabelStyle: { fontSize: globalFontSize },
           headerRight: () => null,
         }}
@@ -308,6 +312,21 @@ export function MainDrawerNavigator() {
           headerRight: () => null,
         }}
       />
+      {__DEV__ ? (
+        <Drawer.Screen
+          name="OrdersUiPreview"
+          component={OrdersUiPreviewScreen}
+          options={{
+            drawerLabel: 'UI заказов (DEV)',
+            title: 'UI заказов (DEV)',
+            headerShown: true,
+            swipeEnabled: true,
+            drawerItemStyle: { backgroundColor: '#fff' },
+            drawerLabelStyle: { fontSize: globalFontSize },
+            headerRight: () => null,
+          }}
+        />
+      ) : null}
     </Drawer.Navigator>
   )
 }

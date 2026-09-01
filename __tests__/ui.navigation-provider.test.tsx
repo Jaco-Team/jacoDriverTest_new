@@ -1,12 +1,14 @@
 import React from 'react';
 import { act, render } from '@testing-library/react-native';
-import { Platform, Text } from 'react-native';
+import { BackHandler, Platform, Text } from 'react-native';
 
 const mockGetCurrentRoute = jest.fn();
+const mockIsReady = jest.fn();
 const mockSystemBars = jest.fn();
 
 let mockLoadSpinner = false;
 let mockNavigationContainerProps: any;
+let hardwareBackPressHandler: (() => boolean) | undefined;
 
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
@@ -30,6 +32,7 @@ jest.mock('@react-navigation/native', () => {
     NavigationContainer,
     createNavigationContainerRef: () => ({
       getCurrentRoute: (...args: any[]) => mockGetCurrentRoute(...args),
+      isReady: (...args: any[]) => mockIsReady(...args),
     }),
   };
 });
@@ -103,6 +106,14 @@ describe('NavigationProvider и системные области', () => {
     mockLoadSpinner = false;
     mockNavigationContainerProps = undefined;
     mockGetCurrentRoute.mockReturnValue({ name: 'Greeting' });
+    mockIsReady.mockReturnValue(true);
+    hardwareBackPressHandler = undefined;
+    (BackHandler.addEventListener as jest.Mock).mockImplementation(
+      (_eventName: string, handler: () => boolean) => {
+        hardwareBackPressHandler = handler
+        return { remove: jest.fn() }
+      },
+    );
     setPlatform('android');
   });
 
@@ -126,6 +137,22 @@ describe('NavigationProvider и системные области', () => {
     expect(latestSystemBarsProps()).toEqual({
       style: { statusBar: 'light', navigationBar: 'dark' },
     });
+  });
+
+  it('блокирует системный back только на техническом Greeting', async () => {
+    await render(
+      <NavigationProvider>
+        <RouteProbe />
+      </NavigationProvider>,
+    );
+
+    expect(hardwareBackPressHandler?.()).toBe(true);
+
+    mockGetCurrentRoute.mockReturnValue({ name: 'Auth' });
+    expect(hardwareBackPressHandler?.()).toBe(false);
+
+    mockIsReady.mockReturnValue(false);
+    expect(hardwareBackPressHandler?.()).toBe(false);
   });
 
   it('переключает фон и стиль Status Bar между Auth и рабочими экранами', async () => {
@@ -186,6 +213,25 @@ describe('NavigationProvider и системные области', () => {
     expect(screen.getByTestId('global-spinner')).toBeTruthy();
     expect(latestSystemBarsProps()).toEqual({
       style: { statusBar: 'light', navigationBar: 'dark' },
+    });
+  });
+
+  it('централизованно задаёт Status Bar на iOS', async () => {
+    setPlatform('ios');
+    mockGetCurrentRoute.mockReturnValue({ name: 'Auth' });
+
+    await render(
+      <NavigationProvider>
+        <RouteProbe />
+      </NavigationProvider>,
+    );
+
+    await act(async () => {
+      mockNavigationContainerProps.onReady();
+    });
+
+    expect(latestSystemBarsProps()).toEqual({
+      style: { statusBar: 'dark', navigationBar: 'dark' },
     });
   });
 });

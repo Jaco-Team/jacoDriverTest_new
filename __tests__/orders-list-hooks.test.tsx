@@ -45,6 +45,7 @@ describe('orders-list hooks', () => {
     mockGlobalState = {
       globalFontSize: 18,
       showAlertText: mockShowAlertText,
+      loadSpinner: true,
     };
     mockOrdersState = {
       getOrders: mockGetOrders,
@@ -52,6 +53,7 @@ describe('orders-list hooks', () => {
       update_interval: 30,
       actionButtonOrder: mockActionButtonOrder,
       setActiveConfirm: mockSetActiveConfirm,
+      is_check: true,
       limit_summ: '10000',
       limit_count: '10',
     };
@@ -77,6 +79,8 @@ describe('orders-list hooks', () => {
     expect(api!.showAlertText).toBe(mockShowAlertText);
     expect(api!.getOrders).toBe(mockGetOrders);
     expect(api!.orders).toEqual([{ id: 1, addr: 'Адрес' }]);
+    expect(api!.isChecking).toBe(true);
+    expect(api!.isGlobalLoading).toBe(true);
     expect(api!.update_interval).toBe(30);
     expect(api!.actionButtonOrder).toBe(mockActionButtonOrder);
     expect(api!.setActiveConfirm).toBe(mockSetActiveConfirm);

@@ -65,25 +65,16 @@ describe('schedule hooks', () => {
     jest.useRealTimers();
   });
 
-  it('useGraphLogic: на mount грузит текущий месяц и refresh держит isRefreshing', async () => {
-    let api: ReturnType<typeof useGraphLogic> | null = null;
-
+  it('useGraphLogic: на mount грузит текущий месяц без отсутствующего на сайте pull-to-refresh', async () => {
     function Probe() {
-      api = useGraphLogic();
+      useGraphLogic();
       return null as any;
     }
 
     await render(<Probe />);
 
+    expect(mockGetGraph).toHaveBeenCalledTimes(1);
     expect(mockGetGraph).toHaveBeenCalledWith('2026-06');
-    expect(api!.isRefreshing).toBe(false);
-
-    await act(async () => {
-      await api!.handleRefresh();
-    });
-
-    expect(mockGetGraph).toHaveBeenCalledWith('2026-06');
-    expect(api!.isRefreshing).toBe(false);
   });
 
   it('useChooseMonthLogic: выбирает активный месяц и вызывает getGraph при выборе', async () => {

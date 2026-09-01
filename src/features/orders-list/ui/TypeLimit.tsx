@@ -1,47 +1,75 @@
 import React from 'react';
 
-import {Text, TouchableOpacity, View} from 'react-native';
-
-import { HStack } from '@/components/ui/hstack';
-//import { RefreshCcw } from 'lucide-react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { OrdersTypeList } from './OrdersTypeList';
 import { useTypeLimit } from '../model/useTypeLimit';
+import { appPalette } from '@/shared/styles/appPalette';
 
 export function TypeLimit(): React.JSX.Element {
-  const { getOrders, limit_summ, limit_count, globalFontSize } = useTypeLimit()
+  const { limit_summ, limit_count, globalFontSize } = useTypeLimit()
 
   return (
-    <HStack className="justify-between items-center m-5 mb-0">
-      <OrdersTypeList />
+    <View style={styles.summary} testID="orders-list-summary">
+      <View style={styles.statusColumn}>
+        <OrdersTypeList />
+      </View>
 
-      <HStack className="flex gap-2">
-        {limit_count.length > 0 && 
-          <View className="px-3 py-1">
-            <Text className='font-semibold' style={{ fontSize: globalFontSize }}>{limit_count}</Text>
-          </View>
-        }
-        <View className="pl-3 py-1">
-          <Text className='font-semibold' style={{ fontSize: globalFontSize }}>{limit_summ}</Text>
-        </View>
-      </HStack>
-    </HStack>
+      {limit_count.length > 0 ? (
+        <Text
+          numberOfLines={1}
+          style={[styles.statText, styles.countText, { fontSize: globalFontSize }]}
+          testID="orders-list-limit-count"
+        >
+          {limit_count}
+        </Text>
+      ) : null}
+
+      <View style={styles.limitColumn}>
+        <Text
+          numberOfLines={1}
+          style={[styles.statText, styles.limitText, { fontSize: globalFontSize }]}
+          testID="orders-list-limit-sum"
+        >
+          {limit_summ}
+        </Text>
+      </View>
+    </View>
   )
-
-  // return (
-  //   <>
-  //     <HStack className='justify-between items-center m-5 mb-0'>
-  //       <OrdersTypeList />
-
-  //       <TouchableOpacity onPress={ () => getOrders(true) } className='p-3'>
-  //         <RefreshCcw size={25} color={'#000'} />
-  //       </TouchableOpacity>
-  //     </HStack>
-      
-  //     <HStack className={ (limit_count.length > 0 ? 'justify-between' : 'justify-center') + ' m-3 p-2 ml-5 mr-5 mb-0'}>
-  //       <Text className='font-semibold' style={{ fontSize: globalFontSize }}>{limit_summ}</Text>
-  //       {limit_count.length > 0 && <Text className='font-semibold' style={{ fontSize: globalFontSize }}>{limit_count}</Text>}
-  //     </HStack>
-  //   </>
-  // )
 }
+
+const styles = StyleSheet.create({
+  summary: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 7,
+    backgroundColor: appPalette.surface,
+  },
+  statusColumn: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'flex-start',
+  },
+  limitColumn: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'flex-end',
+  },
+  statText: {
+    color: '#111111',
+    fontFamily: 'Roboto-Bold',
+    fontWeight: '700',
+    lineHeight: 22,
+  },
+  countText: {
+    flexShrink: 0,
+    textAlign: 'center',
+  },
+  limitText: {
+    maxWidth: '100%',
+    textAlign: 'right',
+  },
+})

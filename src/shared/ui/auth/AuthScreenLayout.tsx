@@ -3,11 +3,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   View,
 } from 'react-native'
-import { useIsFocused } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Svg, {
   Circle,
@@ -55,13 +53,8 @@ function AuthBackground(): React.JSX.Element {
 }
 
 export function AuthScreenLayout({ children }: AuthScreenLayoutProps): React.JSX.Element {
-  const isFocused = useIsFocused()
-
   return (
     <View style={styles.root} testID="auth-screen-layout">
-      {Platform.OS === 'ios' ? (
-        <StatusBar barStyle={isFocused ? 'dark-content' : 'light-content'} />
-      ) : null}
       <AuthBackground />
 
       <SafeAreaView style={styles.safeArea} edges={['top', 'right', 'bottom', 'left']}>

@@ -39,6 +39,7 @@ describe('useSettingsLogic: локальное состояние и сохра�
     mockSettingsState = {
       getSettings: mockGetSettings,
       saveSettings: mockSaveSettings,
+      isClick: false,
       action_centered_map: 1,
       color: '#cc0033',
       fontSize: '16px',
@@ -52,40 +53,41 @@ describe('useSettingsLogic: локальное состояние и сохра�
     };
   });
 
-  it('инициализирует локальный state из store и сохраняет старое parseInt/parseFloat-поведение', async () => {
+  it('инициализирует локальный state из store и нормализует числовые значения', async () => {
     await render(<Probe />);
 
     expect(mockGetSettings).toHaveBeenCalledTimes(1);
     expect(api!.globalFontSize).toBe(18);
-    expect(api!.type_show_delState).toBe('full');
-    expect(api!.centered_mapState).toEqual(['is_center']);
-    expect(api!.night_mapState).toEqual([]);
-    expect(api!.is_scaleMapState).toEqual(['is_scaleMap']);
-    expect(api!.fontSizeState).toBe(16);
-    expect(api!.mapScaleState).toBe(1.25);
-    expect(api!.colorState).toBe('#cc0033');
-    expect(api!.groupTypeTimeState).toBe('norm');
-    expect(api!.groupTypeThemeState).toBe('white_border');
+    expect(api!.typeShowDel).toBe('full');
+    expect(api!.centeredMap).toBe(true);
+    expect(api!.nightMap).toBe(false);
+    expect(api!.showMapScale).toBe(true);
+    expect(api!.fontSize).toBe(16);
+    expect(api!.mapScale).toBe(1.25);
+    expect(api!.color).toBe('#cc0033');
+    expect(api!.mapDataType).toBe('norm');
+    expect(api!.markerTheme).toBe('white_border');
+    expect(api!.isSaving).toBe(false);
   });
 
   it('saveSettingsFunc передает в store актуальные значения локальной формы', async () => {
     await render(<Probe />);
 
     await act(async () => {
-      api!.setType_show_del('min');
-      api!.setCentered_map([]);
+      api!.setTypeShowDel('min');
+      api!.setCenteredMap(false);
       api!.setFontSize(22);
-      api!.setUpdate_interval(45);
+      api!.setUpdateInterval(45);
       api!.setColor('#111111');
       api!.setMapScale(1.75);
-      api!.setGroupTypeTime('full');
-      api!.setGroupTypeTheme('black');
-      api!.setNight_map(['is_night']);
-      api!.setScale_map([]);
+      api!.setMapDataType('full');
+      api!.setMarkerTheme('black');
+      api!.setNightMap(true);
+      api!.setShowMapScale(false);
     });
 
     await act(async () => {
-      api!.saveSettingsFunc();
+      await api!.saveSettings();
     });
 
     expect(mockSaveSettings).toHaveBeenCalledTimes(1);

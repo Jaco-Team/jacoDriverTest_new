@@ -1,74 +1,71 @@
-// __tests__/statistics.onRefresh.test.tsx
-/**
- * onRefresh:
- * - сразу ставит isRefreshing=true и зовёт getStatistics(start,end)
- * - через 500ms (fake timers) сбрасывает isRefreshing=false
- */
+import React from 'react'
+import { act, render } from '@testing-library/react-native'
 
-import dayjs from 'dayjs';
-import { render, act } from '@testing-library/react-native';
+const mockGetStatistics = jest.fn()
+const mockShowAlertText = jest.fn()
+const mockAnalyticsLog = jest.fn()
 
-// моки стора (до импорта хука!)
-jest.mock('@/shared/store/store', () => {
-  const getStatistics = jest.fn();
-  const useStatStore = (sel: any) =>
-    sel({ getStatistics, statArr: [{ name: 'X', time2: '', other_stat: {} }] });
-  const useGlobalStore = (sel: any) => sel({ globalFontSize: 16 });
-  return { useStatStore, useGlobalStore };
-});
+jest.mock('zustand/react/shallow', () => ({
+  useShallow: (selector: any) => selector,
+}))
 
-// импортируем хук после моков
-import { useStatisticsTable } from '@/features/statistics/model/useStatisticsTable';
+jest.mock('@/shared/store/store', () => ({
+  useStatStore: (selector: any) => selector({
+    getStatistics: mockGetStatistics,
+    statArr: [{ driver_id: 1, name: 'Курьер', time2: '', other_stat: {} }],
+  }),
+  useGlobalStore: (selector: any) => selector({
+    globalFontSize: 16,
+    showAlertText: mockShowAlertText,
+  }),
+}))
 
-describe('useStatisticsTable.onRefresh', () => {
-  // доступ к возвращаемому API хука
-  let api: ReturnType<typeof useStatisticsTable> | null = null;
+jest.mock('@/analytics/AppMetricaService', () => ({
+  Analytics: { log: (...args: any[]) => mockAnalyticsLog(...args) },
+  AnalyticsEvent: {
+    StatisticsCalendarStartOpen: 'StatisticsCalendarStartOpen',
+    StatisticsCalendarEndOpen: 'StatisticsCalendarEndOpen',
+    StatisticsCalendarStartClose: 'StatisticsCalendarStartClose',
+    StatisticsCalendarEndClose: 'StatisticsCalendarEndClose',
+    StatisticsDateSelected: 'StatisticsDateSelected',
+    StatisticsShowClick: 'StatisticsShowClick',
+  },
+}))
 
-  const fmt = (d: dayjs.Dayjs) => d.format('YYYY-MM-DD');
-  const today = dayjs('2025-10-27');
+import { useStatisticsTable } from '@/features/statistics/model/useStatisticsTable'
 
-  // достаём мок getStatistics из мок-стора
-  const { useStatStore } = require('@/shared/store/store');
-  const getStatistics: jest.Mock = useStatStore((s: any) => s).getStatistics;
+describe('useStatisticsTable: ручное обновление с кнопки сайта', () => {
+  let api: ReturnType<typeof useStatisticsTable> | null = null
 
-  // проб-компонент, чтобы "вытащить" значения из хука
   function Probe() {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    api = useStatisticsTable();
-    return null as any;
+    api = useStatisticsTable()
+    return null as any
   }
 
-  beforeEach(async () => {
-    jest.useFakeTimers();
-    jest.setSystemTime(Date.parse('2025-10-27T00:00:00Z'));
-    jest.clearAllMocks();
-    api = null;
-  });
+  beforeEach(() => {
+    jest.useFakeTimers()
+    jest.setSystemTime(Date.parse('2025-10-27T12:00:00Z'))
+    jest.clearAllMocks()
+    api = null
+  })
 
-  afterEach(async () => {
-    try { jest.runOnlyPendingTimers(); } catch {}
-    jest.useRealTimers();
-  });
+  afterEach(() => {
+    jest.runOnlyPendingTimers()
+    jest.useRealTimers()
+  })
 
-  it('isRefreshing -> true сразу, затем false через 500ms', async () => {
-    await render(<Probe />);
+  it('повторно запрашивает текущий диапазон по кнопке «Показать статистику»', async () => {
+    await render(<Probe />)
+    mockGetStatistics.mockClear()
 
-    getStatistics.mockClear();
-    expect(api!.isRefreshing).toBe(false);
-
-    // дергаем onRefresh
     await act(async () => {
-      api!.onRefresh();
-    });
+      api!.getStat()
+    })
 
-    // сразу после вызова — true и вызван getStatistics(сегодня, сегодня)
-    expect(api!.isRefreshing).toBe(true);
-    expect(getStatistics).toHaveBeenCalledWith(fmt(today), fmt(today));
-
-    // через 500мс переключается обратно в false
-    await act(async () => {
-      jest.advanceTimersByTime(500);
-    });
-    expect(api!.isRefreshing).toBe(false);
-  });
-});
+    expect(mockGetStatistics).toHaveBeenCalledWith('2025-10-21', '2025-10-27')
+    expect(mockAnalyticsLog).toHaveBeenCalledWith(
+      'StatisticsShowClick',
+      'Показать статистику времени',
+    )
+  })
+})

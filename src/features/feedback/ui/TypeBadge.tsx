@@ -1,24 +1,28 @@
-import React from 'react';
-import { View, Text } from 'react-native';
-import { FeedbackResponse } from '@/shared/store/FeedbackStoreType';
+import React from 'react'
+import { StyleSheet, Text, View } from 'react-native'
 
-export const TypeBadge: React.FC<{ type: FeedbackResponse['type'], globalFontSize: number }> = ({ type, globalFontSize }) => {
-  const getTypeStyle = () => {
-    switch (type) {
-      case 'предложение':
-        return 'bg-purple-100 text-purple-800';
-      case 'ошибка':
-        return 'bg-red-100 text-red-800';
-      case 'улучшение':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+import { appPalette } from '@/shared/styles/appPalette'
+import type { FeedbackResponse } from '@/shared/store/FeedbackStoreType'
 
-  return (
-    <View className={`rounded-full py-2 px-4 pt-1.5 ${getTypeStyle()}`}>
-      <Text className='leading-7 font-medium' style={{ fontSize: globalFontSize }}>{type}</Text>
-    </View>
-  );
-};
+export const TypeBadge: React.FC<{
+  type: FeedbackResponse['type']
+  globalFontSize: number
+}> = ({ type, globalFontSize }) => (
+  <View style={styles.badge}>
+    <Text style={[styles.text, { fontSize: Math.min(19, Math.max(13, globalFontSize - 1)) }]}>
+      {type}
+    </Text>
+  </View>
+)
+
+const styles = StyleSheet.create({
+  badge: {
+    minHeight: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: appPalette.surfaceAlt,
+  },
+  text: { color: appPalette.text, fontFamily: 'Roboto-Medium', lineHeight: 18 },
+})

@@ -1,7 +1,9 @@
 import React, { memo } from 'react'
 import {
+  Pressable,
+  StyleSheet,
+  Text,
   View,
-  TouchableOpacity,
 } from 'react-native'
 
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
@@ -9,8 +11,6 @@ import { faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons'
 
 import { MapPointTimeType } from '@/shared/store/SettingsStoreType'  //components/store/SettingsStoreType'
 import { Path, G, Svg } from 'react-native-svg'
-
-import { MarkerText } from '@/shared/ui/MarkerText'
 
 export const MapPointTime = memo(function MapPointTime({
   theme,
@@ -20,7 +20,14 @@ export const MapPointTime = memo(function MapPointTime({
   isActive
 }: MapPointTimeType): React.JSX.Element {
   return (
-    <View className="inline-flex flex-row items-center">
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ selected: isActive }}
+      onPress={() => setActive(value)}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      testID={`settings-map-data-${value}`}
+    >
+      <View style={styles.rowContent}>
       {theme === 'classic' ? (
         <View className="w-5 h-7 ml-1 mt-1">
           <Svg width="100%" height="100%" viewBox="0 0 183 285">
@@ -34,21 +41,50 @@ export const MapPointTime = memo(function MapPointTime({
         </View>
       ) : (
         <FontAwesomeIcon
-          size={20}
+          size={22}
           color={isActive === true ? 'red' : 'blue'}
           icon={faMapMarkerAlt}
         />
       )}
 
-      <TouchableOpacity onPress={() => setActive(value)}>
-
-        <MarkerText
-          globalFontSize={16}
-          theme={theme}
-          text={text || '14:32 (15 мин.)'}
-        />
-
-      </TouchableOpacity>
-    </View>
+      <View style={styles.label}>
+        <Text style={styles.labelText}>{text || '14:32 (15 мин.)'}</Text>
+      </View>
+      </View>
+    </Pressable>
   )
+})
+
+const styles = StyleSheet.create({
+  row: {
+    minHeight: 46,
+    borderRadius: 12,
+    justifyContent: 'center',
+  },
+  rowContent: {
+    width: '100%',
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  pressed: {
+    backgroundColor: 'rgba(255,255,255,0.38)',
+  },
+  label: {
+    alignSelf: 'center',
+    maxWidth: '86%',
+    marginLeft: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.65)',
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+  },
+  labelText: {
+    color: '#1f2b36',
+    fontSize: 14,
+    lineHeight: 18,
+  },
 })

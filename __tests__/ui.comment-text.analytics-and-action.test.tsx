@@ -1,101 +1,119 @@
-// __tests__/ui.comment-text.analytics-and-action.test.tsx
-/**
- * Назначение:
- *   Проверяет логику CommentText:
- *   • есть номер → звонок + событие аналитики, иконка Copy видна
- *   • нет номера → копирование в буфер + алёрт + другое событие аналитики
- *
- * Зачем:
- *   Это быстрый контакт/копипаст из комментария; регресс ломает UX и аналитику.
- */
+import React from 'react'
+import { fireEvent, render, screen } from '@testing-library/react-native'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 
-/* ===== ЛОКАЛЬНЫЕ МОКИ UI-КОМПОНЕНТОВ (убирают "type is invalid") ===== */
-jest.mock('@/components/ui/hstack', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  return { HStack: ({ children, ...p }: any) => React.createElement(View, p, children) };
-});
-jest.mock('@/components/ui/text', () => {
-  const React = require('react');
-  const { Text } = require('react-native');
-  return { Text: ({ children, ...p }: any) => React.createElement(Text, p, children) };
-});
+jest.mock('@/components/ui/actionsheet', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+
+  return {
+    Actionsheet: ({ children, isOpen }: any) =>
+      isOpen ? React.createElement(View, null, children) : null,
+    ActionsheetBackdrop: View,
+    ActionsheetContent: View,
+    ActionsheetDragIndicator: View,
+    ActionsheetDragIndicatorWrapper: View,
+  }
+})
+
 jest.mock('lucide-react-native', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  const Mk = (name: string) => (props: any) => React.createElement(View, { ...props, testID: name });
-  return { Copy: Mk('Copy'), QrCode: Mk('QrCode') };
-});
+  const React = require('react')
+  const { View } = require('react-native')
+  const Phone = (props: any) =>
+    React.createElement(View, { ...props, testID: 'Phone' })
 
-/* ===== СИСТЕМНЫЕ МОКИ (Clipboard/Analytics/парсеры) ===== */
-jest.mock('@react-native-clipboard/clipboard', () => ({ setString: jest.fn() }));
+  return { Phone }
+})
+
 jest.mock('@/analytics/AppMetricaService', () => ({
   Analytics: { log: jest.fn() },
-  AnalyticsEvent: { OrderCallClient: 'OrderCallClient', OrderClipboard: 'OrderClipboard' },
-}));
-jest.mock('@/shared/lib/getNumberComment', () => ({
-  // Для тестов возвращаем как есть
-  getNumberComment: (s: string) => s,
-}));
-jest.mock('@/shared/lib/getNumberCommentCheck', () => ({
-  // Считаем, что "есть номер", если встречаем префикс "tel:"
-  getNumberCommentCheck: (s: string) => (s.includes('tel:') ? ['+7'] : []),
-}));
+  AnalyticsEvent: {
+    OrderCallClient: 'OrderCallClient',
+    OrderCommentPhonesOpen: 'OrderCommentPhonesOpen',
+  },
+}))
 
-/* ===== ТЕСТЫ ===== */
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
-import { CommentText } from '@/entities/CardOrder/ui/CommentText';
-import Clipboard from '@react-native-clipboard/clipboard';
+import { CommentText } from '@/entities/CardOrder/ui/CommentText'
 
-test('есть номер: звонок, иконка Copy видна, логируется OrderCallClient', async () => {
-  const dialCall = jest.fn();
-  const { Analytics } = require('@/analytics/AppMetricaService');
+const metrics = {
+  frame: { x: 0, y: 0, width: 390, height: 844 },
+  insets: { top: 47, right: 0, bottom: 34, left: 0 },
+}
 
-  await render(
-    <CommentText
-      comment="tel:+79990000000"
-      showAlertText={jest.fn()}
-      globalFontSize={16}
-      dialCall={dialCall}
-    />
-  );
+async function renderComment(comment: string, dialCall = jest.fn()) {
+  const result = await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <CommentText
+        comment={comment}
+        dialCall={dialCall}
+        globalFontSize={16}
+        showAlertText={jest.fn()}
+      />
+    </SafeAreaProvider>,
+  )
 
-  // Иконка есть
-  expect(screen.getByTestId('Copy')).toBeTruthy();
+  return {
+    dialCall,
+    ...result,
+  }
+}
 
-  // Нажимаем по тексту блока комментария
-  await fireEvent.press(screen.getByTestId('comment-touch'));
+describe('телефоны в комментарии заказа', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
 
-  // Вызван звонок и корректная аналитика
-  expect(dialCall).toHaveBeenCalledWith('tel:+79990000000');
-  expect(Analytics.log).toHaveBeenCalledWith('OrderCallClient', 'Звонок клиенту из комментария');
-});
+  it('звонит по единственному номеру через телефонную кнопку', async () => {
+    const { Analytics } = require('@/analytics/AppMetricaService')
+    const { dialCall } = await renderComment(
+      'Позвонить +7 (999) 111-22-33 перед доставкой',
+    )
 
-test('нет номера: копирование и алерт, логируется OrderClipboard; иконки Copy нет', async () => {
-  const showAlertText = jest.fn();
-  const dialCall = jest.fn();
-  const { Analytics } = require('@/analytics/AppMetricaService');
+    expect(screen.getByTestId('Phone')).toBeTruthy()
+    expect(screen.queryByTestId('order-card-comment-phones-drawer')).toBeNull()
 
-  await render(
-    <CommentText
-      comment="без телефона"
-      showAlertText={showAlertText}
-      globalFontSize={16}
-      dialCall={dialCall}
-    />
-  );
+    await fireEvent.press(screen.getByTestId('order-card-comment-call'))
 
-  // Иконки нет
-  expect(screen.queryByTestId('Copy')).toBeNull();
+    expect(dialCall).toHaveBeenCalledWith('+79991112233')
+    expect(Analytics.log).toHaveBeenCalledWith(
+      'OrderCallClient',
+      'Звонок клиенту из комментария',
+    )
+  })
 
-  // Нажимаем по тексту блока комментария
-  await fireEvent.press(screen.getByTestId('comment-touch'));
+  it('не показывает действие, если в комментарии нет номера', async () => {
+    await renderComment('Домофон не работает')
 
-  // Скопировано в буфер, показан алерт, звонка нет, аналитика корректная
-  expect(Clipboard.setString).toHaveBeenCalledWith('без телефона');
-  expect(showAlertText).toHaveBeenCalledWith(true, 'Скопировано');
-  expect(dialCall).not.toHaveBeenCalled();
-  expect(Analytics.log).toHaveBeenCalledWith('OrderClipboard', 'Копирование комментария из заказа');
-});
+    expect(screen.getByTestId('comment-row')).toHaveTextContent(
+      'Комментарий: Домофон не работает',
+    )
+    expect(screen.queryByTestId('order-card-comment-call')).toBeNull()
+  })
 
+  it('открывает выбор нескольких номеров и звонит по выбранному', async () => {
+    const { Analytics } = require('@/analytics/AppMetricaService')
+    const { dialCall } = await renderComment(
+      'Клиент +7 999 111-22-33, получатель 8 (999) 444-55-66',
+    )
+
+    expect(screen.getByTestId('order-card-comment-call')).toHaveTextContent('2')
+    expect(screen.queryByTestId('order-card-comment-phones-drawer')).toBeNull()
+
+    await fireEvent.press(screen.getByTestId('order-card-comment-call'))
+
+    expect(screen.getByTestId('order-card-comment-phones-drawer')).toBeTruthy()
+    expect(screen.getByText('8 (999) 111-22-33')).toBeTruthy()
+    expect(screen.getByText('8 (999) 444-55-66')).toBeTruthy()
+    expect(Analytics.log).toHaveBeenCalledWith(
+      'OrderCommentPhonesOpen',
+      'Открытие номеров из комментария',
+    )
+
+    await fireEvent.press(
+      screen.getByTestId('order-card-comment-phone-79994445566'),
+    )
+
+    expect(dialCall).toHaveBeenCalledWith('+79994445566')
+    expect(screen.queryByTestId('order-card-comment-phones-drawer')).toBeNull()
+  })
+})

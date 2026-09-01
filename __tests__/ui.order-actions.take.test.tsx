@@ -75,12 +75,29 @@ describe('OrderActions — кнопка «Взять»', () => {
     const { unmount } = await render(<OrderActions {...props} />);
 
     const takeBtn = screen.getByTestId(`order-${props.item.id}-take`);
+    expect(takeBtn).toHaveStyle({
+      height: 44,
+      minHeight: 44,
+      maxHeight: 44,
+      borderRadius: 8,
+      backgroundColor: '#4CAF50',
+    });
+    expect(screen.getByText('ВЗЯТЬ')).toBeTruthy();
     await fireEvent.press(takeBtn);
 
     expect(props.actionButtonOrder).toHaveBeenCalledTimes(1);
     expect(props.actionButtonOrder).toHaveBeenCalledWith(1, props.item.id);
 
     const phoneBtn = screen.getByTestId(`order-${props.item.id}-phone`);
+    expect(phoneBtn).toHaveStyle({
+      height: 44,
+      borderRadius: 8,
+      backgroundColor: 'rgba(0, 0, 0, 0.08)',
+    });
+    expect(screen.getByText(props.item.number)).toHaveStyle({
+      color: '#1F2D38',
+      fontSize: 14,
+    });
     await fireEvent.press(phoneBtn);
     expect(props.dialCall).toHaveBeenCalledWith(props.item.number);
 
@@ -135,4 +152,3 @@ describe('OrderActions — кнопка «Взять»', () => {
 
 
 });
-

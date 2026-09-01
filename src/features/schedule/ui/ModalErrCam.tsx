@@ -1,32 +1,36 @@
-import React from "react"
+import React, {useEffect, useRef, useState} from 'react';
+import {Image, Platform, Pressable, Text, View} from 'react-native';
+import ImageView from 'react-native-image-viewing';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
-import { View, TouchableOpacity, ScrollView, KeyboardAvoidingView, Image } from 'react-native';
-
-import ImageView from "react-native-image-viewing";
-import { Textarea, TextareaInput } from "@/components/ui/textarea"
-
+import {useErrorCamera} from '../model/useErrorModal';
+import type {GraphErrCam} from '@/shared/store/StatStoreType';
 import {
-  Modal,
-  ModalBackdrop,
-  ModalContent,
-  ModalCloseButton,
-  ModalHeader,
-  ModalBody,
-} from "@/components/ui/modal"
-import { Text } from "@/components/ui/text"
-import { Icon, CloseIcon } from "@/components/ui/icon"
-import { Button } from "@/components/ui/button"
-import { Heading } from "@/components/ui/heading"
+  GraphAppealBlock,
+  GraphErrorField,
+  GraphErrorSheetContainer,
+  graphErrorSheetStyles,
+  type GraphErrorScrollHandle,
+} from './GraphErrorSheetParts';
 
-import { useErrorCamera } from '../model/useErrorModal'
+interface ModalErrCamPreview {
+  isOpen: boolean;
+  data: GraphErrCam;
+  onClose: () => void;
+  onSubmit: (text: string) => void;
+}
 
-export function ModalErrCam(): React.JSX.Element {
-
-  const { 
+export function ModalErrCam({
+  preview,
+}: {
+  preview?: ModalErrCamPreview;
+}): React.JSX.Element {
+  const insets = useSafeAreaInsets();
+  const {
     isShowModalErrCam,
     modalErrCam,
     FormatPrice,
-
+    isSubmitting,
     globalFontSize,
     visible,
     setVisible,
@@ -34,125 +38,117 @@ export function ModalErrCam(): React.JSX.Element {
     transformedArray,
     errorText,
     setTextError,
-
     closeModal,
     openImage,
-    onSubmitError 
-  } = useErrorCamera()
+    onSubmitError,
+  } = useErrorCamera();
+  const [previewErrorText, setPreviewErrorText] = useState('');
+  const scrollRef = useRef<GraphErrorScrollHandle | null>(null);
+  const focusScrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (preview?.isOpen) setPreviewErrorText('');
+  }, [preview?.data, preview?.isOpen]);
+
+  useEffect(
+    () => () => {
+      if (focusScrollTimer.current) clearTimeout(focusScrollTimer.current);
+    },
+    [],
+  );
+
+  const activeModal = preview?.data ?? modalErrCam;
+  const activeErrorText = preview ? previewErrorText : errorText;
+  const activeImages = preview ? [] : transformedArray;
+  const activeSubmitting = preview ? false : isSubmitting;
+  const handleClose = preview?.onClose ?? closeModal;
+  const handleSubmit = preview
+    ? () => preview.onSubmit(previewErrorText)
+    : onSubmitError;
+  const keepAppealVisible = () => {
+    if (Platform.OS === 'ios') return;
+
+    if (focusScrollTimer.current) clearTimeout(focusScrollTimer.current);
+    focusScrollTimer.current = setTimeout(() => {
+      scrollRef.current?.scrollToEnd({animated: true});
+    }, 250);
+  };
 
   return (
     <>
-      <Modal
-        isOpen={isShowModalErrCam}
-        onClose={closeModal}
-        size="lg"
-        className="rounded-lg"
-      >
-        <ModalBackdrop />
-        <ModalContent>
-          <ModalHeader>
-            <Heading size="md" className="text-typography-950 text-center">
-              Ошибка №{modalErrCam?.id}
-            </Heading>
-            <ModalCloseButton>
-              <Icon
-                as={CloseIcon}
-                size="md"
-                className="stroke-background-400 group-[:hover]/modal-close-button:stroke-background-700 group-[:active]/modal-close-button:stroke-background-900 group-[:focus-visible]/modal-close-button:stroke-background-900"
-              />
-            </ModalCloseButton>
-          </ModalHeader>
-          <ModalBody>
-            
-            <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={100}>
-              
-              <ScrollView>
-                <View className="flex flex-row flex-wrap pt-5">
-                  <Text className="font-bold color-black" style={{ fontSize: globalFontSize }}>Дата время ошибки: </Text>
-                  <Text className="color-black" style={{ fontSize: globalFontSize }}>{modalErrCam?.date_time_fine}</Text>
-                </View>
+      <GraphErrorSheetContainer
+        bottomInset={insets.bottom}
+        busy={activeSubmitting}
+        isOpen={preview?.isOpen ?? isShowModalErrCam}
+        testPrefix="graph-camera-error"
+        onClose={handleClose}
+        onScrollRef={instance => {
+          scrollRef.current = instance;
+        }}>
+        <Text style={[graphErrorSheetStyles.title, {fontSize: globalFontSize}]}>
+          Ошибка №{activeModal?.id}
+        </Text>
+        <GraphErrorField
+          fontSize={globalFontSize}
+          label="Дата время ошибки:"
+          value={activeModal?.date_time_fine}
+        />
+        <GraphErrorField
+          fontSize={globalFontSize}
+          label="Ошибка:"
+          value={activeModal?.fine_name}
+        />
+        <GraphErrorField
+          fontSize={globalFontSize}
+          label="Сумма:"
+          value={`${FormatPrice(activeModal?.price || 0)}₽`}
+        />
 
-                <View className="flex flex-row flex-wrap pt-5">
-                  <Text className="font-bold color-black" style={{ fontSize: globalFontSize }}>Ошибка: </Text>
-                  <Text className="color-black" style={{ fontSize: globalFontSize }}>{modalErrCam?.fine_name}</Text>
-                </View>
+        {activeImages.length === 0 ? null : (
+          <>
+            <GraphErrorField fontSize={globalFontSize} label="Фото" value="" />
+            <View style={graphErrorSheetStyles.images}>
+              {activeImages.map((image, index) => (
+                <Pressable
+                  key={`${image.uri}-${index}`}
+                  style={graphErrorSheetStyles.imageButton}
+                  onPress={() => openImage(index)}>
+                  <Image
+                    resizeMode="contain"
+                    source={image}
+                    style={graphErrorSheetStyles.image}
+                  />
+                </Pressable>
+              ))}
+            </View>
+          </>
+        )}
 
-                <View className="flex flex-row flex-wrap pt-5">
-                  <Text className="font-bold color-black" style={{ fontSize: globalFontSize }}>Сумма: </Text>
-                  <Text className="color-black" style={{ fontSize: globalFontSize }}>{FormatPrice(modalErrCam?.price || 0)} ₽</Text>
-                </View>
-
-                {modalErrCam?.imgs?.length == 0 ? null : (
-                  <View className="flex flex-row flex-wrap pt-5">
-                    <Text className="font-bold color-black" style={{ fontSize: globalFontSize }}>Фото</Text>
-                  </View>
-                )}
-
-                {modalErrCam?.imgs?.length == 0 ? null : (
-                  <View className="flex flex-row flex-wrap pt-5">
-                    { transformedArray?.map((images, index) => {
-                      return (
-                        <TouchableOpacity onPress={() => { openImage(index) } } key={index}>
-                          <Image 
-                            source={{ uri: images?.uri }} 
-                            style={{ width: 100, height: 100 }} 
-                          />
-                        </TouchableOpacity>
-                      )
-                    })}
-                  </View>
-                )}
-    
-                {modalErrCam?.text_one?.length == 0 ? modalErrCam?.is_edit == 0 ? null : (
-                  <View className="flex flex-row flex-wrap pt-5">
-                    <Text className="font-bold color-black pb-3" style={{ fontSize: globalFontSize }}>Причина обжалования:</Text>
-
-                    <Textarea
-                      size="md"
-                      isReadOnly={false}
-                      isInvalid={false}
-                      isDisabled={false}
-                      className="w-full mb-5"
-                    >
-                      <TextareaInput 
-                        placeholder="Что произошло на самом деле ?" 
-                        style={{ fontSize: globalFontSize }} 
-                        value={errorText} 
-                        onChange={event => setTextError(event.nativeEvent.text)} 
-                      />
-                    </Textarea>
-
-                    <Button onPress={onSubmitError} className="bg-primary-main w-full">
-                      <Text className="text-white font-normal" style={{ fontSize: globalFontSize }}>Обжаловать</Text>
-                    </Button>
-                  </View>
-                ) : (
-                  <View className="flex flex-row flex-wrap pt-5">
-                    <Text className="font-bold color-black" style={{ fontSize: globalFontSize }}>Причина обжалования:</Text>
-                    <Text className="color-black" style={{ fontSize: globalFontSize }}>{modalErrCam?.text_one}</Text>
-                  </View>
-                )}
-
-                {modalErrCam?.text_two?.length == 0 ? null : (
-                  <View className="flex flex-row flex-wrap pt-5">
-                    <Text className="font-bold color-black" style={{ fontSize: globalFontSize }}>Ответ обжалования: </Text>
-                    <Text className="color-black" style={[{ fontSize: globalFontSize }]}>{modalErrCam?.text_two}</Text>
-                  </View>
-                )}
-              </ScrollView>
-              
-            </KeyboardAvoidingView>
-
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+        <GraphAppealBlock
+          busy={activeSubmitting}
+          canEdit={activeModal?.is_edit !== 0}
+          fontSize={globalFontSize}
+          text={activeModal?.text_one}
+          value={activeErrorText}
+          onChange={preview ? setPreviewErrorText : setTextError}
+          onInputFocus={keepAppealVisible}
+          onSubmit={handleSubmit}
+        />
+        {!activeModal?.text_two ? null : (
+          <GraphErrorField
+            fontSize={globalFontSize}
+            label="Ответ обжалования:"
+            value={activeModal.text_two}
+          />
+        )}
+      </GraphErrorSheetContainer>
 
       <ImageView
-        images={transformedArray ?? []}
         imageIndex={indexImg}
+        images={activeImages}
         visible={visible}
         onRequestClose={() => setVisible(false)}
       />
     </>
-  )
+  );
 }

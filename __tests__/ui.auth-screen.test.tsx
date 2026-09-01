@@ -90,6 +90,18 @@ describe('AuthScreen', () => {
     expect(mockGoToResetPwd).toHaveBeenCalledTimes(1)
   })
 
+  it('маскирует пароль и снимает маскирование только по состоянию кнопки глаза', async () => {
+    const screen = await render(<AuthScreen />)
+
+    expect(screen.getByTestId('auth-password-input').props.keyboardType).toBe('default')
+    expect(screen.getByTestId('auth-password-input').props.secureTextEntry).toBe(true)
+
+    mockAuthState.showPassword = true
+    await screen.rerender(<AuthScreen />)
+
+    expect(screen.getByTestId('auth-password-input').props.secureTextEntry).toBe(false)
+  })
+
   it('заменяет hint на inline-ошибку сервера', async () => {
     mockAuthState.loginError = 'Неверный пароль'
 

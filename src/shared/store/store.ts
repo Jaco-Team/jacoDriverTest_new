@@ -1,7 +1,11 @@
 import { create } from 'zustand'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import Geolocation, { GeolocationResponse } from '@react-native-community/geolocation';
+import Geolocation, {
+  type GeolocationError,
+  type GeolocationOptions,
+  type GeolocationResponse,
+} from '@react-native-community/geolocation';
 import {request, PERMISSIONS, RESULTS, checkMultiple} from 'react-native-permissions';
 import {Platform} from 'react-native';
 
@@ -26,6 +30,37 @@ import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
 
 interface ExtendedGeolocationResponse extends GeolocationResponse {
   mocked?: boolean;
+}
+
+const DRIVER_LOCATION_FIRST_TIMEOUT_MS = 15000
+const DRIVER_LOCATION_RETRY_TIMEOUT_MS = 10000
+
+function requestCurrentPosition(options: GeolocationOptions): Promise<ExtendedGeolocationResponse> {
+  return new Promise((resolve, reject) => {
+    Geolocation.getCurrentPosition(resolve, reject, options)
+  })
+}
+
+function isLocationPermissionError(error: unknown): boolean {
+  const locationError = error as Partial<GeolocationError> | null
+  const message = String(locationError?.message ?? '').toLowerCase()
+
+  return locationError?.code === 1 || message.includes('denied') || message.includes('permission')
+}
+
+function getDriverLocationErrorText(error: unknown): string {
+  const locationError = error as Partial<GeolocationError> | null
+  const message = String(locationError?.message ?? '').toLowerCase()
+
+  if (isLocationPermissionError(error)) {
+    return 'Нет доступа к геолокации. Разрешите доступ к местоположению в настройках телефона.'
+  }
+
+  if (locationError?.code === 3 || message.includes('timeout')) {
+    return 'Местоположение определяется слишком долго. Проверьте GPS и интернет, затем повторите действие.'
+  }
+
+  return 'Не удалось определить местоположение. Включите GPS и выйдите на открытое место, затем повторите действие.'
 }
 
 let authRecoveryRequestSequence = 0;
@@ -684,14 +719,32 @@ export const useSettingsStore = create<SettingsStore>()( (set, get) => ({
 
     try {
       
-      await api<SaveSettingsResponse>('settings', data);
+      const result = await api<SaveSettingsResponse>('settings', data);
+
+      if (result.st === false) {
+        throw new Error(result.text || 'Не удалось сохранить настройки');
+      }
 
       Analytics.log(AnalyticsEvent.SettingsSaveSuccess, 'Успешное сохранение настроек');
+
+      set({
+        action_centered_map: data.action_centered_map,
+        color,
+        fontSize,
+        mapScale,
+        theme,
+        type_data_map: groupTypeTime as MySettingsResponse['type_data_map'],
+        type_show_del: type_show_del as MySettingsResponse['type_show_del'],
+        update_interval,
+        night_map: data.night_map,
+        is_scaleMap: data.is_scaleMap,
+      });
 
       useGlobalStore.getState().showAlertText(true, 'Настройки сохранены');
       useGlobalStore.getState().setFontSize(fontSize);
       useGlobalStore.getState().setTheme(theme);
       useGlobalStore.getState().setMapScale(mapScale);
+      useOrdersStore.getState().setUpdateInterval(update_interval);
 
     } catch (e) {
 
@@ -729,6 +782,7 @@ export const useSettingsStore = create<SettingsStore>()( (set, get) => ({
 
 export const useGEOStore = create<GEOStore>()((set, get) => ({
   check_pos_check: false,
+  driver_location_requesting: false,
   //driver_need_gps: false,
   driver_pos: '',
   driver_pos_accuracy: 0,
@@ -773,7 +827,7 @@ export const useGEOStore = create<GEOStore>()((set, get) => ({
         },
         {
           maximumAge: 3000, 
-          enableHighAccuracy: true 
+          enableHighAccuracy: true,
         }
       );
     }else{
@@ -852,26 +906,88 @@ export const useGEOStore = create<GEOStore>()((set, get) => ({
 
   // показать текущее местоположение водителя
   showLocationDriver: async() => {
+    if (get().driver_location_requesting) return false
+
     Analytics.log(AnalyticsEvent.DriverLocation, 'Показать текущее местоположение водителя на карте');
 
     useGlobalStore.getState().setSpinner(true);
-  
+
     set({
+      driver_location_requesting: true,
       location_driver: null,
       location_driver_time_text: ''
     })
 
-    get().check_pos(get().setDriverPos, {});
+    try {
+      const granted = await get().getLocationPermissions()
+
+      if (!granted) {
+        useGlobalStore.getState().showModalText(
+          true,
+          'Нет доступа к геолокации. Разрешите доступ к местоположению в настройках телефона.',
+        )
+        return false
+      }
+
+      let position: ExtendedGeolocationResponse
+
+      try {
+        position = await requestCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: DRIVER_LOCATION_FIRST_TIMEOUT_MS,
+          maximumAge: 0,
+        })
+      } catch (firstError) {
+        if (isLocationPermissionError(firstError)) throw firstError
+
+        position = await requestCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: DRIVER_LOCATION_RETRY_TIMEOUT_MS,
+          maximumAge: 60000,
+        })
+      }
+
+      if (position.mocked) {
+        useGlobalStore.getState().showModalText(
+          true,
+          'Не удалось определить местоположение. Возможно, данные были подменены.',
+        )
+        return false
+      }
+
+      await get().setDriverPos(position.coords)
+      return true
+    } catch (error) {
+      useGlobalStore.getState().showModalText(true, getDriverLocationErrorText(error))
+      return false
+    } finally {
+      set({ driver_location_requesting: false })
+      useGlobalStore.getState().setSpinner(false)
+    }
   },
 
-  set_type_location: () => {
+  set_type_location: async () => {
     const type_location = get().type_location;
 
     if(type_location === 'none') {
-      get().showLocationDriver();
+      const didFindLocation = await get().showLocationDriver();
+
+      if (!didFindLocation || get().type_location !== 'none') return
+
       set({
         type_location: 'location'
       })
+
+      setTimeout(() => {
+        if (get().type_location === 'location') {
+          set({
+            type_location: 'none',
+            location_driver: null,
+            location_driver_time_text: '',
+          })
+        }
+      }, 30000)
+
       return ;
     }
 
@@ -946,7 +1062,8 @@ export const useGEOStore = create<GEOStore>()((set, get) => ({
           },
           {
             maximumAge: 3000, 
-            enableHighAccuracy: true 
+            enableHighAccuracy: true,
+            timeout: 10000,
           }
         );
 
@@ -990,7 +1107,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
     {id: 1, text: 'Активные'}, //готовятся и готовы
     {id: 3, text: 'Предзаказы'}, //более часа
     {id: 2, text: 'Мои отмеченные'}, //мои
-    {id: 5, text: 'У других'},
+    {id: 5, text: 'У других курьеров'},
     {id: 6, text: 'Мои завершенные'}, //мои завершенеы
   ],
 

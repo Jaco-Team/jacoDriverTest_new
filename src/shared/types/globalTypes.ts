@@ -1,5 +1,5 @@
 export type Status = true | false;
-export type Theme = "transparent" | "white" | "white_border" | "black" | "classic";
+export type Theme = "transparent" | "transparent_white" | "white" | "white_border" | "black" | "classic";
 export type DelType = "min" | "max" | "full";
 export type ShowType = "norm" | "full" | "min";
 

@@ -1,54 +1,103 @@
-import React, { useEffect, useMemo } from 'react';
-import { View, Text, FlatList } from 'react-native';
-
-import FeedbackItem from './FeedbackItem';
-
-import { useFeedbackStore } from '@/shared/store/store';
+import React from 'react'
+import { FlatList, StyleSheet, Text, View } from 'react-native'
 import { useShallow } from 'zustand/react/shallow'
 
-const FeedbackList: React.FC = () => {
-  const [ feedbacks, fetchFeedbacks, openViewModal, chooseStatus, searchQuery, fetchFeedbackById ] = useFeedbackStore( useShallow( state => [ state.feedbacks, state.fetchFeedbacks, state.openViewModal, state.chooseStatus, state.searchQuery, state.fetchFeedbackById ]) );
+import { appPalette } from '@/shared/styles/appPalette'
+import { useFeedbackStore } from '@/shared/store/store'
+import type { FeedbackResponse } from '@/shared/store/FeedbackStoreType'
 
-  useEffect(() => {
-    fetchFeedbacks();
-  }, [fetchFeedbacks]);
+import FeedbackItem from './FeedbackItem'
 
-  const filteredFeedbacks = useMemo(() => {
-    return feedbacks.filter((feedback) => {
-      const matchesSearch = 
-        feedback.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        feedback.description.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesStatus = chooseStatus == '' || feedback.status == chooseStatus;
-      
-      return matchesSearch && matchesStatus;
-    });
-  }, [searchQuery, chooseStatus, feedbacks]);
+type FeedbackListProps = {
+  feedbacks: FeedbackResponse[]
+  globalFontSize: number
+  onDismissKeyboard: () => void
+}
+
+const FeedbackList: React.FC<FeedbackListProps> = ({
+  feedbacks,
+  globalFontSize,
+  onDismissKeyboard,
+}) => {
+  const [fetchFeedbacks, fetchFeedbackById] = useFeedbackStore(
+    useShallow(state => [state.fetchFeedbacks, state.fetchFeedbackById]),
+  )
+
+  React.useEffect(() => {
+    void fetchFeedbacks()
+  }, [fetchFeedbacks])
 
   return (
-    <View className='flex-1'>
-      <FlatList
-        refreshing={false}
-        onRefresh={() => fetchFeedbacks()}
-        removeClippedSubviews={true}
-        showsHorizontalScrollIndicator={false}
-        showsVerticalScrollIndicator={false}
-        data={filteredFeedbacks}
-        keyExtractor={(item) => item.id+""}
-        renderItem={({ item }) => (
-          <FeedbackItem feedback={item} onPress={() => fetchFeedbackById(item.id)} />
-        )}
-        ListFooterComponent={() => <View className='h-20'></View>}
-        ListEmptyComponent={
-          <View className='flex-1 items-center justify-center p-12 shadow-zinc-0 shadow'>
-            <Text className='text-gray-500 text-lg text-center'>
-              Нет предложений. Будьте первым, кто внесет предложение!
-            </Text>
-          </View>
-        }
-      />
-    </View>
-  );
-};
+    <FlatList
+      contentContainerStyle={[
+        styles.content,
+        feedbacks.length === 0 && styles.emptyContent,
+      ]}
+      data={feedbacks}
+      keyExtractor={item => String(item.id)}
+      ListEmptyComponent={
+        <View style={styles.emptyCard}>
+          <Text style={[styles.emptyTitle, { fontSize: Math.min(28, globalFontSize + 3) }]}>Ничего не найдено</Text>
+          <Text style={[styles.emptyText, { fontSize: Math.max(14, globalFontSize) }]}>
+            Попробуйте изменить фильтр или текст поиска
+          </Text>
+        </View>
+      }
+      onRefresh={() => void fetchFeedbacks()}
+      onScrollBeginDrag={onDismissKeyboard}
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="never"
+      refreshing={false}
+      removeClippedSubviews
+      renderItem={({ item }) => (
+        <FeedbackItem
+          feedback={item}
+          globalFontSize={globalFontSize}
+          onPress={() => {
+            onDismissKeyboard()
+            void fetchFeedbackById(item.id)
+          }}
+        />
+      )}
+      showsVerticalScrollIndicator={false}
+      testID="feedback-list"
+    />
+  )
+}
 
-export default FeedbackList;
+export default FeedbackList
+
+const styles = StyleSheet.create({
+  content: {
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingBottom: 112,
+  },
+  emptyContent: {
+    flexGrow: 1,
+  },
+  emptyCard: {
+    minHeight: 170,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 36,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: appPalette.border,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+  },
+  emptyTitle: {
+    marginBottom: 6,
+    color: appPalette.text,
+    fontFamily: 'Roboto-Bold',
+    textAlign: 'center',
+  },
+  emptyText: {
+    color: appPalette.textMuted,
+    fontFamily: 'Roboto-Regular',
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+})

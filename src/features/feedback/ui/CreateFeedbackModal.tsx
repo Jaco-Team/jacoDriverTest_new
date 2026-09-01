@@ -1,224 +1,319 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  TextInput, 
-  ScrollView,
-  Alert,
-  Image,
-  FlatList
-} from 'react-native';
-
-import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet'
-import { Button, ButtonText } from '@/components/ui/button'
-
-import ImageViewing from 'react-native-image-viewing';
-
+import React from 'react'
 import {
-  Checkbox,
-  CheckboxIndicator,
-  CheckboxLabel,
-  CheckboxIcon,
-  CheckboxGroup
-} from '@/components/ui/checkbox'
-import { CheckIcon } from '@/components/ui/icon'
+  ActivityIndicator,
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  type TextInputProps,
+  View,
+} from 'react-native'
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet'
+import { Check, X } from 'lucide-react-native'
+import ImageViewing from 'react-native-image-viewing'
 
-import { launchImageLibrary, launchCamera, ImagePickerResponse, Asset } from 'react-native-image-picker';
+import { appPalette } from '@/shared/styles/appPalette'
 
 import { useCreateFeedbackModal } from '../model/useCreateFeedbackModal'
+import { FeedbackSheet } from './FeedbackSheet'
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+function FeedbackTextInput(props: TextInputProps): React.JSX.Element {
+  if (Platform.OS === 'ios') return <BottomSheetTextInput {...props} />
+  return <TextInput {...props} />
+}
 
 const CreateFeedbackModal: React.FC = () => {
-
-  
-
   const {
-    bottomSheetRef, 
-    isCreateModalOpen, 
+    isCreateModalOpen,
+    closeCreateModal,
     globalFontSize,
-    title, setTitle,
-    description, setDescription,
-    type, setType,
-    is_need_notification, setIs_need_notification,
+    title,
+    setTitle,
+    description,
+    setDescription,
+    type,
+    setType,
+    isNeedNotification,
+    setIsNeedNotification,
+    isSaving,
     handleSubmit,
     feedbackTypes,
-    handleSheetChanges,
-    images, setImages,
-    handleImagePickerResponse,
-    pickImageFromGallery,
-    takePhoto,
+    images,
     showImagePickerOptions,
-    removeImage
-  } = useCreateFeedbackModal();
-  
-  // Состояние для полноэкранного просмотра
-  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-
-  const openImageViewer = (index: number) => {
-    setCurrentImageIndex(index);
-    setIsImageViewerOpen(true);
-  };
-
-  const renderImageItem = ({ item, index }: { item: Asset; index: number }) => (
-    <View className='mr-2 mb-2 relative'>
-      <TouchableOpacity
-        key={index}
-        style={{ marginRight: 8, marginBottom: 8 }}
-        onPress={() => openImageViewer(index)}
-      >
-        <Image
-          source={{ uri: item.uri }}
-          className='w-24 h-24 rounded-lg'
-          resizeMode="cover"
-        />
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        className='absolute top-1 right-1 bg-red-500 rounded-full w-6 h-6 items-center justify-center'
-        onPress={() => removeImage(index)}
-      >
-        <Text className='text-white font-bold text-xs'>X</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    removeImage,
+  } = useCreateFeedbackModal()
+  const [isImageViewerOpen, setIsImageViewerOpen] = React.useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = React.useState(0)
+  const normalizedFontSize = Number.isFinite(globalFontSize) && globalFontSize > 0
+    ? globalFontSize
+    : 16
+  const bodyFontSize = clamp(normalizedFontSize, 14, 20)
+  const sectionFontSize = clamp(bodyFontSize + 1, 15, 24)
+  const previewImages = images
+    .filter(image => Boolean(image.uri))
+    .map(image => ({ uri: image.uri as string }))
 
   return (
-    <BottomSheet
-      ref={bottomSheetRef}
-      index={ isCreateModalOpen ? 2 : -1 } 
-      snapPoints={['90%', '50%', '25%']} // ['50%', '25%']
-      enablePanDownToClose    // позволяет свайпом вниз закрыть
-      backdropComponent={BottomSheetBackdrop} // полу-прозрачный фон
-      onChange={ handleSheetChanges }
-      style={{ zIndex: 1000 }}
-      backgroundStyle={{ borderRadius: 30, backgroundColor: '#fff' }}
-      
+    <FeedbackSheet
+      busy={isSaving}
+      isOpen={isCreateModalOpen}
+      onClose={closeCreateModal}
+      testID="feedback-create-sheet"
     >
-      <BottomSheetScrollView className='flex bg-white rounded-md' style={{zIndex: 30}}>
-        <View className='flex-1 bg-white '>
-          <View className='p-4 border-b border-gray-200'>
-            <View className='flex-row justify-between items-center'>
-              <Text className='leading-7 font-bold' style={{ fontSize: globalFontSize }}>Новое предложение</Text>
-            </View>
-          </View>
+      <Text style={[styles.title, { fontSize: clamp(bodyFontSize + 6, 20, 30) }]}>Новое предложение</Text>
+      <View style={styles.divider} />
 
-          <ScrollView className='flex-1 p-4'>
-            <View className='mb-4'>
-              <Text className='text-gray-700 mb-1 font-medium' style={{ fontSize: globalFontSize }}>Тип</Text>
-              <View className='flex-row flex-wrap'>
-                {feedbackTypes.map((feedbackType) => (
-                  <TouchableOpacity
-                    key={feedbackType}
-                    className={`mr-2 mb-2 rounded-full py-2 px-4 pt-1.5 ${type === feedbackType ? 'bg-primary-main' : 'bg-gray-200'}`}
-                    onPress={() => setType(feedbackType)}
-                  >
-                    <Text className={`leading-7 ${type === feedbackType ? 'text-white' : 'text-gray-800'}`} style={{ fontSize: globalFontSize }}>
-                      {feedbackType}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+      <Text style={[styles.sectionTitle, { fontSize: sectionFontSize }]}>Тип</Text>
+      <View style={styles.typeList}>
+        {feedbackTypes.map(feedbackType => {
+          const selected = type === feedbackType
 
-            <View className='mb-4'>
-              <Text className='text-gray-700 mb-1 font-medium' style={{ fontSize: globalFontSize }}>Заголовок</Text>
-              <TextInput
-                className='border border-gray-300 rounded-lg p-3 bg-white'
-                placeholder="Введите заголовок"
-                style={{ fontSize: globalFontSize }}
-                value={title}
-                onChangeText={setTitle}
-              />
-            </View>
-
-            <View className='mb-4'>
-              <Text className='text-gray-700 mb-1 font-medium' style={{ fontSize: globalFontSize }}>Описание</Text>
-              <TextInput
-                className='border border-gray-300 rounded-lg p-3 h-32 bg-white'
-                placeholder="Расскажите о проблемах в работе приложения, предложите, как можно улучшить систему"
-                style={{ fontSize: globalFontSize }}
-                value={description}
-                onChangeText={setDescription}
-                multiline
-                textAlignVertical="top"
-              />
-            </View>
-
-
-            <View className='mb-4'>
-              <Text className='text-gray-700 mb-1 font-medium'>Изображение (опционально)</Text>
-              
-              {images.length > 0 && (
-                <View className='mb-2'>
-                  <FlatList
-                    data={images}
-                    renderItem={renderImageItem}
-                    keyExtractor={(item, index) => `image-${index}`}
-                    horizontal={true}
-                    showsHorizontalScrollIndicator={false}
-                    //contentContainerStyle={tw('py-2')}
-                  />
-                </View>
-              )}
-              
-              <TouchableOpacity
-                className='border border-dashed border-gray-300 rounded-lg p-4 items-center justify-center h-16'
-                onPress={showImagePickerOptions}
+          return (
+            <Pressable
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              disabled={isSaving}
+              key={feedbackType}
+              onPress={() => setType(feedbackType)}
+              style={[
+                styles.typeChip,
+                selected && styles.typeChipSelected,
+              ]}
+              testID={`feedback-type-${feedbackType}`}
+            >
+              <Text
+                style={[
+                  styles.typeChipText,
+                  selected && styles.typeChipTextSelected,
+                  { fontSize: clamp(bodyFontSize - 1, 13, 19) },
+                ]}
               >
-                <Text className='text-gray-500'>
-                  {images.length > 0 ? 'Добавить еще изображения' : 'Нажмите, чтобы добавить изображения'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+                {feedbackType}
+              </Text>
+            </Pressable>
+          )
+        })}
+      </View>
 
+      <Text style={[styles.sectionTitle, { fontSize: sectionFontSize }]}>Заголовок</Text>
+      <FeedbackTextInput
+        editable={!isSaving}
+        maxLength={255}
+        onChangeText={setTitle}
+        placeholder="Введите заголовок"
+        placeholderTextColor="#8A94A0"
+        style={[styles.input, { fontSize: bodyFontSize }]}
+        testID="feedback-title-input"
+        value={title}
+      />
 
+      <Text style={[styles.sectionTitle, { fontSize: sectionFontSize }]}>Описание</Text>
+      <FeedbackTextInput
+        editable={!isSaving}
+        maxLength={5000}
+        multiline
+        onChangeText={setDescription}
+        placeholder="Расскажите о проблемах в работе приложения, предложите, как можно улучшить систему"
+        placeholderTextColor="#8A94A0"
+        style={[styles.input, styles.descriptionInput, { fontSize: bodyFontSize }]}
+        testID="feedback-description-input"
+        textAlignVertical="top"
+        value={description}
+      />
 
-            <View className='mb-4'>
-              <CheckboxGroup
-                value={is_need_notification}
-                onChange={(keys) => {
-                  setIs_need_notification(keys as ['is_need_notification'] | [])
-                }}
-                className="mb-3"
+      <Text style={[styles.sectionTitle, { fontSize: sectionFontSize }]}>Изображение (опционально)</Text>
+      {previewImages.length > 0 ? (
+        <ScrollView
+          horizontal
+          contentContainerStyle={styles.imageList}
+          showsHorizontalScrollIndicator={false}
+        >
+          {previewImages.map((image, index) => (
+            <View key={`${image.uri}-${index}`} style={styles.imageWrapper}>
+              <Pressable onPress={() => { setCurrentImageIndex(index); setIsImageViewerOpen(true) }}>
+                <Image source={image} style={styles.image} />
+              </Pressable>
+              <Pressable
+                accessibilityLabel="Удалить изображение"
+                disabled={isSaving}
+                hitSlop={8}
+                onPress={() => removeImage(index)}
+                style={styles.removeImage}
               >
-                <Checkbox size="lg" value="is_need_notification">
-                  <CheckboxIndicator>
-                    <CheckboxIcon as={CheckIcon} />
-                  </CheckboxIndicator>
-                  <CheckboxLabel style={{ fontSize: globalFontSize }}>Уведомить о решении</CheckboxLabel>
-                </Checkbox>
-              </CheckboxGroup>
+                <X color="#FFFFFF" size={15} strokeWidth={3} />
+              </Pressable>
             </View>
-            
-            <View className='mt-2 border-t border-gray-200'>
-              <Button
-                onPress={handleSubmit}
-                variant="outline"
-                className="rounded-lg border-gray-200 justify-center items-center w-full h-auto bg-primary-main"
-              >
-                <ButtonText className="p-3 color-white" style={{ fontSize: globalFontSize }}>
-                  Отправить
-                </ButtonText>
-              </Button>
-            </View>
-          </ScrollView>
+          ))}
+        </ScrollView>
+      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        disabled={isSaving}
+        onPress={showImagePickerOptions}
+        style={styles.imagePicker}
+        testID="feedback-image-picker"
+      >
+        <Text style={[styles.imagePickerText, { fontSize: clamp(bodyFontSize - 1, 13, 18) }]}>
+          {images.length > 0 ? 'Добавить еще изображения' : 'Нажмите, чтобы добавить изображения'}
+        </Text>
+      </Pressable>
 
-          {/* Компонент полноэкранного просмотра */}
-          <ImageViewing
-            images={images}
-            imageIndex={currentImageIndex}
-            visible={isImageViewerOpen}
-            onRequestClose={() => setIsImageViewerOpen(false)}
-          />
-          
+      <Pressable
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: isNeedNotification, disabled: isSaving }}
+        disabled={isSaving}
+        onPress={() => setIsNeedNotification(!isNeedNotification)}
+        style={styles.checkboxRow}
+        testID="feedback-notification-checkbox"
+      >
+        <View style={[styles.checkbox, isNeedNotification && styles.checkboxChecked]}>
+          {isNeedNotification ? <Check color="#FFFFFF" size={16} strokeWidth={4} /> : null}
         </View>
+        <Text style={[styles.checkboxLabel, { fontSize: bodyFontSize }]}>Уведомить о решении</Text>
+      </Pressable>
 
-        <View className='w-full h-20' />
-        
-      </BottomSheetScrollView>
-    </BottomSheet>
+      <Pressable
+        accessibilityRole="button"
+        disabled={isSaving}
+        onPress={handleSubmit}
+        style={[
+          styles.submit,
+          isSaving && styles.submitDisabled,
+        ]}
+        testID="feedback-submit-button"
+      >
+        {isSaving ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={[styles.submitText, { fontSize: clamp(bodyFontSize + 2, 15, 24) }]}>Отправить</Text>
+        )}
+      </Pressable>
+
+      <ImageViewing
+        images={previewImages}
+        imageIndex={currentImageIndex}
+        onRequestClose={() => setIsImageViewerOpen(false)}
+        visible={isImageViewerOpen}
+      />
+    </FeedbackSheet>
   )
-};
+}
 
-export default CreateFeedbackModal;
+export default CreateFeedbackModal
+
+const styles = StyleSheet.create({
+  title: {
+    marginBottom: 16,
+    color: appPalette.text,
+    fontFamily: 'Roboto-Bold',
+    lineHeight: 32,
+  },
+  divider: {
+    height: 1,
+    marginHorizontal: -20,
+    marginBottom: 18,
+    backgroundColor: appPalette.border,
+  },
+  sectionTitle: {
+    marginBottom: 8,
+    color: appPalette.text,
+    fontFamily: 'Roboto-Bold',
+    lineHeight: 24,
+  },
+  typeList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 17,
+  },
+  typeChip: {
+    minHeight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: appPalette.border,
+    borderRadius: 999,
+    backgroundColor: appPalette.surface,
+  },
+  typeChipSelected: { borderColor: appPalette.brand, backgroundColor: appPalette.brand },
+  typeChipText: { color: appPalette.text, fontFamily: 'Roboto-Medium' },
+  typeChipTextSelected: { color: '#FFFFFF' },
+  input: {
+    width: '100%',
+    minHeight: 54,
+    marginBottom: 17,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: appPalette.border,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    color: appPalette.text,
+    fontFamily: 'Roboto-Regular',
+  },
+  descriptionInput: { height: 120, lineHeight: 23 },
+  imageList: { gap: 10, paddingBottom: 10 },
+  imageWrapper: { position: 'relative' },
+  image: { width: 96, height: 96, borderRadius: 12, backgroundColor: appPalette.surfaceAlt },
+  removeImage: {
+    position: 'absolute', top: 5, right: 5, width: 26, height: 26,
+    alignItems: 'center', justifyContent: 'center', borderRadius: 13,
+    backgroundColor: appPalette.brand,
+  },
+  imagePicker: {
+    minHeight: 86,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: appPalette.border,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  imagePickerText: { color: appPalette.textMuted, fontFamily: 'Roboto-Regular', textAlign: 'center' },
+  checkboxRow: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 10,
+    marginBottom: 13,
+    paddingRight: 12,
+    borderRadius: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#9BAFBE',
+    borderRadius: 5,
+    backgroundColor: '#FFFFFF',
+  },
+  checkboxChecked: { borderColor: appPalette.brand, backgroundColor: appPalette.brand },
+  checkboxLabel: { color: '#404850', fontFamily: 'Roboto-Regular' },
+  submit: {
+    minHeight: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    backgroundColor: appPalette.brand,
+    shadowColor: '#920024',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  submitDisabled: { opacity: 0.6 },
+  submitText: { color: '#FFFFFF', fontFamily: 'Roboto-Bold' },
+})

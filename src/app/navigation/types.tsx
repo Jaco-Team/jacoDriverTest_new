@@ -9,4 +9,5 @@ export const RU_SCREEN_NAMES: Record<string, string> = {
   Statistics: 'Статистика времени',
   Settings: 'Настройки',
   FeedbackScreen: 'Предложения',
+  OrdersUiPreview: 'UI заказов (DEV)',
 };

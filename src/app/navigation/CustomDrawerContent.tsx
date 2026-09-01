@@ -39,6 +39,7 @@ type DrawerRouteName =
   | 'Statistics'
   | 'Settings'
   | 'FeedbackScreen'
+  | 'OrdersUiPreview'
 
 interface NavigationItem {
   route: DrawerRouteName
@@ -62,6 +63,15 @@ const NAVIGATION_ITEMS: NavigationItem[] = [
   { route: 'Statistics', label: 'Статистика', icon: faChartSimple },
   { route: 'Settings', label: 'Настройки', icon: faGear },
   { route: 'FeedbackScreen', label: 'Предложения', icon: faCircleExclamation },
+  ...(__DEV__
+    ? [
+        {
+          route: 'OrdersUiPreview' as const,
+          label: 'UI заказов (DEV)',
+          icon: faReceipt,
+        },
+      ]
+    : []),
 ]
 
 function clampFontSize(value: number, min: number, max: number): number {
@@ -190,7 +200,7 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
   const contactLabelFontSize = clampFontSize(globalFontSize - 1, 14, 17)
   const contactPhoneFontSize = clampFontSize(globalFontSize - 2, 12, 15)
 
-  const navigationItems = isNeedPageStat
+  const navigationItems = __DEV__ || isNeedPageStat
     ? NAVIGATION_ITEMS
     : NAVIGATION_ITEMS.filter((item) => item.route !== 'Statistics')
 
@@ -238,7 +248,7 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
 
     props.navigation.closeDrawer()
     logogout()
-    props.navigation.navigate('Auth')
+    props.navigation.reset({ index: 0, routes: [{ name: 'Auth' }] })
   }
 
   return (

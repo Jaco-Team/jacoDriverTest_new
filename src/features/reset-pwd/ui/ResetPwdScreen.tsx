@@ -118,9 +118,7 @@ export function ResetPwdScreen(): React.JSX.Element {
               autoCapitalize="none"
               autoComplete="new-password"
               autoCorrect={false}
-              keyboardType={
-                Platform.OS === 'android' ? 'visible-password' : 'default'
-              }
+              keyboardType="default"
               label="Новый пароль"
               passwordVisible={showPassword}
               returnKeyType="done"

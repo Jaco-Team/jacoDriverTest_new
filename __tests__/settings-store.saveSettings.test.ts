@@ -78,6 +78,18 @@ describe('useSettingsStore.saveSettings', () => {
     expect(useGlobalStore.getState().mapScale).toBe(1.5);
     expect(useGlobalStore.getState().is_show_alert_text).toBe(true);
     expect(useGlobalStore.getState().modal_text).toBe('Настройки сохранены');
+    expect(useSettingsStore.getState()).toMatchObject({
+      action_centered_map: 1,
+      color: '#123456',
+      fontSize: 20,
+      mapScale: 1.5,
+      theme: 'black',
+      type_data_map: 'full',
+      type_show_del: 'min',
+      update_interval: 45,
+      night_map: 1,
+      is_scaleMap: 0,
+    });
     expect(useSettingsStore.getState().isClick).toBe(true);
     expect(useGlobalStore.getState().loadSpinner).toBe(true);
 
@@ -115,6 +127,34 @@ describe('useSettingsStore.saveSettings', () => {
 
     jest.advanceTimersByTime(300);
 
+    expect(useSettingsStore.getState().isClick).toBe(false);
+    expect(useGlobalStore.getState().loadSpinner).toBe(false);
+  });
+
+  it('ответ st=false считается ошибкой и не применяет настройки', async () => {
+    mockApi.mockResolvedValueOnce({ st: false, text: 'Сохранение отклонено' });
+
+    await useSettingsStore.getState().saveSettings(
+      'full',
+      [],
+      24,
+      60,
+      '#654321',
+      1.2,
+      'norm',
+      'classic',
+      [],
+      [],
+    );
+
+    expect(mockAnalyticsLog).toHaveBeenCalledWith(
+      'SettingsSaveFail',
+      'Ошибка в сохранение настроек',
+    );
+    expect(useGlobalStore.getState().is_show_modal_text).toBe(true);
+    expect(useGlobalStore.getState().globalFontSize).toBe(16);
+
+    jest.advanceTimersByTime(300);
     expect(useSettingsStore.getState().isClick).toBe(false);
     expect(useGlobalStore.getState().loadSpinner).toBe(false);
   });

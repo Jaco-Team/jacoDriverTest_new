@@ -65,6 +65,8 @@ describe('ResetPwdScreen', () => {
     expect(screen.getByText('Восстановление доступа')).toBeTruthy()
     expect(screen.getByTestId('reset-phone-input')).toBeTruthy()
     expect(screen.getByTestId('reset-password-input')).toBeTruthy()
+    expect(screen.getByTestId('reset-password-input').props.keyboardType).toBe('default')
+    expect(screen.getByTestId('reset-password-input').props.secureTextEntry).toBe(true)
     expect(screen.getByTestId('reset-password-requirements')).toBeTruthy()
     expect(screen.getByTestId('reset-captcha-placeholder')).toBeTruthy()
     expect(screen.getByTestId('reset-hint')).toBeTruthy()

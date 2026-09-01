@@ -24,6 +24,7 @@ export enum AnalyticsEvent {
 
   /** Заказы */
   OrderCallClient = 'order_call_client',
+  OrderCommentPhonesOpen = 'order_comment_phones_open',
   OrderClipboard = 'order_clipboard',
   OrderAccept = 'order_accept',
   OrderArrive = 'order_arrive',
@@ -93,6 +94,7 @@ export enum AnalyticsEvent {
   StatisticsCalendarStartClose = 'statistics_calendar_start_close',
   StatisticsCalendarEndClose = 'statistics_calendar_end_close',
   StatisticsDateSelected = 'statistics_date_selected',
+  StatisticsShowClick = 'statistics_show_click',
 }
 
 function safeJSONString(value: unknown): string {

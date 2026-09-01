@@ -3,7 +3,14 @@ import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 
 import YaMap from 'react-native-yamap-plus'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import { faLocationDot, faLockOpen, faLock, faFilter, faLocationPin, faLocationPinLock, faRoad } from '@fortawesome/free-solid-svg-icons'
+import {
+  faLocationDot,
+  faLocationPin,
+  faLocationPinLock,
+  faLockOpen,
+  faLock,
+  faRoad,
+} from '@fortawesome/free-solid-svg-icons'
 
 import { Slider, SliderThumb, SliderTrack, SliderFilledTrack } from '@/components/ui/slider'
 
@@ -11,7 +18,11 @@ import { TypeLimit } from './Limit';
 import { ListOrders } from './ListOrders';
 import { HomeMarker } from './HomeMarker';
 import { ModalOrder } from './ModalOrder';
-import { DriverMarker } from './DriverMarker';
+import {
+  DriverMarker,
+  DriverMarkerImage,
+  type DriverMarkerImageSource,
+} from './DriverMarker';
 import { ModalFilterOrders } from './ModalFilterOrders';
 
 const { width, height } = Dimensions.get('window')
@@ -19,18 +30,45 @@ const MAP_CONTROL_RIGHT = 20
 
 import { useMapLogic } from '../model/useMapLogic'
 
-import { ScreenLayout } from '@/shared/ui/ScreenLayout'
 import { Center } from '@/components/ui/center'
 import { Spinner } from '@/components/ui/spinner'
 
 export function MapScreen() {
-  const { mapRef, zoom, updateZoom, getHome, home, showLocationDriver, night_map, is_scaleMap, rotate_map, setRotateMap, showModalTypeDop, is_showModalTypeDop, isActiveFilter, isOpenOrderMap, set_type_location, type_location, trafficVisible, toggleTrafficVisible, mapInitStatus, mapInstanceKey, handleMapLoaded, retryMap, shouldRenderMap } = useMapLogic()
+  const {
+    mapRef,
+    zoom,
+    updateZoom,
+    getHome,
+    home,
+    set_type_location,
+    type_location,
+    night_map,
+    is_scaleMap,
+    rotate_map,
+    setRotateMap,
+    is_showModalTypeDop,
+    isOpenOrderMap,
+    trafficVisible,
+    toggleTrafficVisible,
+    mapInitStatus,
+    mapInstanceKey,
+    handleMapLoaded,
+    retryMap,
+    shouldRenderMap,
+  } = useMapLogic()
   const [hasViewport, setHasViewport] = useState(false)
+  const [driverMarkerImage, setDriverMarkerImage] = useState<DriverMarkerImageSource | null>(null)
 
   const mtop = (height - 300) / 4
 
   return (
-    <ScreenLayout>
+    <View
+      style={[
+        styles1.root,
+        { backgroundColor: night_map == 1 ? '#18232D' : '#F5F5F5' },
+      ]}
+      testID="orders-map-screen"
+    >
       { !(is_showModalTypeDop || isOpenOrderMap) && is_scaleMap == 1 &&
         <Slider
           value={zoom}
@@ -56,20 +94,28 @@ export function MapScreen() {
         </Slider>
       }
 
-      <TouchableOpacity style={{ backgroundColor: 'transparent', position: 'absolute', left: 10, top: 10, zIndex: 22, padding: 10 }} onPress={() => setRotateMap(!rotate_map)}>
+      <DriverMarkerImage onImage={setDriverMarkerImage} />
+
+      <TouchableOpacity
+        accessibilityLabel={rotate_map ? 'Заблокировать поворот карты' : 'Разблокировать поворот карты'}
+        accessibilityRole="button"
+        style={{ backgroundColor: 'transparent', position: 'absolute', left: 10, top: 10, zIndex: 22, padding: 10 }}
+        testID="orders-map-rotation-lock"
+        onPress={() => setRotateMap(!rotate_map)}
+      >
         <FontAwesomeIcon size={25} color={ night_map == 1 ? '#f0f8ff' : '#000' } style={{ zIndex: 22 }} icon={rotate_map === true ? faLockOpen : faLock} />
       </TouchableOpacity>
 
-      { !(is_showModalTypeDop || isOpenOrderMap) ?
-        <TouchableOpacity style={{ backgroundColor: 'transparent', position: 'absolute', right: MAP_CONTROL_RIGHT, bottom: 150, zIndex: 22, padding: 10 }} onPress={() => showModalTypeDop(true)}>
-          <FontAwesomeIcon size={25} color={ isActiveFilter ? '#fff44f' : night_map == 1 ? '#f0f8ff' : '#000' } style={{ zIndex: 22 }} icon={faFilter} />
-        </TouchableOpacity>
-          :
-        false
-      }
-
       {/* Кнопка для отображения локации водителя */}
       <TouchableOpacity
+        accessibilityLabel={
+          type_location === 'none'
+            ? 'Показать мою геопозицию'
+            : type_location === 'location'
+              ? 'Включить постоянное отслеживание геопозиции'
+              : 'Выключить отслеживание геопозиции'
+        }
+        accessibilityRole="button"
         style={{
           backgroundColor: 'transparent',
           position: 'absolute',
@@ -78,15 +124,21 @@ export function MapScreen() {
           padding: 10,
           zIndex: 22
         }}
-        onPress={() => showLocationDriver()}
-        //onPress={() => set_type_location()}
+        testID="orders-map-driver-location"
+        onPress={set_type_location}
       >
         <FontAwesomeIcon 
           size={25} 
           color={night_map == 1 ? '#f0f8ff' : '#000'} 
           style={{ zIndex: 22 }} 
-          icon={faLocationDot} 
-          //icon={type_location === 'location' ? faLocationDot : type_location === 'watch' ? faLocationPin : faLocationPinLock} 
+          icon={
+            type_location === 'location'
+              ? faLocationDot
+              : type_location === 'watch'
+                ? faLocationPin
+                : faLocationPinLock
+          }
+          testID="orders-map-driver-location-icon"
         />
       </TouchableOpacity>
 
@@ -103,6 +155,7 @@ export function MapScreen() {
         onPress={() => toggleTrafficVisible()}
         accessibilityRole="button"
         accessibilityLabel={trafficVisible ? 'Скрыть пробки на карте' : 'Показать пробки на карте'}
+        testID="orders-map-traffic"
       >
         <FontAwesomeIcon
           size={25}
@@ -116,6 +169,7 @@ export function MapScreen() {
       <View
         style={styles1.ymap}
         collapsable={false}
+        testID="orders-map-viewport"
         onLayout={(event) => {
           const { width, height } = event.nativeEvent.layout
           setHasViewport(width > 1 && height > 1)
@@ -134,7 +188,7 @@ export function MapScreen() {
             collapsable={false}
           >
             {home && <HomeMarker point={home} getHome={getHome} />}
-            <DriverMarker />
+            <DriverMarker image={driverMarkerImage} />
             <ListOrders />
           </YaMap>
         ) : (
@@ -156,14 +210,19 @@ export function MapScreen() {
       <TypeLimit />
       <ModalOrder />
       <ModalFilterOrders />
-    </ScreenLayout>
+    </View>
   )
 }
 
 export const styles1 = StyleSheet.create({
+  root: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+  },
   ymap: {
     flex: 1,
     width: width,
-    height: height
+    height: height,
   }
 })

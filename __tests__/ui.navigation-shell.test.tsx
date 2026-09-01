@@ -2,6 +2,7 @@ import React from 'react'
 import { fireEvent, render } from '@testing-library/react-native'
 
 const mockNavigate = jest.fn()
+const mockReset = jest.fn()
 const mockCloseDrawer = jest.fn()
 const mockLogOut = jest.fn()
 const mockDialCall = jest.fn()
@@ -67,6 +68,7 @@ function drawerProps(activeRoute = 'List_orders'): any {
     },
     navigation: {
       navigate: mockNavigate,
+      reset: mockReset,
       closeDrawer: mockCloseDrawer,
     },
     descriptors: {},
@@ -89,7 +91,7 @@ describe('боковое меню', () => {
     }
   })
 
-  it('показывает активный раздел, среднее время и учитывает настройку статистики', async () => {
+  it('показывает активный раздел, среднее время и временно открывает статистику в DEV', async () => {
     const screen = await render(
       <CustomDrawerContent {...drawerProps('List_orders')} />,
     )
@@ -104,7 +106,8 @@ describe('боковое меню', () => {
       borderWidth: 1,
       backgroundColor: '#E9EEF3',
     })
-    expect(screen.queryByTestId('drawer-route-Statistics')).toBeNull()
+    expect(screen.getByTestId('drawer-route-Statistics')).toBeTruthy()
+    expect(screen.getByTestId('drawer-route-OrdersUiPreview')).toBeTruthy()
     expect(screen.getByText('+7 (900) 123-45-67')).toBeTruthy()
     expect(screen.getByTestId('drawer-contact-Директор')).toHaveStyle({
       minHeight: 60,
@@ -136,7 +139,10 @@ describe('боковое меню', () => {
     mockCloseDrawer.mockClear()
     await fireEvent.press(screen.getByTestId('drawer-logout'))
     expect(mockLogOut).toHaveBeenCalledTimes(1)
-    expect(mockNavigate).toHaveBeenCalledWith('Auth')
+    expect(mockReset).toHaveBeenCalledWith({
+      index: 0,
+      routes: [{ name: 'Auth' }],
+    })
     expect(mockCloseDrawer).toHaveBeenCalled()
   })
 

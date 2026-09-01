@@ -1,120 +1,167 @@
 import React from 'react'
-import { View, ScrollView, StyleSheet } from 'react-native'
-import { Table, TableWrapper, Row, Cell } from 'react-native-reanimated-table'
+import { StyleSheet, Text, View } from 'react-native'
 
-interface IGraphTableViewProps {
+import { graphStyles } from './graphStyles'
+
+interface GraphDate {
+  date?: string
+  day?: string
+  dow?: string
+}
+
+interface GraphCell {
+  date?: string
+  hours?: number | string
+  min?: number | string
+  user_name?: string
+}
+
+interface GraphTableViewProps {
+  dates: GraphDate[]
   headerDay: string[]
   headerDow: string[]
-  users: any[]        // Подставьте точные типы, если нужно
+  users: GraphCell[][]
   userName: string
   thisDay: string
   globalFontSize: number
 }
 
-const tableBorder = {
-  borderWidth: 1,
-  borderColor: 'rgb(229, 229, 229)'
+const EMPLOYEE_WIDTH = 180
+const DAY_WIDTH = 64
+
+function isWeekend(value: string | undefined): boolean {
+  const normalized = String(value ?? '').toLowerCase()
+  return normalized.includes('сб') || normalized.includes('вс')
 }
 
 export function GraphTableView({
+  dates,
   headerDay,
   headerDow,
   users,
   userName,
   thisDay,
-  globalFontSize
-}: IGraphTableViewProps) {
+  globalFontSize,
+}: GraphTableViewProps): React.JSX.Element {
+  const tableWidth = EMPLOYEE_WIDTH + Math.max(dates.length, 1) * DAY_WIDTH
+
+  const renderHeaderRow = (label: string, values: string[], isDow: boolean) => (
+    <View style={[graphStyles.tableRow, { width: tableWidth }]}>
+      <View style={[graphStyles.tableCell, graphStyles.headCell, styles.employeeCell]}>
+        <Text style={[graphStyles.headText, { fontSize: globalFontSize }]}>
+          {label}
+        </Text>
+      </View>
+      {values.map((value, index) => {
+        const today = dates[index]?.date === thisDay
+        const weekend = isDow
+          ? isWeekend(value)
+          : isWeekend(headerDow[index])
+
+        return (
+          <View
+            key={`${label}-${index}`}
+            style={[
+              graphStyles.tableCell,
+              graphStyles.headCell,
+              styles.dayCell,
+              index === values.length - 1 && graphStyles.lastColumn,
+              weekend && graphStyles.weekendCell,
+              today && graphStyles.todayCell,
+            ]}
+          >
+            <Text
+              testID={`graph-header-${isDow ? 'dow' : 'date'}-${index}`}
+              style={[
+                graphStyles.headText,
+                { fontSize: globalFontSize },
+                weekend && graphStyles.weekendText,
+              ]}
+            >
+              {value}
+            </Text>
+          </View>
+        )
+      })}
+    </View>
+  )
+
   return (
-    <View>
-      {/* Первая таблица: день */}
-      <Table borderStyle={tableBorder}>
-        <TableWrapper style={styles.tableRow}>
-          <Cell
-            data={''}
-            textStyle={[styles.celText, { width: 170, fontSize: globalFontSize }]}
-          />
-          <Row
-            data={headerDay}
-            style={{ minHeight: 30, backgroundColor: '#fff' }}
-            textStyle={[styles.celText, { fontSize: globalFontSize }]}
-          />
-        </TableWrapper>
-      </Table>
+    <View style={{ minWidth: tableWidth }} testID="graph-schedule-table">
+      {renderHeaderRow('Дата', headerDay, false)}
+      {renderHeaderRow('Сотрудник', headerDow, true)}
 
-      {/* Вторая таблица: день недели */}
-      <Table borderStyle={tableBorder}>
-        <TableWrapper style={styles.tableRow}>
-          <Cell
-            data={'Сотрудники'}
-            textStyle={[styles.celText, { width: 170, fontSize: globalFontSize }]}
-          />
-          <Row
-            data={headerDow}
-            style={{ minHeight: 30, backgroundColor: '#fff' }}
-            textStyle={[styles.celText, { fontSize: globalFontSize }]}
-          />
-        </TableWrapper>
-      </Table>
+      {users.length === 0 ? (
+        <View style={[graphStyles.empty, { width: tableWidth }]}>
+          <Text style={[graphStyles.emptyText, { fontSize: globalFontSize }]}>
+            За выбранный месяц пока нет данных по графику.
+          </Text>
+        </View>
+      ) : (
+        users.map((rowData, rowIndex) => {
+          const currentUser = rowData[0]?.user_name === userName
+          const lastRow = rowIndex === users.length - 1
 
-      {/* Третья таблица: основная, со списком пользователей */}
-      <ScrollView style={{ marginTop: -1 }} showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false}>
-        <Table borderStyle={tableBorder}>
-          {users.map((rowData, index) => (
-            <TableWrapper key={index} style={styles.tableRow}>
-              {rowData.map((cellData: any, cellIndex: number) => {
-                const isUserRow = rowData[0].user_name === userName
-                // Пример логики фона ячейки
-                const cellStyle =
-                  isUserRow && cellData.date === thisDay
-                    ? { backgroundColor: '#b0d959' }
-                    : isUserRow
-                    ? { backgroundColor: '#ffcc00' }
-                    : index % 2
-                    ? { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
-                    : {}
+          return (
+            <View
+              key={`${rowData[0]?.user_name ?? 'employee'}-${rowIndex}`}
+              style={[graphStyles.tableRow, { width: tableWidth }]}
+            >
+              {rowData.map((cellData, cellIndex) => {
+                const nameCell = cellIndex === 0
+                const today = !nameCell && cellData.date === thisDay
+                const hasHours = !nameCell && Number(cellData.min) > 0
+                const lastColumn = cellIndex === rowData.length - 1
 
                 return (
-                  <Cell
-                    key={cellIndex}
-                    data={
-                      cellIndex === 0
-                        ? cellData.user_name
-                        : cellData.min === 0
-                        ? ''
-                        : cellData.hours
-                    }
-                    textStyle={[
-                      {
-                        textAlign: cellIndex === 0 ? 'left' : 'center',
-                        fontWeight: '400',
-                        color: '#000',
-                        width: cellIndex === 0 ? 170 : 50,
-                        fontSize: globalFontSize,
-                        padding: 5
-                      }
+                  <View
+                    key={`${rowIndex}-${cellIndex}`}
+                    style={[
+                      graphStyles.tableCell,
+                      nameCell ? styles.employeeCell : styles.dayCell,
+                      lastColumn && graphStyles.lastColumn,
+                      lastRow && graphStyles.lastRowCell,
+                      hasHours && graphStyles.filledHoursCell,
+                      currentUser && graphStyles.currentUserCell,
+                      currentUser && nameCell && graphStyles.currentUserNameCell,
+                      currentUser && today && graphStyles.currentTodayCell,
                     ]}
-                    style={cellStyle}
-                  />
+                  >
+                    <Text
+                      style={[
+                        graphStyles.bodyText,
+                        { fontSize: globalFontSize },
+                        nameCell && styles.employeeText,
+                        currentUser && graphStyles.currentUserText,
+                      ]}
+                    >
+                      {nameCell
+                        ? cellData.user_name
+                        : hasHours
+                          ? cellData.hours
+                          : ''}
+                    </Text>
+                  </View>
                 )
               })}
-            </TableWrapper>
-          ))}
-        </Table>
-      </ScrollView>
+            </View>
+          )
+        })
+      )}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  tableRow: {
-    flexDirection: 'row',
-    minHeight: 30,
-    backgroundColor: '#fff'
+  employeeCell: {
+    width: EMPLOYEE_WIDTH,
+    alignItems: 'flex-start',
   },
-  celText: {
-    textAlign: 'center',
-    fontWeight: '400',
-    color: '#000',
-    width: 50
-  }
+  employeeText: {
+    fontFamily: 'Roboto-Bold',
+    textAlign: 'left',
+  },
+  dayCell: {
+    width: DAY_WIDTH,
+  },
 })

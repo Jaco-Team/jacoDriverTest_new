@@ -57,6 +57,7 @@ describe('useCreateFeedbackModal: форма и image picker', () => {
       modal: { isCreateModalOpen: true },
       closeCreateModal: mockCloseCreateModal,
       createFeedback: mockCreateFeedback,
+      is_click: false,
       searchQuery: '',
       setSearchQuery: mockSetSearchQuery,
     };
@@ -95,6 +96,22 @@ describe('useCreateFeedbackModal: форма и image picker', () => {
     expect(mockCreateFeedback).not.toHaveBeenCalled();
   });
 
+  it('после закрытия сбрасывает чекбокс уведомления', async () => {
+    await render(<Probe />);
+
+    await act(async () => {
+      api!.setIsNeedNotification(true);
+    });
+    expect(api!.isNeedNotification).toBe(true);
+
+    await act(async () => {
+      api!.handleClose();
+    });
+
+    expect(api!.isNeedNotification).toBe(false);
+    expect(mockCloseCreateModal).toHaveBeenCalledTimes(1);
+  });
+
   it('отправляет createFeedback с текущими полями, уведомлением и изображениями', async () => {
     const image = { uri: 'file://photo.jpg', fileName: 'photo.jpg', type: 'image/jpeg' };
     await render(<Probe />);
@@ -103,7 +120,7 @@ describe('useCreateFeedbackModal: форма и image picker', () => {
       api!.setTitle('Ошибка');
       api!.setDescription('Описание проблемы');
       api!.setType('ошибка');
-      api!.setIs_need_notification(['is_need_notification']);
+      api!.setIsNeedNotification(true);
       api!.handleImagePickerResponse({ assets: [image] } as any);
     });
     await act(async () => {

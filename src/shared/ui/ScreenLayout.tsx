@@ -1,23 +1,42 @@
 import React, { ReactNode } from 'react'
-import { SafeAreaView, ScrollView, StyleSheet, View } from 'react-native'
+import {
+  ScrollView,
+  StyleProp,
+  StyleSheet,
+  View,
+  ViewStyle,
+} from 'react-native'
+import {
+  SafeAreaView,
+} from 'react-native-safe-area-context'
+import type { Edges } from 'react-native-safe-area-context'
+
+const DRAWER_SCREEN_EDGES: Edges = ['right', 'bottom', 'left']
 
 interface ScreenLayoutProps {
   children: ReactNode
-  withScroll?: boolean     // хотим ли прокрутку
-  style?: object           // возможность переопределить стили
+  withScroll?: boolean
+  style?: StyleProp<ViewStyle>
+  safeAreaEdges?: Edges
 }
 
 export function ScreenLayout({
   children,
   withScroll = false,
-  style
+  style,
+  safeAreaEdges = DRAWER_SCREEN_EDGES,
 }: ScreenLayoutProps) {
   if (withScroll) {
     return (
-      <SafeAreaView style={[styles.safeArea, style]}>
+      <SafeAreaView
+        edges={safeAreaEdges}
+        style={[styles.safeArea, style]}
+        testID="screen-layout-safe-area"
+      >
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
+          testID="screen-layout-scroll"
         >
           {children}
         </ScrollView>
@@ -26,7 +45,11 @@ export function ScreenLayout({
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, style]}>
+    <SafeAreaView
+      edges={safeAreaEdges}
+      style={[styles.safeArea, style]}
+      testID="screen-layout-safe-area"
+    >
       <View className='h-full w-full relative bg-gray-50'>
         {children}
       </View>
@@ -37,17 +60,9 @@ export function ScreenLayout({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F5F5F5', // например сероватый фон
-  },
-  container: {
-    flex: 1,
-    //paddingHorizontal: 16,
-    paddingTop: 16,
-    // любые другие базовые стили
+    backgroundColor: '#F5F5F5',
   },
   scrollContainer: {
-    //paddingHorizontal: 16,
     paddingTop: 16,
-    // ...
   },
 })

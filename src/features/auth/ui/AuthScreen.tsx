@@ -91,7 +91,7 @@ export function AuthScreen(): React.JSX.Element {
           autoCapitalize="none"
           autoComplete="current-password"
           autoCorrect={false}
-          keyboardType={Platform.OS === 'android' ? 'visible-password' : 'default'}
+          keyboardType="default"
           label="Пароль"
           passwordVisible={showPassword}
           returnKeyType="done"

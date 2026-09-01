@@ -32,9 +32,7 @@ export function useAuthLogic() {
           const title = RU_SCREEN_NAMES['List_orders'] ?? 'Список заказов';
           Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${title}`);
 
-          navigation.navigate('List_orders')
-        } else {
-          navigation.navigate('Auth') // остаёмся на Auth
+          navigation.reset({ index: 0, routes: [{ name: 'List_orders' }] })
         }
       }
       check()
@@ -70,10 +68,18 @@ export function useAuthLogic() {
     if (res.st === true) {
       Analytics.log(AnalyticsEvent.AuthLogin, 'Успешная авторизация');
 
+      // Auth остаётся смонтированным в drawer после перехода к заказам.
+      // Очищаем чувствительные данные до навигации, чтобы они не появились
+      // повторно при выходе из аккаунта.
+      setMyLogin('')
+      setMyPWD('')
+      setShowPassword(false)
+      setCaptchaRequired(false)
+
       const title = RU_SCREEN_NAMES['List_orders'] ?? 'Список заказов';
       Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${title}`);
 
-      navigation.navigate('List_orders')
+      navigation.reset({ index: 0, routes: [{ name: 'List_orders' }] })
     } else {
       setLoginError(res.text || 'Не удалось войти. Проверьте номер телефона и пароль.')
       Analytics.log(AnalyticsEvent.AuthLoginFail, 'Ошибка авторизации');

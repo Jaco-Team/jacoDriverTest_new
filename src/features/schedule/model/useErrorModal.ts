@@ -5,7 +5,7 @@ import { useShallow } from 'zustand/react/shallow'
 
 export function useErrorCamera() {
   const [ globalFontSize ] = useGlobalStore(useShallow( state => [ state.globalFontSize ]));
-  const [ isShowModalErrCam, modalErrCam, showModalErrCam, FormatPrice, answer_err_cam ] = useStatStore(useShallow( state => [ state.isShowModalErrCam, state.modalErrCam, state.showModalErrCam, state.FormatPrice, state.answer_err_cam ]));
+  const [ isShowModalErrCam, modalErrCam, showModalErrCam, FormatPrice, answer_err_cam, isClick ] = useStatStore(useShallow( state => [ state.isShowModalErrCam, state.modalErrCam, state.showModalErrCam, state.FormatPrice, state.answer_err_cam, state.isClick ]));
 
   const [visible, setVisible] = useState<boolean>(false);
   const [indexImg, setIndexImg] = useState<number>(0);
@@ -16,6 +16,7 @@ export function useErrorCamera() {
   useEffect(() => {
     const arr = modalErrCam?.imgs?.map((uri) => ({ uri })) ?? []
     setTransformedArray(arr)
+    setTextError('')
   }, [modalErrCam])
 
   // Функция закрытия модалки
@@ -39,6 +40,7 @@ export function useErrorCamera() {
     isShowModalErrCam,
     modalErrCam,
     FormatPrice,
+    isSubmitting: isClick,
 
     // Локальные стейты и методы
     globalFontSize,
@@ -62,13 +64,15 @@ export function useErrorOrders() {
     showModalErrOrder,
     FormatPrice,
     answer_err_order,
+    isClick,
   ] = useStatStore(
     useShallow((state) => [
       state.isShowModalErrOrder,
       state.modalErrOrder,
       state.showModalErrOrder,
       state.FormatPrice,
-      state.answer_err_order
+      state.answer_err_order,
+      state.isClick,
     ])
   )
 
@@ -84,6 +88,7 @@ export function useErrorOrders() {
   useEffect(() => {
     const arr = modalErrOrder?.imgs?.map((uri: string) => ({ uri })) ?? []
     setTransformedArray(arr)
+    setTextError('')
   }, [modalErrOrder])
 
   // Закрытие модалки
@@ -107,6 +112,7 @@ export function useErrorOrders() {
     isShowModalErrOrder,
     modalErrOrder,
     FormatPrice,
+    isSubmitting: isClick,
     globalFontSize,
     visible,
     setVisible,

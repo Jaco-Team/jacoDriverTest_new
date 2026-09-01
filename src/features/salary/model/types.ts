@@ -1,15 +1,34 @@
+export type ActivePricePicker = 'start' | 'end' | null
+
+export interface PriceMetricRow {
+  label: string
+  value: string
+  description?: string
+  emphasize?: boolean
+  hideDivider?: boolean
+}
+
 export interface TextDescriptionProps {
   text: string
-  value: number
+  value: string
   title?: string
-  FormatPrice: (num: number) => string
-  bottom_devider?: boolean
-  globalFontSize: number,
-  type: 'count' | 'price'
+  emphasize?: boolean
+  hideDivider?: boolean
+  globalFontSize: number
 }
 
 export interface TextPopoverProps {
   Main: React.ReactNode
   title: string
   globalFontSize: number
+}
+
+export interface PriceDatePickerSheetProps {
+  isOpen: boolean
+  title: string
+  value: string
+  minDate: string
+  maxDate: string
+  onClose: () => void
+  onSelect: (date: string) => void
 }

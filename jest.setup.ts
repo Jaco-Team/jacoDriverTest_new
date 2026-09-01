@@ -13,14 +13,23 @@ jest.useFakeTimers();
 }
 
 // — жёстко замокаем локальные UI-обёртки
-jest.mock('@/components/ui/modal',   () => require('./__mocks__/ui/modalMock.js'));
-jest.mock('@/components/ui/vstack',  () => require('./__mocks__/ui/vstackMock.js'));
-jest.mock('@/components/ui/text',    () => require('./__mocks__/ui/textMock.js'));
-jest.mock('@/components/ui/button',  () => require('./__mocks__/ui/buttonMock.js'));
-jest.mock('@/components/ui/icon',    () => require('./__mocks__/ui/iconMock.js'));
-jest.mock('@/components/ui/checkbox',() => require('./__mocks__/ui/checkboxMock.js'));
-jest.mock('@/components/ui/hstack',  () => require('./__mocks__/ui/hstackMock.js'));
-
+jest.mock('@/components/ui/modal', () =>
+  require('./__mocks__/ui/modalMock.js'),
+);
+jest.mock('@/components/ui/vstack', () =>
+  require('./__mocks__/ui/vstackMock.js'),
+);
+jest.mock('@/components/ui/text', () => require('./__mocks__/ui/textMock.js'));
+jest.mock('@/components/ui/button', () =>
+  require('./__mocks__/ui/buttonMock.js'),
+);
+jest.mock('@/components/ui/icon', () => require('./__mocks__/ui/iconMock.js'));
+jest.mock('@/components/ui/checkbox', () =>
+  require('./__mocks__/ui/checkboxMock.js'),
+);
+jest.mock('@/components/ui/hstack', () =>
+  require('./__mocks__/ui/hstackMock.js'),
+);
 
 /* ===== ДАЛЬШЕ — КАК У ТЕБЯ (подмодули/зависимости) ===== */
 
@@ -32,7 +41,7 @@ jest.mock('@/shared/lib/notifications', () => ({
 
 jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter', () => {
   return jest.fn().mockImplementation(() => ({
-    addListener: jest.fn(() => ({ remove: jest.fn() })),
+    addListener: jest.fn(() => ({remove: jest.fn()})),
     removeAllListeners: jest.fn(),
     removeSubscription: jest.fn(),
     emit: jest.fn(),
@@ -50,20 +59,23 @@ jest.mock('react-native/Libraries/Utilities/DevSettings', () => ({
   },
 }));
 
-jest.mock('react-native/Libraries/PushNotificationIOS/PushNotificationIOS', () => ({
-  __esModule: true,
-  default: {
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    presentLocalNotification: jest.fn(),
-    cancelAllLocalNotifications: jest.fn(),
-  },
-}));
+jest.mock(
+  'react-native/Libraries/PushNotificationIOS/PushNotificationIOS',
+  () => ({
+    __esModule: true,
+    default: {
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      presentLocalNotification: jest.fn(),
+      cancelAllLocalNotifications: jest.fn(),
+    },
+  }),
+);
 
 jest.mock('react-native/Libraries/Settings/NativeSettingsManager', () => ({
   __esModule: true,
   default: {
-    getConstants: () => ({ settings: {} }),
+    getConstants: () => ({settings: {}}),
     addListener: jest.fn(),
     removeListeners: jest.fn(),
   },
@@ -83,20 +95,23 @@ jest.mock('react-native/Libraries/ReactNative/NativeI18nManager', () => ({
   },
 }));
 
-jest.mock('react-native/src/private/specs_DEPRECATED/modules/NativePlatformConstantsIOS', () => {
-  const constants = {
-    forceTouchAvailable: false,
-    interfaceIdiom: 'phone',
-    osVersion: '17.0',
-    systemName: 'iOS',
-    isTesting: true,
-  };
-  return {
-    __esModule: true,
-    default: { getConstants: () => constants },
-    getConstants: () => constants,
-  };
-});
+jest.mock(
+  'react-native/src/private/specs_DEPRECATED/modules/NativePlatformConstantsIOS',
+  () => {
+    const constants = {
+      forceTouchAvailable: false,
+      interfaceIdiom: 'phone',
+      osVersion: '17.0',
+      systemName: 'iOS',
+      isTesting: true,
+    };
+    return {
+      __esModule: true,
+      default: {getConstants: () => constants},
+      getConstants: () => constants,
+    };
+  },
+);
 
 jest.mock('react-native/Libraries/Utilities/NativePlatformConstantsIOS', () => {
   const constants = {
@@ -108,47 +123,50 @@ jest.mock('react-native/Libraries/Utilities/NativePlatformConstantsIOS', () => {
   };
   return {
     __esModule: true,
-    default: { getConstants: () => constants },
+    default: {getConstants: () => constants},
     getConstants: () => constants,
   };
 });
 
-jest.mock('react-native/src/private/specs_DEPRECATED/modules/NativeDeviceInfo', () => {
-  const constants = {
-    Dimensions: {
-      window: { width: 375, height: 667, scale: 2, fontScale: 2 },
-      screen: { width: 375, height: 667, scale: 2, fontScale: 2 },
-    },
-    isIPhoneX_deprecated: false,
-    isTesting: true,
-  };
-  return {
-    __esModule: true,
-    default: { getConstants: () => constants },
-    getConstants: () => constants,
-  };
-});
+jest.mock(
+  'react-native/src/private/specs_DEPRECATED/modules/NativeDeviceInfo',
+  () => {
+    const constants = {
+      Dimensions: {
+        window: {width: 375, height: 667, scale: 2, fontScale: 2},
+        screen: {width: 375, height: 667, scale: 2, fontScale: 2},
+      },
+      isIPhoneX_deprecated: false,
+      isTesting: true,
+    };
+    return {
+      __esModule: true,
+      default: {getConstants: () => constants},
+      getConstants: () => constants,
+    };
+  },
+);
 
 jest.mock('react-native/Libraries/Utilities/NativeDeviceInfo', () => {
   const constants = {
     Dimensions: {
-      window: { width: 375, height: 667, scale: 2, fontScale: 2 },
-      screen: { width: 375, height: 667, scale: 2, fontScale: 2 },
+      window: {width: 375, height: 667, scale: 2, fontScale: 2},
+      screen: {width: 375, height: 667, scale: 2, fontScale: 2},
     },
     isIPhoneX_deprecated: false,
     isTesting: true,
   };
   return {
     __esModule: true,
-    default: { getConstants: () => constants },
+    default: {getConstants: () => constants},
     getConstants: () => constants,
   };
 });
 
 jest.mock('react-native/Libraries/Utilities/Dimensions', () => {
   const dims = {
-    window: { width: 375, height: 667, scale: 2, fontScale: 2 },
-    screen: { width: 375, height: 667, scale: 2, fontScale: 2 },
+    window: {width: 375, height: 667, scale: 2, fontScale: 2},
+    screen: {width: 375, height: 667, scale: 2, fontScale: 2},
   };
   const listeners = new Set<any>();
   const api = {
@@ -156,11 +174,11 @@ jest.mock('react-native/Libraries/Utilities/Dimensions', () => {
     set: (next: any) => Object.assign(dims, next),
     addEventListener: (_: any, cb: any) => {
       listeners.add(cb);
-      return { remove: () => listeners.delete(cb) };
+      return {remove: () => listeners.delete(cb)};
     },
     removeEventListener: (_: any, cb: any) => listeners.delete(cb),
   };
-  return { __esModule: true, ...api, default: api };
+  return {__esModule: true, ...api, default: api};
 });
 
 jest.mock('react-native/Libraries/Utilities/PixelRatio', () => {
@@ -171,7 +189,7 @@ jest.mock('react-native/Libraries/Utilities/PixelRatio', () => {
     getPixelSizeForLayoutSize: (layout: number) => Math.round(layout * 2),
     startDetecting: () => {},
   };
-  return { __esModule: true, ...api, default: api };
+  return {__esModule: true, ...api, default: api};
 });
 
 jest.mock('react-native/Libraries/TurboModule/TurboModuleRegistry', () => ({
@@ -191,10 +209,10 @@ jest.mock('react-native/Libraries/TurboModule/TurboModuleRegistry', () => ({
       };
     }
     if (name === 'KeyboardObserver') {
-      return { addListener: jest.fn(), removeListeners: jest.fn() };
+      return {addListener: jest.fn(), removeListeners: jest.fn()};
     }
     if (name === 'NativeSoundManager' || name === 'SoundManager') {
-      return { playTouchSound: jest.fn() };
+      return {playTouchSound: jest.fn()};
     }
     return {};
   },
@@ -203,7 +221,8 @@ jest.mock('react-native/Libraries/TurboModule/TurboModuleRegistry', () => ({
 
 jest.mock('react-native-svg', () => {
   const React = require('react');
-  const View = ({ children, ...props }: any) => React.createElement('div', props, children);
+  const View = ({children, ...props}: any) =>
+    React.createElement('div', props, children);
   const Mock = View;
   return {
     __esModule: true,
@@ -224,7 +243,7 @@ jest.mock('react-native-svg', () => {
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
   const NavigationContainer = React.forwardRef((props: any, ref: any) =>
-    React.createElement('div', { ref }, props.children)
+    React.createElement('div', {ref}, props.children),
   );
   const useNavigationContainerRef = () => ({
     current: null,
@@ -232,13 +251,16 @@ jest.mock('@react-navigation/native', () => {
     resetRoot: () => {},
   });
   const useFocusEffect = (effect: () => void | (() => void)) => {
-    React.useEffect(() => (typeof effect === 'function' ? effect() : undefined), [effect]);
+    React.useEffect(
+      () => (typeof effect === 'function' ? effect() : undefined),
+      [effect],
+    );
   };
-  const DefaultTheme = { dark: false, colors: {} };
-  const ThemeProvider = ({ children }: any) => children;
-  const useTheme = () => ({ colors: {} });
+  const DefaultTheme = {dark: false, colors: {}};
+  const ThemeProvider = ({children}: any) => children;
+  const useTheme = () => ({colors: {}});
   const useIsFocused = () => true;
-  const createNavigationContainerRef = () => ({ current: null });
+  const createNavigationContainerRef = () => ({current: null});
 
   return {
     __esModule: true,
@@ -259,8 +281,10 @@ jest.mock('@react-navigation/drawer', () => {
     __esModule: true,
     getDrawerStatusFromState: (state: any) => state?.default ?? 'closed',
     createDrawerNavigator: () => ({
-      Navigator: ({ children }: any) => React.createElement(React.Fragment, null, children),
-      Screen: ({ children }: any) => React.createElement(React.Fragment, null, children),
+      Navigator: ({children}: any) =>
+        React.createElement(React.Fragment, null, children),
+      Screen: ({children}: any) =>
+        React.createElement(React.Fragment, null, children),
     }),
   };
 });
@@ -287,12 +311,12 @@ jest.mock('@react-native-community/geolocation', () => ({
 }));
 
 jest.mock('react-native-permissions', () => {
-  const RESULTS = { GRANTED: 'granted' };
+  const RESULTS = {GRANTED: 'granted'};
   return {
     RESULTS,
     PERMISSIONS: {
-      ANDROID: { ACCESS_FINE_LOCATION: 'ACCESS_FINE_LOCATION' },
-      IOS: { LOCATION_WHEN_IN_USE: 'LOCATION_WHEN_IN_USE' },
+      ANDROID: {ACCESS_FINE_LOCATION: 'ACCESS_FINE_LOCATION'},
+      IOS: {LOCATION_WHEN_IN_USE: 'LOCATION_WHEN_IN_USE'},
     },
     request: jest.fn(async () => RESULTS.GRANTED),
     checkMultiple: jest.fn(async () => ({})),
@@ -301,8 +325,8 @@ jest.mock('react-native-permissions', () => {
 
 jest.mock('@notifee/react-native', () => {
   const api = {
-    requestPermission: jest.fn(async () => ({ authorizationStatus: 1 })), // AUTHORIZED
-    getNotificationSettings: jest.fn(async () => ({ authorizationStatus: 1 })),
+    requestPermission: jest.fn(async () => ({authorizationStatus: 1})), // AUTHORIZED
+    getNotificationSettings: jest.fn(async () => ({authorizationStatus: 1})),
     createChannel: jest.fn(async () => 'jacodriver'),
     displayNotification: jest.fn(async () => {}),
     onForegroundEvent: jest.fn(() => () => {}),
@@ -337,7 +361,7 @@ jest.mock('@react-native-firebase/app', () => {
     name: 'mock',
     options: {},
     delete: jest.fn(),
-    utils: () => ({ isRunningInTestLab: false }),
+    utils: () => ({isRunningInTestLab: false}),
   };
   const firebase = {
     app: () => appInstance,
@@ -347,11 +371,14 @@ jest.mock('@react-native-firebase/app', () => {
     getApps: jest.fn(() => [appInstance]),
     SDK_VERSION: '0.0.0-test',
   };
-  return { __esModule: true, ...firebase, default: firebase };
+  return {__esModule: true, ...firebase, default: firebase};
 });
 
 jest.mock('@react-native-firebase/messaging', () => {
-  const listeners = { onMessage: [] as Array<(m: any) => void>, onTokenRefresh: [] as Array<(t: string) => void> };
+  const listeners = {
+    onMessage: [] as Array<(m: any) => void>,
+    onTokenRefresh: [] as Array<(t: string) => void>,
+  };
   const api = {
     hasPermission: jest.fn(async () => true),
     requestPermission: jest.fn(async () => true),
@@ -378,7 +405,13 @@ jest.mock('@react-native-firebase/messaging', () => {
       };
     }),
   };
-  return { __esModule: true, default: api, getMessaging: () => api, onMessage: api.onMessage, getToken: api.getToken };
+  return {
+    __esModule: true,
+    default: api,
+    getMessaging: () => api,
+    onMessage: api.onMessage,
+    getToken: api.getToken,
+  };
 });
 
 jest.mock('react-native-reanimated', () => {
@@ -410,13 +443,19 @@ jest.mock('react-native-reanimated', () => {
     ((x: number, input: number[], output: number[]) => {
       let i = 0;
       while (i < input.length - 1 && x > input[i + 1]) i++;
-      const x0 = input[i], x1 = input[i + 1] ?? input[i];
-      const y0 = output[i], y1 = output[i + 1] ?? output[i];
+      const x0 = input[i],
+        x1 = input[i + 1] ?? input[i];
+      const y0 = output[i],
+        y1 = output[i + 1] ?? output[i];
       return x1 === x0 ? y1 : y0 + ((y1 - y0) * (x - x0)) / (x1 - x0);
     });
 
-  Reanimated.configureReanimatedLogger = Reanimated.configureReanimatedLogger ?? jest.fn();
-  Reanimated.ReanimatedLogLevel = Reanimated.ReanimatedLogLevel ?? { warn: 1, error: 2 };
+  Reanimated.configureReanimatedLogger =
+    Reanimated.configureReanimatedLogger ?? jest.fn();
+  Reanimated.ReanimatedLogLevel = Reanimated.ReanimatedLogLevel ?? {
+    warn: 1,
+    error: 2,
+  };
 
   return Reanimated;
 });
@@ -424,10 +463,11 @@ jest.mock('react-native-reanimated', () => {
 try {
   require.resolve('react-native/Libraries/Animated/NativeAnimatedHelper');
   jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper', () => ({}));
-} catch {
-}
+} catch {}
 
-;(global as any).fetch = jest.fn(async () => ({ ok: true, json: async () => ({}) } as any));
+(global as any).fetch = jest.fn(
+  async () => ({ok: true, json: async () => ({})}) as any,
+);
 
 jest.mock('query-string', () => ({
   __esModule: true,
@@ -446,19 +486,26 @@ jest.mock('@react-native-clipboard/clipboard', () => {
     hasString: jest.fn(async () => false),
     getStringURL: jest.fn(async () => null),
   };
-  return { __esModule: true, default: api, ...api };
+  return {__esModule: true, default: api, ...api};
 });
 
 jest.mock('react-native-yamap-plus', () => {
   const React = require('react');
-  const YaMap = (props: any) => React.createElement(React.Fragment, null, props?.children);
+  const YaMap = (props: any) =>
+    React.createElement(React.Fragment, null, props?.children);
   (YaMap as any).init = jest.fn(() => Promise.resolve());
   (YaMap as any).setLocale = jest.fn();
   (YaMap as any).setCenter = jest.fn();
   (YaMap as any).setZoom = jest.fn();
-  const Animation = { SMOOTH: 0 };
-  const YamapInstance = { init: jest.fn(() => Promise.resolve()) };
-  return { __esModule: true, default: YaMap, Animation, YamapInstance, Marker: YaMap };
+  const Animation = {SMOOTH: 0};
+  const YamapInstance = {init: jest.fn(() => Promise.resolve())};
+  return {
+    __esModule: true,
+    default: YaMap,
+    Animation,
+    YamapInstance,
+    Marker: YaMap,
+  };
 });
 
 jest.mock('@sentry/react-native', () => {
@@ -471,39 +518,40 @@ jest.mock('@sentry/react-native', () => {
     setTag: jest.fn(),
     setUser: jest.fn(),
     setContext: jest.fn(),
-    withScope: (cb: any) => cb?.({ setTag: () => {}, setContext: () => {} }),
+    withScope: (cb: any) => cb?.({setTag: () => {}, setContext: () => {}}),
     ReactNavigationInstrumentation: function () {},
   };
-  return { __esModule: true, ...api, default: api };
+  return {__esModule: true, ...api, default: api};
 });
 
 jest.mock('@/components/ui/gluestack-ui-provider', () => {
   const React = require('react');
-  const Provider = ({ children }: { children?: React.ReactNode }) =>
+  const Provider = ({children}: {children?: React.ReactNode}) =>
     React.createElement(React.Fragment, null, children);
-  return { __esModule: true, default: Provider, GluestackUIProvider: Provider };
+  return {__esModule: true, default: Provider, GluestackUIProvider: Provider};
 });
 
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
-  const defaultInsets = { top: 0, right: 0, bottom: 0, left: 0 };
-  const defaultFrame = { x: 0, y: 0, width: 360, height: 640 };
+  const defaultInsets = {top: 0, right: 0, bottom: 0, left: 0};
+  const defaultFrame = {x: 0, y: 0, width: 360, height: 640};
   const SafeAreaInsetsContext = React.createContext(defaultInsets);
   const SafeAreaFrameContext = React.createContext(defaultFrame);
   const useSafeAreaInsets = () => React.useContext(SafeAreaInsetsContext);
   const useSafeAreaFrame = () => React.useContext(SafeAreaFrameContext);
-  const SafeAreaProvider = ({ children, initialMetrics }: any) =>
+  const SafeAreaProvider = ({children, initialMetrics}: any) =>
     React.createElement(
       SafeAreaInsetsContext.Provider,
-      { value: initialMetrics?.insets ?? defaultInsets },
+      {value: initialMetrics?.insets ?? defaultInsets},
       React.createElement(
         SafeAreaFrameContext.Provider,
-        { value: initialMetrics?.frame ?? defaultFrame },
+        {value: initialMetrics?.frame ?? defaultFrame},
         children,
       ),
     );
-  const SafeAreaView = ({ children }: any) => React.createElement('div', null, children);
-  const initialWindowMetrics = { insets: defaultInsets, frame: defaultFrame };
+  const SafeAreaView = ({children, ...props}: any) =>
+    React.createElement('div', props, children);
+  const initialWindowMetrics = {insets: defaultInsets, frame: defaultFrame};
   const exports = {
     SafeAreaProvider,
     SafeAreaView,
@@ -513,18 +561,34 @@ jest.mock('react-native-safe-area-context', () => {
     SafeAreaFrameContext,
     initialWindowMetrics,
   };
-  return { __esModule: true, ...exports, default: exports };
+  return {__esModule: true, ...exports, default: exports};
 });
 
 jest.mock('react-native-gesture-handler', () => {
   const React = require('react');
-  const View = ({ children }: any) => React.createElement('div', null, children);
+  const View = ({children}: any) => React.createElement('div', null, children);
   const Handler = View;
-  const State = { UNDETERMINED: 0, FAILED: 1, BEGAN: 2, CANCELLED: 3, ACTIVE: 4, END: 5 };
-  const Directions = { RIGHT: 1, LEFT: 2, UP: 4, DOWN: 8 };
-  const chain = new Proxy({}, { get: () => () => chain });
-  const Gesture = { Pan: () => chain, Tap: () => chain, LongPress: () => chain, Fling: () => chain, Native: () => chain, Race: () => chain, Simultaneous: () => chain };
-  const GestureDetector = ({ children }: any) => React.createElement('div', null, children);
+  const State = {
+    UNDETERMINED: 0,
+    FAILED: 1,
+    BEGAN: 2,
+    CANCELLED: 3,
+    ACTIVE: 4,
+    END: 5,
+  };
+  const Directions = {RIGHT: 1, LEFT: 2, UP: 4, DOWN: 8};
+  const chain = new Proxy({}, {get: () => () => chain});
+  const Gesture = {
+    Pan: () => chain,
+    Tap: () => chain,
+    LongPress: () => chain,
+    Fling: () => chain,
+    Native: () => chain,
+    Race: () => chain,
+    Simultaneous: () => chain,
+  };
+  const GestureDetector = ({children}: any) =>
+    React.createElement('div', null, children);
   return {
     __esModule: true,
     State,
@@ -554,25 +618,35 @@ jest.mock('react-native-gesture-handler', () => {
 
 jest.mock('react-native-modal-datetime-picker', () => {
   const React = require('react');
-  const Mock = ({ isVisible, ...rest }: any) =>
-    React.createElement('div', { 'data-testid': 'rn-mdtp', 'data-visible': !!isVisible, ...rest });
+  const Mock = ({isVisible, ...rest}: any) =>
+    React.createElement('div', {
+      'data-testid': 'rn-mdtp',
+      'data-visible': !!isVisible,
+      ...rest,
+    });
   return Mock;
 });
 
 jest.mock('@react-native-community/datetimepicker', () => {
   const React = require('react');
   return function MockCommunityPicker(props: any) {
-    return React.createElement('div', { 'data-testid': 'community-dtpicker', ...props });
+    return React.createElement('div', {
+      'data-testid': 'community-dtpicker',
+      ...props,
+    });
   };
 });
 
 // 🔴 Мок react-native-wheel-color-picker (пакет дергает PanResponder.create)
 jest.mock('react-native-wheel-color-picker', () => {
   const React = require('react');
-  const { View } = require('react-native');
+  const {View} = require('react-native');
   // Простейший «контрол» вместо нативного пикера
   const MockColorPicker = (props: any) =>
-    React.createElement(View, { 'data-testid': 'rn-wheel-color-picker', ...props });
+    React.createElement(View, {
+      'data-testid': 'rn-wheel-color-picker',
+      ...props,
+    });
   return MockColorPicker;
 });
 
@@ -582,7 +656,7 @@ jest.mock('@gluestack-ui/actionsheet', () => {
 
   const makeBox = (tag = 'div') =>
     React.forwardRef((props: any, ref: any) =>
-      React.createElement(tag, { ...props, ref }, props?.children)
+      React.createElement(tag, {...props, ref}, props?.children),
     );
 
   const createActionsheet = () => {
@@ -607,7 +681,7 @@ jest.mock('@gluestack-ui/actionsheet', () => {
     };
   };
 
-  return { __esModule: true, createActionsheet };
+  return {__esModule: true, createActionsheet};
 });
 
 // 📸 mock react-native-image-picker
@@ -647,7 +721,7 @@ jest.mock('@gluestack-ui/modal', () => {
 
   const wrap = (tag = 'div') =>
     React.forwardRef((props: any, ref: any) =>
-      React.createElement(tag, { ...props, ref }, props?.children)
+      React.createElement(tag, {...props, ref}, props?.children),
     );
 
   // Игнорируем все конфиги — просто возвращаем набор примитивных компонентов
@@ -661,7 +735,7 @@ jest.mock('@gluestack-ui/modal', () => {
     ModalCloseButton: wrap('button'),
   });
 
-  return { __esModule: true, createModal };
+  return {__esModule: true, createModal};
 });
 
 // == ЛОКАЛЬНАЯ обёртка модалки: глушим целиком ==
@@ -669,7 +743,7 @@ jest.mock('@/components/ui/modal', () => {
   const React = require('react');
   const wrap = (tag = 'div') =>
     React.forwardRef((props: any, ref: any) =>
-      React.createElement(tag, { ...props, ref }, props?.children)
+      React.createElement(tag, {...props, ref}, props?.children),
     );
 
   return {
@@ -687,54 +761,52 @@ jest.mock('@/components/ui/modal', () => {
 // == ЛОКАЛЬНАЯ обёртка actionsheet (если используешь '@/components/ui/actionsheet') ==
 jest.mock('@/components/ui/actionsheet', () => {
   const React = require('react');
-  const box = (tag = 'div') => (props: any) =>
-    React.createElement(tag, props, props?.children);
+  const {Pressable, Text, View} = require('react-native');
+  const box = (Component = View) =>
+    React.forwardRef(({children, ...props}: any, ref: any) =>
+      React.createElement(Component, {...props, ref}, children),
+    );
 
-  const createActionsheet = () => {
-    const Actionsheet = box();
-    const ActionsheetBackdrop = box();
-    const ActionsheetContent = box();
-    const ActionsheetDragIndicator = box('span');
-    const ActionsheetDragIndicatorWrapper = box();
-    const ActionsheetItem = box('button');
-    const ActionsheetItemText = box('span');
-    const ActionsheetIcon = box('span');
+  const Actionsheet = React.forwardRef(
+    ({children, isOpen, ...props}: any, ref: any) =>
+      isOpen ? React.createElement(View, {...props, ref}, children) : null,
+  );
 
-    return {
-      Actionsheet,
-      ActionsheetBackdrop,
-      ActionsheetContent,
-      ActionsheetDragIndicator,
-      ActionsheetDragIndicatorWrapper,
-      ActionsheetItem,
-      ActionsheetItemText,
-      ActionsheetIcon,
-    };
+  return {
+    __esModule: true,
+    Actionsheet,
+    ActionsheetBackdrop: box(),
+    ActionsheetContent: box(),
+    ActionsheetDragIndicator: box(),
+    ActionsheetDragIndicatorWrapper: box(),
+    ActionsheetItem: box(Pressable),
+    ActionsheetItemText: box(Text),
+    ActionsheetIcon: box(),
   };
-
-  return { __esModule: true, createActionsheet };
 });
 
 // --- ТЕСТОВЫЕ ЗАГЛУШКИ ДЛЯ СЛОЖНЫХ UI ---
 jest.mock('@/shared/ui/CustomAlert', () => {
   const React = require('react');
-  const { Fragment, createElement } = React;
-  const Mock = ({ children }: any) => createElement(Fragment, null, children);
-  return { __esModule: true, default: Mock };
+  const {Fragment, createElement} = React;
+  const Mock = ({children}: any) => createElement(Fragment, null, children);
+  return {__esModule: true, default: Mock};
 });
 
 jest.mock('@/shared/ui/ModalText', () => {
   const React = require('react');
-  const { createElement } = React;
+  const {createElement} = React;
   const Mock = (props: any) => createElement('div', props, props?.children);
-  return { __esModule: true, default: Mock };
+  return {__esModule: true, default: Mock};
 });
 
 // ---- bottom-sheet: единый мок для всех путей ----
 const makeMockBottomSheet = () => {
   const React = require('react');
-  const Box = (props: any) => React.createElement('div', props, props?.children);
-  const BottomSheetModalProvider = ({ children }: any) =>
+  const {TextInput} = require('react-native');
+  const Box = (props: any) =>
+    React.createElement('div', props, props?.children);
+  const BottomSheetModalProvider = ({children}: any) =>
     React.createElement(React.Fragment, null, children);
 
   return {
@@ -742,11 +814,12 @@ const makeMockBottomSheet = () => {
     default: Box,
     BottomSheetBackdrop: Box,
     BottomSheetScrollView: Box,
+    BottomSheetTextInput: TextInput,
     BottomSheetView: Box,
     BottomSheetModal: Box,
     BottomSheetModalProvider,
-    useBottomSheetModal: () => ({ present: jest.fn(), dismiss: jest.fn() }),
-    useBottomSheet: () => ({ expand: jest.fn(), close: jest.fn() }),
+    useBottomSheetModal: () => ({present: jest.fn(), dismiss: jest.fn()}),
+    useBottomSheet: () => ({expand: jest.fn(), close: jest.fn()}),
   };
 };
 
@@ -760,20 +833,28 @@ jest.mock('@gorhom/bottom-sheet/lib/commonjs', () => mockBottomSheet);
 // jest.setup.ts – если мокаешь UiProviders, экспорт должен называться UiProvider
 jest.mock('@/app/providers/UiProviders', () => {
   const React = require('react');
-  const C = ({ children }: any) => React.createElement(React.Fragment, null, children);
-  return { __esModule: true, default: C, UiProvider: C }; // именно UiProvider
+  const C = ({children}: any) =>
+    React.createElement(React.Fragment, null, children);
+  return {__esModule: true, default: C, UiProvider: C}; // именно UiProvider
 });
 
 jest.mock('@/app/providers/AppProviders', () => {
   const React = require('react');
-  const C = ({ children }: any) => React.createElement(React.Fragment, null, children);
-  return { __esModule: true, default: C, AppProviders: C };
+  const C = ({children}: any) =>
+    React.createElement(React.Fragment, null, children);
+  return {__esModule: true, default: C, AppProviders: C};
 });
 
 jest.mock('@/analytics/AppMetricaService', () => {
   const service = {
-    Analytics: { init: jest.fn(), log: jest.fn(), setUserId: jest.fn(), reportError: jest.fn(), setErrorContext: jest.fn() },
-    AnalyticsEvent: new Proxy({}, { get: (_: any, k: any) => String(k) }),
+    Analytics: {
+      init: jest.fn(),
+      log: jest.fn(),
+      setUserId: jest.fn(),
+      reportError: jest.fn(),
+      setErrorContext: jest.fn(),
+    },
+    AnalyticsEvent: new Proxy({}, {get: (_: any, k: any) => String(k)}),
     installJsCrashHandler: jest.fn(),
     resetJsCrashHandler: jest.fn(),
     reportSentryEventToAppMetrica: jest.fn(),
@@ -781,8 +862,8 @@ jest.mock('@/analytics/AppMetricaService', () => {
   };
   return {
     __esModule: true,
-    ...service,      // именованные импорты
-    default: service // на случай где-то есть default-импорт
+    ...service, // именованные импорты
+    default: service, // на случай где-то есть default-импорт
   };
 });
 
@@ -800,7 +881,7 @@ jest.mock('@react-native-community/netinfo', () => {
         isConnected: true,
         isInternetReachable: true,
         type: 'wifi',
-        details: { isConnectionExpensive: false },
+        details: {isConnectionExpensive: false},
       });
     } catch {}
 
@@ -811,10 +892,10 @@ jest.mock('@react-native-community/netinfo', () => {
     isConnected: true,
     isInternetReachable: true,
     type: 'wifi',
-    details: { isConnectionExpensive: false },
+    details: {isConnectionExpensive: false},
   }));
 
-  const NetInfo = { addEventListener, fetch };
+  const NetInfo = {addEventListener, fetch};
 
   return {
     __esModule: true,
@@ -834,7 +915,7 @@ jest.mock('react-native-device-info', () => {
     getBuildNumber: jest.fn(() => '1'),
     // ...добавляй по мере надобности
   };
-  return { __esModule: true, default: api, ...api };
+  return {__esModule: true, default: api, ...api};
 });
 
 if (typeof beforeEach === 'function' && typeof afterEach === 'function') {
@@ -843,7 +924,9 @@ if (typeof beforeEach === 'function' && typeof afterEach === 'function') {
   });
 
   afterEach(() => {
-    try { jest.clearAllTimers(); } catch {}
+    try {
+      jest.clearAllTimers();
+    } catch {}
     jest.clearAllMocks();
     jest.useRealTimers();
     try {
@@ -854,6 +937,6 @@ if (typeof beforeEach === 'function' && typeof afterEach === 'function') {
 
   afterAll(async () => {
     jest.useRealTimers();
-    await new Promise((r) => setImmediate(r));
+    await new Promise(r => setImmediate(r));
   });
 }

@@ -30,6 +30,11 @@ if (typeof SB.currentHeight !== 'number') {
 }
 def(rn, 'StatusBar', SB);
 
+/** Alert may be absent from the RN Jest shim. */
+if (!rn.Alert || typeof rn.Alert.alert !== 'function') {
+  def(rn, 'Alert', { alert: jest.fn() });
+}
+
 /** ✅ Dimensions — нужен @gorhom/bottom-sheet и др. */
 const dims = {
   window: { width: 375, height: 667, scale: 2, fontScale: 2 },
@@ -65,6 +70,14 @@ const Keyboard = {
   dismiss: jest.fn(),           // <-- главное
 };
 def(rn, 'Keyboard', Keyboard);
+
+/** Android hardware back button used by the root navigation provider. */
+if (!rn.BackHandler || typeof rn.BackHandler.addEventListener !== 'function') {
+  def(rn, 'BackHandler', {
+    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+    exitApp: jest.fn(),
+  });
+}
 
 /** RN 0.87 removed InteractionManager; drawer-layout 4.x still calls it. */
 def(rn, 'InteractionManager', {
@@ -255,6 +268,21 @@ if (typeof rn.TextInput !== 'function') {
   def(rn, 'TextInput', mkHost('RN_TEXT_INPUT'));
 }
 
+if (typeof rn.Pressable !== 'function') {
+  def(rn, 'Pressable', mkHost('RN_PRESSABLE'));
+}
+
+if (typeof rn.ActivityIndicator !== 'function') {
+  def(rn, 'ActivityIndicator', mkHost('RN_ACTIVITY_INDICATOR'));
+}
+
+// RN 0.87's Jest shim does not expose Modal in this project.  Rendering its
+// children is sufficient for component tests; the native presentation itself
+// is covered by the platform implementation.
+if (typeof rn.Modal !== 'function') {
+  def(rn, 'Modal', mkHost('RN_MODAL'));
+}
+
 if (typeof rn.Image !== 'function') {
   def(rn, 'Image', mkHost('RN_IMAGE'));
 }
@@ -285,6 +313,64 @@ if (typeof rn.Pressable !== 'function') {
 }
 if (typeof rn.ScrollView !== 'function') {
   def(rn, 'ScrollView', mkHost('RN_SCROLL_VIEW'));
+}
+if (!rn.RefreshControl) {
+  def(rn, 'RefreshControl', mkHost('RN_REFRESH_CONTROL'));
+}
+
+if (!rn.FlatList) {
+  const renderListSlot = (slot, key) => {
+    if (!slot) return null;
+    if (React.isValidElement(slot)) return React.cloneElement(slot, { key });
+    if (typeof slot === 'function') return React.createElement(slot, { key });
+    return null;
+  };
+
+  const FlatList = React.forwardRef((props, ref) => {
+    const {
+      data = [],
+      keyExtractor,
+      ListEmptyComponent,
+      ListFooterComponent,
+      ListHeaderComponent,
+      onRefresh,
+      refreshControl: suppliedRefreshControl,
+      refreshing,
+      renderItem,
+      ...rest
+    } = props;
+    const refreshControl = suppliedRefreshControl ?? (
+      onRefresh
+        ? React.createElement(rn.View, { onRefresh, refreshing })
+        : undefined
+    );
+    const children = [renderListSlot(ListHeaderComponent, 'header')];
+
+    if (data.length === 0) {
+      children.push(renderListSlot(ListEmptyComponent, 'empty'));
+    } else if (typeof renderItem === 'function') {
+      data.forEach((item, index) => {
+        const key = keyExtractor ? keyExtractor(item, index) : String(index);
+        children.push(
+          React.createElement(
+            React.Fragment,
+            { key },
+            renderItem({ item, index, separators: {} }),
+          ),
+        );
+      });
+    }
+
+    children.push(renderListSlot(ListFooterComponent, 'footer'));
+
+    return React.createElement(
+      'RN_FLAT_LIST',
+      { ...rest, ref, data, onRefresh, refreshing, refreshControl },
+      children,
+    );
+  });
+  FlatList.displayName = 'MockFlatList';
+  def(rn, 'FlatList', FlatList);
 }
 
 module.exports = rn;

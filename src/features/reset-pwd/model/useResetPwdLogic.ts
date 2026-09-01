@@ -52,7 +52,7 @@ export function useResetPwdLogic() {
       const check = async () => {
         const token = await checkToken()
         if (isFocused && token === true) {
-          navigation.navigate('List_orders')
+          navigation.reset({ index: 0, routes: [{ name: 'List_orders' }] })
         }
       }
 
@@ -118,7 +118,7 @@ export function useResetPwdLogic() {
     if (result.st === true) {
       const title = RU_SCREEN_NAMES.List_orders ?? 'Список заказов'
       Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${title}`)
-      navigation.navigate('List_orders')
+      navigation.reset({ index: 0, routes: [{ name: 'List_orders' }] })
       return
     }
 

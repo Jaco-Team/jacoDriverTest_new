@@ -1,7 +1,9 @@
 import React, { memo } from 'react'
 import {
+  Pressable,
+  StyleSheet,
+  Text,
   View,
-  TouchableOpacity,
 } from 'react-native'
 
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
@@ -9,8 +11,6 @@ import { faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons'
 
 import { MapPointThemeType } from '@/shared/store/SettingsStoreType'  //components/store/SettingsStoreType'
 import { Path, G, Svg } from 'react-native-svg'
-
-import { MarkerText } from '@/shared/ui/MarkerText'
 
 export const MapPointTheme = memo(function MapPointTheme({
   theme,
@@ -20,9 +20,16 @@ export const MapPointTheme = memo(function MapPointTheme({
   isActive
 }: MapPointThemeType): React.JSX.Element {
   return (
-    <View className="inline-flex flex-row items-center">
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ selected: isActive }}
+      onPress={() => setActive(value)}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      testID={`settings-marker-theme-${value}`}
+    >
+      <View style={styles.rowContent}>
       {theme === 'classic' ? (
-        <View className="w-5 h-7 ml-1 mt-1">
+        <View style={styles.classicMarker}>
           <Svg width="100%" height="100%" viewBox="0 0 183 285">
             <G className="layer">
               <Path
@@ -34,21 +41,93 @@ export const MapPointTheme = memo(function MapPointTheme({
         </View>
       ) : (
         <FontAwesomeIcon
-          size={20}
+          size={22}
           color={isActive === true ? 'red' : 'blue'}
           icon={faMapMarkerAlt}
         />
       )}
 
-      <TouchableOpacity onPress={() => setActive(value)}>
-
-        <MarkerText
-          globalFontSize={16}
-          theme={theme}
-          text={text || '14:32 (15 мин.)'}
-        />
-
-      </TouchableOpacity>
-    </View>
+      <View
+        style={[
+          styles.label,
+          theme === 'classic' && styles.labelClassic,
+          theme === 'transparent' && styles.labelTransparent,
+          theme === 'transparent_white' && styles.labelTransparent,
+          theme === 'white' && styles.labelWhite,
+          theme === 'white_border' && styles.labelWhiteBorder,
+          theme === 'black' && styles.labelBlack,
+        ]}
+      >
+        <Text
+          style={[
+            styles.labelText,
+            theme === 'transparent_white' && styles.labelTextWhite,
+            theme === 'black' && styles.labelTextWhite,
+          ]}
+        >
+          {text || '14:32 (15 мин.)'}
+        </Text>
+      </View>
+      </View>
+    </Pressable>
   )
+})
+
+const styles = StyleSheet.create({
+  row: {
+    minHeight: 54,
+    borderRadius: 12,
+    justifyContent: 'center',
+  },
+  rowContent: {
+    width: '100%',
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  pressed: {
+    backgroundColor: 'rgba(255,255,255,0.38)',
+  },
+  classicMarker: {
+    width: 28,
+    height: 42,
+  },
+  label: {
+    alignSelf: 'center',
+    maxWidth: '84%',
+    marginLeft: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    borderRadius: 10,
+  },
+  labelClassic: {
+    marginLeft: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+  },
+  labelTransparent: {
+    backgroundColor: 'transparent',
+  },
+  labelWhite: {
+    backgroundColor: '#ffffff',
+  },
+  labelWhiteBorder: {
+    borderColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: '#ffffff',
+  },
+  labelBlack: {
+    borderColor: '#000000',
+    backgroundColor: '#000000',
+  },
+  labelText: {
+    color: '#1f2b36',
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  labelTextWhite: {
+    color: '#ffffff',
+  },
 })

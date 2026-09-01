@@ -12,7 +12,8 @@ export interface CardTagPopoverType extends CardTagType{
 }
 
 export interface CardTagPopoverArrType {
-  names: string
+  name?: string
+  names?: string
 }
 
 export type setActiveConfirmProps = (
@@ -44,7 +45,8 @@ export interface CommentTextProps {
   comment: string,
   showAlertText: (is_open: boolean, text?: string) => void
   globalFontSize: number,
-  dialCall: (number: string) => void
+  dialCall: (number: string) => void,
+  textColor?: string
 }
 
 type typeConfirm = ''|'fake'|'finish'|'cancel';
@@ -58,4 +60,5 @@ interface ItemProps {
 export interface PdEtKvProps {
   item: ItemProps;
   textStyle: object;
+  textColor?: string;
 }

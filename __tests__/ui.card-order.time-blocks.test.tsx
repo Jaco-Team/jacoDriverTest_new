@@ -52,6 +52,20 @@ test('status_order=1: видны «Начнут готовить» и «Оста
   expect(screen.queryByTestId('order-time-close')).toBeNull();
 });
 
+test('status_order="1" из legacy API: видны «Начнут готовить» и «Осталось»', async () => {
+  const item = {
+    ...baseItem,
+    status_order: '1' as unknown as number,
+  } as Order;
+  await render(<CardOrder item={item} {...commonProps} />);
+
+  expect(screen.getByTestId('order-time-start')).toHaveTextContent(
+    'Начнут готовить: 12:00',
+  );
+  expect(screen.getByTestId('order-time-left')).toBeTruthy();
+  expect(screen.queryByTestId('order-time-close')).toBeNull();
+});
+
 test('status_order=6: виден «Отдали», скрыты «Начнут готовить» и «Осталось»', async () => {
   const item = { ...baseItem, status_order: 6 } as Order;
   await render(<CardOrder item={item} {...commonProps} />);
@@ -68,4 +82,34 @@ test('status_order=0 (прочее): виден «Осталось», скрыт
   expect(screen.getByTestId('order-time-left')).toBeTruthy();
   expect(screen.queryByTestId('order-time-start')).toBeNull();
   expect(screen.queryByTestId('order-time-close')).toBeNull();
+});
+
+test('пустой need_time legacy API восстанавливается из фактических временных полей', async () => {
+  const item = {
+    ...baseItem,
+    need_time: '',
+    time_start_mini: '14:51',
+    unix_time_to_client: '30-60',
+  } as Order;
+
+  await render(<CardOrder item={item} {...commonProps} />);
+
+  expect(screen.getByTestId('order-need-time')).toHaveTextContent(
+    'Ко времени: 14:51 - 15:51',
+  );
+});
+
+test('готовый need_time backend имеет приоритет над fallback', async () => {
+  const item = {
+    ...baseItem,
+    need_time: '17:00 - 17:30',
+    time_start_mini: '14:51',
+    unix_time_to_client: '30-60',
+  } as Order;
+
+  await render(<CardOrder item={item} {...commonProps} />);
+
+  expect(screen.getByTestId('order-need-time')).toHaveTextContent(
+    'Ко времени: 17:00 - 17:30',
+  );
 });

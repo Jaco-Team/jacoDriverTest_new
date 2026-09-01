@@ -1,58 +1,107 @@
-import React from 'react';
+import React from 'react'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { ReceiptText } from 'lucide-react-native'
 
-import { Text, View, TouchableOpacity } from 'react-native';
-
-import {   
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableData,
-  TableRow,
-} from '@/components/ui/table';
-
-import { ModalErrOrder } from './ModalErrOrder';
-
-import dayjs from 'dayjs';
-
+import { appPalette } from '@/shared/styles/appPalette'
 import { useErrorOrders } from '../model/useError'
+import { ModalErrOrder } from './ModalErrOrder'
+import { graphStyles } from './graphStyles'
 
 export function ErrOrders(): React.JSX.Element {
-  const { globalFontSize, err_orders, showModalErrOrder } = useErrorOrders();
-  
-  return (
-    <View className='m-5 p-5 mt-0 mb-0 bg-white rounded-xl shadow-zinc-500 shadow'>
+  const { globalFontSize, err_orders, showModalErrOrder } = useErrorOrders()
 
-      <View className='flex-row items-center text-center justify-center w-full'>
-        <Text className='font-bold text-lg'>Ошибки по заказам</Text>
+  return (
+    <View style={graphStyles.card} testID="graph-order-errors-card">
+      <View style={graphStyles.cardHeader}>
+        <View style={graphStyles.cardIcon}>
+          <ReceiptText color={appPalette.primary} size={23} />
+        </View>
+        <Text style={graphStyles.cardTitle}>Ошибки по заказам</Text>
       </View>
-      
-      <Table className="w-full">
-        <TableHeader>
-          <TableRow>
-            <TableHead className='w-5/12' style={{ fontSize: globalFontSize }}>Дата</TableHead>
-            <TableHead className='w-7/12' style={{ fontSize: globalFontSize }}>Ошибка</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          { err_orders.map((item, index) => {
-            return (
-              <TouchableOpacity key={index} onPress={ () => { showModalErrOrder(true, item) } }>
-                <TableRow>
-                  <TableData useRNView={true} className='w-5/12 h-auto flex flex-row justify-start items-center text-left'>
-                    <View className=''>
-                      <Text style={{ fontSize: globalFontSize }} className='font-medium leading-[22px] text-typography-800 font-roboto'>{ dayjs(new Date(item.date_time_order)).format('YYYY-MM-DD') }</Text>
-                    </View>
-                  </TableData>
-                  <TableData style={{ fontSize: globalFontSize }} className='w-7/12'>{item.pr_name}</TableData>
-                </TableRow>
-              </TouchableOpacity>
-            )
-          })}
-        </TableBody>
-      </Table>
-      
+
+      <View style={graphStyles.tableShell}>
+        <View style={graphStyles.tableFrame}>
+          <View style={graphStyles.tableRow}>
+            <View style={[graphStyles.tableCell, graphStyles.headCell, styles.dateCell]}>
+              <Text style={[graphStyles.headText, { fontSize: globalFontSize }]}>
+                Дата заказа
+              </Text>
+            </View>
+            <View
+              style={[
+                graphStyles.tableCell,
+                graphStyles.headCell,
+                graphStyles.lastColumn,
+                styles.errorCell,
+              ]}
+            >
+              <Text style={[graphStyles.headText, { fontSize: globalFontSize }]}>
+                Ошибка
+              </Text>
+            </View>
+          </View>
+
+          {err_orders.length === 0 ? (
+            <View style={graphStyles.empty}>
+              <Text style={[graphStyles.emptyText, { fontSize: globalFontSize }]}>
+                Ошибок по заказам за выбранный период нет.
+              </Text>
+            </View>
+          ) : (
+            err_orders.map((item, index) => {
+              const lastRow = index === err_orders.length - 1
+
+              return (
+                <Pressable
+                  accessibilityLabel={`Открыть ошибку по заказу ${item.order_id}`}
+                  accessibilityRole="button"
+                  key={`${item.err_id}-${item.row_id}-${index}`}
+                  style={graphStyles.tableRow}
+                  testID={`graph-order-error-${index}`}
+                  onPress={() => showModalErrOrder(true, item)}
+                >
+                  <View
+                    style={[
+                      graphStyles.tableCell,
+                      styles.dateCell,
+                      lastRow && graphStyles.lastRowCell,
+                    ]}
+                  >
+                    <Text style={[graphStyles.bodyText, { fontSize: globalFontSize }]}>
+                      {item.date_time_order}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      graphStyles.tableCell,
+                      graphStyles.lastColumn,
+                      styles.errorCell,
+                      lastRow && graphStyles.lastRowCell,
+                    ]}
+                  >
+                    <Text style={[graphStyles.bodyText, { fontSize: globalFontSize }]}>
+                      {item.pr_name}
+                    </Text>
+                  </View>
+                </Pressable>
+              )
+            })
+          )}
+        </View>
+      </View>
+
       <ModalErrOrder />
     </View>
-  );
+  )
 }
+
+const styles = StyleSheet.create({
+  dateCell: {
+    width: '46%',
+    alignItems: 'flex-start',
+  },
+  errorCell: {
+    width: '54%',
+    alignItems: 'flex-start',
+  },
+})

@@ -2,6 +2,7 @@ import React, {
   ReactNode,
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from 'react';
@@ -11,7 +12,7 @@ import {
   NavigationState,
   ParamListBase,
 } from '@react-navigation/native';
-import { Platform } from 'react-native';
+import { BackHandler } from 'react-native';
 import { SystemBars } from 'react-native-edge-to-edge';
 
 import { Analytics, AnalyticsEvent } from '@/analytics/AppMetricaService';
@@ -57,19 +58,32 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     [backgroundColor],
   )
 
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        if (!navigationRef.isReady()) return false
+
+        // Greeting — технический стартовый экран. Его нельзя возвращать в
+        // историю или закрывать, пока выполняется проверка авторизации.
+        return navigationRef.getCurrentRoute()?.name === 'Greeting'
+      },
+    )
+
+    return () => subscription.remove()
+  }, [])
+
   return (
     <>
-      {Platform.OS === 'android' ? (
-        <SystemBars
-          style={{
-            statusBar:
-              loadSpinner || !AUTH_ROUTES.has(activeRouteName)
-                ? 'light'
-                : 'dark',
-            navigationBar: 'dark',
-          }}
-        />
-      ) : null}
+      <SystemBars
+        style={{
+          statusBar:
+            loadSpinner || !AUTH_ROUTES.has(activeRouteName)
+              ? 'light'
+              : 'dark',
+          navigationBar: 'dark',
+        }}
+      />
 
       <ActiveRouteNameContext.Provider value={activeRouteName}>
         <NavigationContainer

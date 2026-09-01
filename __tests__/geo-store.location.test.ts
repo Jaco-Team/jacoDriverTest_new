@@ -53,6 +53,7 @@ describe('useGEOStore location flow', () => {
     });
     useGEOStore.setState({
       check_pos_check: false,
+      driver_location_requesting: false,
       location_driver: null,
       location_driver_time_text: '',
       type_location: 'none',
@@ -210,6 +211,7 @@ describe('useGEOStore location flow', () => {
       {
         maximumAge: 3000,
         enableHighAccuracy: true,
+        timeout: 10000,
       },
     );
     expect(useGEOStore.getState().id_watch).toBe(77);
@@ -219,6 +221,67 @@ describe('useGEOStore location flow', () => {
       accuracy: 12,
     });
     expect(useGEOStore.getState().location_driver_time_text).toMatch(/^\d{1,2}:\d{2}$/);
+  });
+
+  it('set_type_location: после таймаута точного GPS использует сохранённую позицию', async () => {
+    mockGetCurrentPosition
+      .mockImplementationOnce((_success, error) => {
+        error({ code: 3, message: 'Location request timed out' });
+      })
+      .mockImplementationOnce((success) => {
+        success({
+          mocked: false,
+          coords: {
+            latitude: 53.529781,
+            longitude: 49.40071,
+            accuracy: 25,
+          },
+        });
+      });
+
+    await useGEOStore.getState().set_type_location();
+
+    expect(mockGetCurrentPosition).toHaveBeenNthCalledWith(
+      1,
+      expect.any(Function),
+      expect.any(Function),
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      },
+    );
+    expect(mockGetCurrentPosition).toHaveBeenNthCalledWith(
+      2,
+      expect.any(Function),
+      expect.any(Function),
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 60000,
+      },
+    );
+    expect(useGEOStore.getState().type_location).toBe('location');
+    expect(useGEOStore.getState().location_driver).toEqual({
+      lon: 49.40071,
+      lat: 53.529781,
+    });
+  });
+
+  it('set_type_location: не переключает режим, если обе попытки завершились ошибкой', async () => {
+    mockGetCurrentPosition.mockImplementation((_success, error) => {
+      error({ code: 3, message: 'Location request timed out' });
+    });
+
+    await useGEOStore.getState().set_type_location();
+
+    expect(mockGetCurrentPosition).toHaveBeenCalledTimes(2);
+    expect(useGEOStore.getState().type_location).toBe('none');
+    expect(useGEOStore.getState().location_driver).toBeNull();
+    expect(useGlobalStore.getState().modal_text).toContain(
+      'Местоположение определяется слишком долго',
+    );
+    expect(useGlobalStore.getState().modal_text).not.toContain('Location request timed out');
   });
 
   it('set_type_location: из watch режима очищает watcher и сбрасывает состояние', async () => {

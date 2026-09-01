@@ -5,20 +5,28 @@ import { useLoginStore } from '@/shared/store/store'
 import { useShallow } from 'zustand/react/shallow'
 
 export function useGreetingLogic() {
-  const { navigate } = useNavigation<NativeStackNavigationProp<ParamListBase>>()
+  const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>()
   const [ check_token ] = useLoginStore(useShallow(state => [state.check_token]))
 
   useFocusEffect(
     useCallback(() => {
+      let isFocused = true
+
       const check = async () => {
         const token = await check_token()
-        if (token === true) {
-          navigate('List_orders')
-        } else {
-          navigate('Auth')
-        }
+        if (!isFocused) return
+
+        navigation.reset({
+          index: 0,
+          routes: [{ name: token === true ? 'List_orders' : 'Auth' }],
+        })
       }
-      check()
-    }, [check_token, navigate])
+
+      void check()
+
+      return () => {
+        isFocused = false
+      }
+    }, [check_token, navigation])
   )
 }

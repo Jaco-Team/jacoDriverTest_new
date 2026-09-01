@@ -18,6 +18,14 @@ export function MarkerText({globalFontSize, theme, text}: MarkerTextProps) {
     )
   }
 
+  if( theme == 'transparent_white' ){
+    return (
+      <View className='rounded-md bg-transparent ml-1 border-black border-0'>
+        <Text className='pl-2 pr-2 pt-1 pb-1 text-white' style={{ fontSize: globalFontSize }}>{text}</Text>
+      </View>
+    )
+  }
+
   if( theme == 'white' ){
     return (
       <View className='rounded-md bg-white ml-1 border-black border-0'>

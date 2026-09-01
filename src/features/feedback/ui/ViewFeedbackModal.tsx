@@ -1,124 +1,168 @@
-import React, { useRef, useCallback, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { useFeedbackStore } from '@/shared/store/store';
-
-import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet'
-import ImageViewing from 'react-native-image-viewing';
-
-import { useGlobalStore } from '@/shared/store/store';
+import React from 'react'
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Clock } from 'lucide-react-native'
+import ImageViewing from 'react-native-image-viewing'
 import { useShallow } from 'zustand/react/shallow'
 
+import { appPalette } from '@/shared/styles/appPalette'
+import { useFeedbackStore, useGlobalStore } from '@/shared/store/store'
+
+import { FeedbackSheet } from './FeedbackSheet'
+import { formatFeedbackDate } from './FeedbackItem'
 import { StatusBadge } from './StatusBadge'
 import { TypeBadge } from './TypeBadge'
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
 const ViewFeedbackModal: React.FC = () => {
-  const bottomSheetRef = useRef<BottomSheet>(null);
-  const { modal, closeViewModal } = useFeedbackStore();
-  const { isViewModalOpen, selectedFeedback } = modal;
-
-  // Состояние для полноэкранного просмотра
-  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-
-  let [ globalFontSize ] = useGlobalStore( useShallow( state => [ state.globalFontSize ]) );
-
-  const handleSheetChanges = useCallback(
-    (index: number) => {
-      if (index < 0) {
-        closeViewModal()
-      }
-    },
-    [closeViewModal]
+  const [modal, closeViewModal] = useFeedbackStore(
+    useShallow(state => [state.modal, state.closeViewModal]),
   )
+  const globalFontSize = useGlobalStore(state => state.globalFontSize)
+  const [isImageViewerOpen, setIsImageViewerOpen] = React.useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = React.useState(0)
+  const feedback = modal.selectedFeedback
+  const normalizedFontSize = Number.isFinite(globalFontSize) && globalFontSize > 0
+    ? globalFontSize
+    : 16
+  const bodyFontSize = clamp(normalizedFontSize, 14, 20)
+  const sectionFontSize = clamp(bodyFontSize + 1, 15, 24)
+  const images = (feedback?.images ?? [])
+    .filter(image => Boolean(image.uri))
+    .map(image => ({ uri: image.uri as string }))
 
-  // Функция открытия полноэкранного просмотра
-  const openImageViewer = (index: number) => {
-    setCurrentImageIndex(index);
-    setIsImageViewerOpen(true);
-  };
-
-  // Предположим, что selectedFeedback?.images — это массив объектов с { uri: string }
-  // Если у вас другая структура, подстройте ее
-  const images = selectedFeedback?.images ?? [];
+  React.useEffect(() => {
+    if (!modal.isViewModalOpen) setIsImageViewerOpen(false)
+  }, [modal.isViewModalOpen])
 
   return (
-    <BottomSheet
-      ref={bottomSheetRef}
-      index={ isViewModalOpen ? 2 : -1 } 
-      snapPoints={['80%', '50%', '25%']} // ['50%', '25%']
-      enablePanDownToClose    // позволяет свайпом вниз закрыть
-      backdropComponent={BottomSheetBackdrop} // полу-прозрачный фон
-      onChange={ handleSheetChanges }
-      style={{ zIndex: 1000 }}
-      backgroundStyle={{ borderRadius: 30, backgroundColor: '#fff' }}
+    <FeedbackSheet
+      isOpen={modal.isViewModalOpen && Boolean(feedback)}
+      onClose={closeViewModal}
+      testID="feedback-view-sheet"
     >
-      <BottomSheetScrollView className='flex bg-white rounded-md' style={{zIndex: 30}}>
-        <View className='flex-1 bg-white rounded-t-3xl'>
-          <View className='p-4 border-b border-gray-200'>
-            <View className='flex-row justify-between items-center'>
-              <Text className='leading-7 font-bold' style={{ fontSize: globalFontSize }}>{selectedFeedback?.title}</Text>
+      {feedback ? (
+        <>
+          <Text style={[styles.title, { fontSize: clamp(bodyFontSize + 6, 20, 30) }]}>
+            {String(feedback.title ?? '').trim() || 'Без заголовка'}
+          </Text>
+          <View style={styles.divider} />
+
+          <View style={styles.metaRow}>
+            <View style={styles.dateRow}>
+              <Clock color={appPalette.textMuted} size={clamp(bodyFontSize - 1, 13, 18)} />
+              <Text style={[styles.date, { fontSize: clamp(bodyFontSize - 1, 13, 18) }]}>
+                {formatFeedbackDate(feedback.date_time_create)}
+              </Text>
             </View>
+            <StatusBadge status={feedback.status} globalFontSize={bodyFontSize - 1} size="details" />
+            <TypeBadge type={feedback.type} globalFontSize={bodyFontSize} />
           </View>
 
-          <ScrollView className='flex-1'>
-            <View className='p-4'>
-              <View className='flex-row items-center mt-0'>
-                <StatusBadge status={selectedFeedback?.status ?? 'Новое'} globalFontSize={globalFontSize} />
-                <View className='ml-2'>
-                  <TypeBadge type={selectedFeedback?.type ?? 'предложение'} globalFontSize={globalFontSize} />
-                </View>
+          <Text style={[styles.sectionTitle, { fontSize: sectionFontSize }]}>Описание</Text>
+          <Text style={[styles.body, { fontSize: bodyFontSize }]}>
+            {String(feedback.description ?? '').trim() || 'Нет описания'}
+          </Text>
+
+          {images.length > 0 ? (
+            <>
+              <Text style={[styles.sectionTitle, { fontSize: sectionFontSize }]}>Изображение</Text>
+              <View style={styles.images}>
+                {images.map((image, index) => (
+                  <Pressable
+                    accessibilityLabel="Открыть изображение"
+                    key={`${image.uri}-${index}`}
+                    onPress={() => { setCurrentImageIndex(index); setIsImageViewerOpen(true) }}
+                    style={styles.imageButton}
+                  >
+                    <Image resizeMode="contain" source={image} style={styles.image} />
+                  </Pressable>
+                ))}
               </View>
+            </>
+          ) : null}
 
-              <View className='mb-4 mt-5'>
-                <Text className='text-gray-500 leading-7 pb-2' style={{ fontSize: globalFontSize }}>Описание</Text>
-                <Text className='leading-7' style={{ fontSize: globalFontSize }}>{selectedFeedback?.description}</Text>
-              </View>
+          <Text style={[styles.sectionTitle, styles.answerTitle, { fontSize: sectionFontSize }]}>Ответ</Text>
+          <View style={styles.answer}>
+            <Text style={[styles.answerText, { fontSize: bodyFontSize }]}>
+              {String(feedback.answer ?? '').trim() || 'Нет ответа'}
+            </Text>
+          </View>
 
-              <View className='mb-4 mt-5'>
-                <Text className='text-gray-500 leading-7 pb-2' style={{ fontSize: globalFontSize }}>Ответ</Text>
-                <Text className='leading-7' style={{ fontSize: globalFontSize }}>{selectedFeedback?.answer}</Text>
-              </View>
-
-              <View className='mb-4'>
-                <Text className='text-gray-500 leading-7 pb-2' style={{ fontSize: globalFontSize }}>Дата создания</Text>
-                <Text className='leading-7' style={{ fontSize: globalFontSize }}>
-                  {new Date(selectedFeedback?.date_time_create ?? '').toLocaleString('ru')}
-                </Text>
-              </View>
-
-              {/* Блок для отображения картинок */}
-              {images.length > 0 && (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                  {images.map((img, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={{ marginRight: 8, marginBottom: 8 }}
-                      onPress={() => openImageViewer(index)}
-                    >
-                      <Image
-                        source={{ uri: img.uri }}
-                        style={{ width: 100, height: 100, borderRadius: 8, backgroundColor: '#eee' }}
-                        resizeMode="cover"
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-
-              {/* Компонент полноэкранного просмотра */}
-              <ImageViewing
-                images={images}
-                imageIndex={currentImageIndex}
-                visible={isImageViewerOpen}
-                onRequestClose={() => setIsImageViewerOpen(false)}
-              />
-
-            </View>
-          </ScrollView>
-        </View>
-      </BottomSheetScrollView>
-    </BottomSheet>
+          <ImageViewing
+            images={images}
+            imageIndex={currentImageIndex}
+            onRequestClose={() => setIsImageViewerOpen(false)}
+            visible={isImageViewerOpen}
+          />
+        </>
+      ) : null}
+    </FeedbackSheet>
   )
-};
+}
 
-export default ViewFeedbackModal;
+export default ViewFeedbackModal
+
+const styles = StyleSheet.create({
+  title: {
+    marginBottom: 16,
+    paddingRight: 8,
+    color: appPalette.text,
+    fontFamily: 'Roboto-Bold',
+    lineHeight: 32,
+  },
+  divider: {
+    height: 1,
+    marginHorizontal: -20,
+    marginBottom: 16,
+    backgroundColor: appPalette.border,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 18,
+  },
+  dateRow: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  date: { color: appPalette.textMuted, fontFamily: 'Roboto-Regular' },
+  sectionTitle: {
+    marginBottom: 6,
+    color: appPalette.text,
+    fontFamily: 'Roboto-Bold',
+    lineHeight: 24,
+  },
+  body: {
+    marginBottom: 16,
+    color: appPalette.textMuted,
+    fontFamily: 'Roboto-Regular',
+    lineHeight: 24,
+  },
+  images: { gap: 10, marginBottom: 16 },
+  imageButton: {
+    width: '100%',
+    minHeight: 220,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: appPalette.border,
+    borderRadius: 16,
+    backgroundColor: appPalette.surfaceAlt,
+  },
+  image: { width: '100%', height: 260 },
+  answerTitle: { marginTop: 2 },
+  answer: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: appPalette.border,
+    borderRadius: 16,
+    backgroundColor: appPalette.surface,
+  },
+  answerText: {
+    color: appPalette.textMuted,
+    fontFamily: 'Roboto-Medium',
+    lineHeight: 24,
+  },
+})

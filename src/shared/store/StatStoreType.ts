@@ -122,11 +122,11 @@ type AvgOrdersStat = {
 }
 
 type AvgOrders = {
-  driver_id: number,
-  name: string,
+  driver_id?: number,
+  name?: string,
   other_stat: AvgOrdersStat,
-  time: number,
-  time2: string
+  time?: number,
+  time2?: string
 }
 
 export interface StatResponse {

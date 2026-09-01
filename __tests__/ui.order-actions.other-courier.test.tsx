@@ -2,7 +2,7 @@
  * Назначение:
  *   Ветка «у другого курьера»:
  *   • показываются driver_name/driver_login
- *   • клик по логину вызывает dialCall(number)
+ *   • клик по логину вызывает dialCall(driver_login)
  *   • action-кнопок нет
  */
 import React from 'react';
@@ -15,12 +15,12 @@ const mkOrder = (p: Partial<Order>): Order => ({
   is_get: 1, is_my: 0,
   number: '79991112233',
   status_order: 0, online_pay: 0, is_delete: 0,
-  driver_name: 'Иван Петров', driver_login: 'ivanp',
+  driver_name: 'Иван Петров', driver_login: '79998887766',
   addr: 'Адрес', pd: '1', et: '', kv: '',
   ...p,
 } as Order);
 
-test('у другого курьера: имя/логин видны; клик по логину -> dialCall(number); action-кнопок нет', async () => {
+test('у другого курьера: имя/логин видны; клик по логину -> dialCall(driver_login); action-кнопок нет', async () => {
   const item = mkOrder({});
   const dialCall = jest.fn();
 
@@ -35,13 +35,18 @@ test('у другого курьера: имя/логин видны; клик �
   );
 
   // Видимость по testID
-  expect(screen.getByTestId(`order-${item.id}-other-name`)).toBeTruthy();
+  expect(screen.getByTestId(`order-${item.id}-other-name`)).toHaveStyle({
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+  });
+  expect(screen.getByText('Водитель: Иван Петров')).toBeTruthy();
   const loginBtn = screen.getByTestId(`order-${item.id}-other-login`);
   expect(loginBtn).toBeTruthy();
 
   // Клик по логину вызывает звонок
   await fireEvent.press(loginBtn);
-  expect(dialCall).toHaveBeenCalledWith(item.number);
+  expect(dialCall).toHaveBeenCalledWith(item.driver_login);
 
   // Action-кнопок нет
   expect(screen.queryByTestId(`order-${item.id}-take`)).toBeNull();
