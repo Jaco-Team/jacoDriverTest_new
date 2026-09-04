@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import Geolocation, {
   type GeolocationError,
   type GeolocationOptions,
@@ -10,14 +9,30 @@ import {request, PERMISSIONS, RESULTS, checkMultiple} from 'react-native-permiss
 import {Platform} from 'react-native';
 
 import { api } from './api';
+import {
+  exchangeLaravelSsoLoginCode,
+  fetchLaravelMe,
+  loginWithLaravel,
+  logoutFromLaravel,
+} from '@/shared/api/laravel/auth';
+import { getLaravelApiErrorInfo } from '@/shared/api/laravel/errors';
+import {
+  createLaravelFeedback,
+  fetchLaravelFeedbacks,
+} from '@/shared/api/laravel/feedback';
+import {
+  clearLaravelAuthToken,
+  getLaravelAuthToken,
+  saveLaravelAuthToken,
+} from '@/shared/lib/laravelAuthTokenStorage';
 import { Theme, ShowType } from '@/shared/types/globalTypes'
 import { globalTypes } from './GlobalStoreType';
-import { StatusTextType, LoginTypes, CheckTokenResponse, LoginResponse } from './LoginStoreType';
+import { StatusTextType, LoginTypes, LoginResponse } from './LoginStoreType';
 import { StatTypes, PriceResponse, GraphResponse, GraphErrCam, GraphErrOrder, AnswerErrCamResponse, StatResponse } from './StatStoreType';
 import { MySettingsResponse, SettingsStore, SaveSettingsResponse, getPhoneCafeResponse, phoneType } from './SettingsStoreType';
 
 import { OrdersStore, GetOrdersResponse, TypeOrder, actionOrderType } from './OrdersStoreType';
-import { FeedbackType, FeedbackStatus, Feedback, ModalState, FeedbackState, fetchFeedbacksResponse, fetchFeedbackResponse, createFeedbackResponse } from './FeedbackStoreType'
+import { FeedbackStatus, FeedbackState } from './FeedbackStoreType'
 
 import { GEOStore } from './GEOStoreType';
 
@@ -34,6 +49,7 @@ interface ExtendedGeolocationResponse extends GeolocationResponse {
 
 const DRIVER_LOCATION_FIRST_TIMEOUT_MS = 15000
 const DRIVER_LOCATION_RETRY_TIMEOUT_MS = 10000
+const SELECTED_POINT_STORAGE_KEY = 'selected_driver_point_id'
 
 function requestCurrentPosition(options: GeolocationOptions): Promise<ExtendedGeolocationResponse> {
   return new Promise((resolve, reject) => {
@@ -63,29 +79,6 @@ function getDriverLocationErrorText(error: unknown): string {
   return 'Не удалось определить местоположение. Включите GPS и выйдите на открытое место, затем повторите действие.'
 }
 
-let authRecoveryRequestSequence = 0;
-
-function maskRecoveryLogin(login: string): string {
-  const normalizedLogin = login.trim();
-
-  if (normalizedLogin.length <= 4) {
-    return '*'.repeat(normalizedLogin.length);
-  }
-
-  return `${normalizedLogin.slice(0, 2)}***${normalizedLogin.slice(-2)}`;
-}
-
-function logAuthRecovery(
-  event: string,
-  details: Record<string, unknown>,
-): void {
-  if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    // Временная безопасная диагностика: пароль, SMS-код и token не логируются.
-    // eslint-disable-next-line no-console
-    console.log(`[AUTH-RECOVERY] ${event}`, details);
-  }
-}
-
 export const useGlobalStore = create<globalTypes>()((set, get) => ({
   loadSpinner: false,
   loadSpinnerHidden: false,
@@ -102,7 +95,7 @@ export const useGlobalStore = create<globalTypes>()((set, get) => ({
   phones: null,
 
   is_need_avg_time: true,
-  is_need_page_stat: true,
+  is_need_page_stat: false,
 
   avgTime: '',
 
@@ -119,15 +112,12 @@ export const useGlobalStore = create<globalTypes>()((set, get) => ({
   setSpinner: (status: boolean) => { set({loadSpinner: status}) },
   setSpinnerHidden: (status: boolean) => { set({loadSpinnerHidden: status}) },
 
-  setTokenAuth: async (token: string) => { 
+  setTokenAuth: async (token: string) => {
     set({tokenAuth: token})
-    await AsyncStorage.setItem('token', token); 
   },
 
   getTokenAuth: async (): Promise<string> => { 
-    const token = await AsyncStorage.getItem('token');
-
-    return token ?? '';
+    return (await getLaravelAuthToken()) ?? '';
   },
 
   getAuthToken: async (): Promise<string> => {
@@ -157,6 +147,7 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
     is_loadToken: false,
   
     authData: {isAuth: false, token: ''},
+    currentUser: null,
   
     initialPage: '',
     loginErr: '',
@@ -164,7 +155,7 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
     wallpaper_btn: false,
     formAuth: true,
   
-    auth: async (login: string, pwd: string): Promise<StatusTextType> => {
+    auth: async (login: string, pwd: string, captchaToken: string = ''): Promise<StatusTextType> => {
       if (!get().is_load) {
         set({is_load: true});
       } else {
@@ -173,20 +164,30 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
       
       useGlobalStore.getState().setSpinner(true);
   
-      const data = {
-        type: 'login',
-        login: login,
-        pwd: pwd,
-      };
-  
-      const json = await api<LoginResponse>('auth', data);
-  
-      console.log('json', json);
+      let result: StatusTextType;
 
-      if (json?.st === true) {
-        useGlobalStore.getState().setTokenAuth(json.data?.token ?? '');
+      try {
+        const laravelSession = await loginWithLaravel(login, pwd, captchaToken);
+        await saveLaravelAuthToken(laravelSession.token);
+        await useGlobalStore.getState().setTokenAuth(laravelSession.token);
+        const currentUser = await fetchLaravelMe(laravelSession.token);
+        set({ currentUser });
 
         useSettingsStore.getState().getSettings();
+        result = { st: true, text: '' };
+      } catch (error) {
+        await Promise.all([
+          clearLaravelAuthToken().catch(() => undefined),
+          useGlobalStore.getState().setTokenAuth('').catch(() => undefined),
+        ]);
+        set({ currentUser: null });
+
+        const errorInfo = getLaravelApiErrorInfo(error);
+        result = {
+          st: false,
+          text: errorInfo.message,
+          captcha_required: errorInfo.captchaRequired,
+        };
       }
 
       setTimeout( () => {
@@ -194,24 +195,53 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
         useGlobalStore.getState().setSpinner(false);
       }, 500 )
       
-      return {
-        st: json.st,
-        text: json?.text ?? '',
-        captcha_required: json.data?.captcha_required === true,
-      };
+      return result;
     },
 
-    sendSMS: async (login: string, pwd: string): Promise<StatusTextType> => {
-      const requestId = ++authRecoveryRequestSequence;
+    authWithSsoCode: async (loginCode: string): Promise<StatusTextType> => {
+      if (get().is_load) {
+        return { st: false, text: 'Пожалуйста, подождите...' };
+      }
 
+      set({is_load: true});
+      useGlobalStore.getState().setSpinner(true);
+
+      let result: StatusTextType;
+
+      try {
+        const laravelSession = await exchangeLaravelSsoLoginCode(loginCode);
+        await saveLaravelAuthToken(laravelSession.token);
+        await useGlobalStore.getState().setTokenAuth(laravelSession.token);
+        const currentUser = await fetchLaravelMe(laravelSession.token);
+        set({ currentUser });
+
+        useSettingsStore.getState().getSettings();
+        result = { st: true, text: '' };
+      } catch (error) {
+        await Promise.all([
+          clearLaravelAuthToken().catch(() => undefined),
+          useGlobalStore.getState().setTokenAuth('').catch(() => undefined),
+        ]);
+        set({ currentUser: null });
+
+        result = {
+          st: false,
+          text: getLaravelApiErrorInfo(error).message,
+        };
+      }
+
+      setTimeout(() => {
+        set({is_load: false});
+        useGlobalStore.getState().setSpinner(false);
+      }, 500);
+
+      return result;
+    },
+
+    sendSMS: async (login: string, pwd: string, captchaToken: string = ''): Promise<StatusTextType> => {
       if (!get().is_load) {
         set({is_load: true});
       } else {
-        logAuthRecovery('get_sms blocked', {
-          requestId,
-          login: maskRecoveryLogin(login),
-          reason: 'request_in_progress',
-        });
         return { st: false, text: "Пожалуйста, подождите..." };
       }
   
@@ -221,22 +251,10 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
         type: 'get_sms',
         login,
         pwd,
+        ...(captchaToken ? { captcha_token: captchaToken } : {}),
       };
-
-      logAuthRecovery('get_sms request', {
-        requestId,
-        login: maskRecoveryLogin(login),
-        loginLength: login.length,
-        passwordLength: pwd.length,
-      });
   
       const json = await api<LoginResponse>('auth', data);
-
-      logAuthRecovery('get_sms response', {
-        requestId,
-        st: json.st,
-        text: json?.text ?? '',
-      });
 
       if (json.st === true) {
         Analytics.log(AnalyticsEvent.AuthSendSms, 'Отправка СМС-кода');
@@ -252,18 +270,10 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
       return { st: json.st, text: json?.text ?? '' };
     },
 
-    sendCode: async (login: string, code: string): Promise<StatusTextType> => {
-      const requestId = ++authRecoveryRequestSequence;
-
+    sendCode: async (login: string, code: string, pwd: string): Promise<StatusTextType> => {
       if (!get().is_load) {
         set({is_load: true});
       } else {
-        logAuthRecovery('check_code blocked', {
-          requestId,
-          login: maskRecoveryLogin(login),
-          codeLength: code.length,
-          reason: 'request_in_progress',
-        });
         return { st: false, text: "Пожалуйста, подождите..." };
       }
   
@@ -274,26 +284,27 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
         login,
         code,
       };
-
-      logAuthRecovery('check_code request', {
-        requestId,
-        login: maskRecoveryLogin(login),
-        loginLength: login.length,
-        codeLength: code.length,
-      });
   
       const json = await api<LoginResponse>('auth', data);
-
-      logAuthRecovery('check_code response', {
-        requestId,
-        st: json.st,
-        text: json?.text ?? '',
-      });
   
       if (json.st === true) {
-        useGlobalStore.getState().setTokenAuth(json.data?.token ?? '');
-
-        useSettingsStore.getState().getSettings();
+        try {
+          const session = await loginWithLaravel(login, pwd);
+          await saveLaravelAuthToken(session.token);
+          await useGlobalStore.getState().setTokenAuth(session.token);
+          const currentUser = await fetchLaravelMe(session.token);
+          set({ currentUser });
+          useSettingsStore.getState().getSettings();
+        } catch (error) {
+          await Promise.all([
+            clearLaravelAuthToken().catch(() => undefined),
+            useGlobalStore.getState().setTokenAuth('').catch(() => undefined),
+          ]);
+          set({ currentUser: null });
+          const errorInfo = getLaravelApiErrorInfo(error);
+          json.st = false;
+          json.text = errorInfo.message;
+        }
       }
   
       setTimeout( () => {
@@ -305,34 +316,69 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
     },
 
     check_token: async () => {
-      const token = await useGlobalStore.getState().getAuthToken();
+      let laravelToken = '';
 
-      if( !token || token.length == 0 ){
+      try {
+        laravelToken = await getLaravelAuthToken();
+      } catch {
+        // Secure storage can be temporarily unavailable (for example, in an
+        // unsigned iOS simulator build). Startup must still leave Greeting.
+        await useGlobalStore.getState().setTokenAuth('').catch(() => undefined);
+        useGlobalStore.getState().setSpinner(false);
+        useGlobalStore.getState().setSpinnerHidden(false);
+        set({ currentUser: null, is_load: false });
         return false;
       }
 
-      const data = {
-        type: 'check_token',
-        token: token
-      };
-  
-      const json = await api<CheckTokenResponse>('auth', data);
-
-      if( json.st === true ){
-        useGlobalStore.getState().setTokenAuth(token);
-
-        useSettingsStore.getState().getSettings();
+      if (!laravelToken) {
+        await Promise.all([
+          clearLaravelAuthToken().catch(() => undefined),
+          useGlobalStore.getState().setTokenAuth('').catch(() => undefined),
+        ]);
+        useGlobalStore.getState().setSpinner(false);
+        useGlobalStore.getState().setSpinnerHidden(false);
+        set({ currentUser: null, is_load: false });
+        return false;
       }
 
-      return json.st;
+      try {
+        const currentUser = await fetchLaravelMe(laravelToken);
+        set({ currentUser });
+      } catch (error) {
+        if (getLaravelApiErrorInfo(error).status === 401) {
+          await Promise.all([
+            clearLaravelAuthToken(),
+            useGlobalStore.getState().setTokenAuth(''),
+          ]);
+        }
+
+        useGlobalStore.getState().setSpinner(false);
+        useGlobalStore.getState().setSpinnerHidden(false);
+        set({ currentUser: null, is_load: false });
+
+        return false;
+      }
+
+      await useGlobalStore.getState().setTokenAuth(laravelToken);
+      useSettingsStore.getState().getSettings();
+      return true;
     },
 
-    logogout: () => {
+    logogout: async () => {
       // метрика выхода
       Analytics.log(AnalyticsEvent.DrawerLogout, 'Выход из аккаунта');
 
-      // разлогин
-      useGlobalStore.getState().setTokenAuth('');
+      const laravelToken = await getLaravelAuthToken();
+
+      await Promise.all([
+        clearLaravelAuthToken(),
+        useGlobalStore.getState().setTokenAuth(''),
+      ]);
+      set({ currentUser: null });
+
+      if (laravelToken) {
+        void logoutFromLaravel(laravelToken).catch(() => undefined);
+      }
     },
 }))
 
@@ -376,6 +422,7 @@ export const useStatStore = create<StatTypes>()((set, get) => ({
       date,
       token,
       type: 'get_my_price',
+      ...(useSettingsStore.getState().point_id ? { point_id: useSettingsStore.getState().point_id } : {}),
     };
 
     const response = await api<PriceResponse>('price', data);
@@ -405,6 +452,7 @@ export const useStatStore = create<StatTypes>()((set, get) => ({
       type: 'get_my_price_between',
       dateStart,
       dateEnd,
+      ...(useSettingsStore.getState().point_id ? { point_id: useSettingsStore.getState().point_id } : {}),
     };
 
     const response = await api<PriceResponse>('price', data);
@@ -445,6 +493,7 @@ export const useStatStore = create<StatTypes>()((set, get) => ({
       date,
       token,
       type: 'get_my_graph',
+      ...(useSettingsStore.getState().point_id ? { point_id: useSettingsStore.getState().point_id } : {}),
     };
 
     const response = await api<GraphResponse>('graph', data);
@@ -568,7 +617,8 @@ export const useStatStore = create<StatTypes>()((set, get) => ({
       type: 'show_data',
       token,
       date_start,
-      date_end
+      date_end,
+      ...(useSettingsStore.getState().point_id ? { point_id: useSettingsStore.getState().point_id } : {}),
     };
   
     const json = await api<StatResponse>('stat_time', data);
@@ -597,6 +647,7 @@ export const useStatStore = create<StatTypes>()((set, get) => ({
     const data = {
       type: 'get_my_avg_time',
       token,
+      ...(useSettingsStore.getState().point_id ? { point_id: useSettingsStore.getState().point_id } : {}),
     };
 
     const json = await api<string>('orders', data);
@@ -628,6 +679,8 @@ export const useSettingsStore = create<SettingsStore>()( (set, get) => ({
   is_scaleMap: 0,
 
   rotate_map: false,
+  points: [],
+  point_id: null,
 
   // установка поворота карты
   setRotateMap: (is_rotate) => {
@@ -640,6 +693,18 @@ export const useSettingsStore = create<SettingsStore>()( (set, get) => ({
     set({
       rotate_map: is_rotate,
     })
+  },
+
+  setPointId: (pointId) => {
+    set({ point_id: pointId });
+    if (pointId === null) {
+      void AsyncStorage.removeItem(SELECTED_POINT_STORAGE_KEY);
+    } else {
+      void AsyncStorage.setItem(SELECTED_POINT_STORAGE_KEY, String(pointId));
+    }
+    void get().getPhoneCafe();
+    void useStatStore.getState().getAvgTime();
+    void useOrdersStore.getState().getOrders(true);
   },
 
   getSettings: async () => {
@@ -659,6 +724,17 @@ export const useSettingsStore = create<SettingsStore>()( (set, get) => ({
       return ;
     }
 
+    const points = res.data?.all_points ?? [];
+    const savedPointIdValue = await AsyncStorage.getItem(SELECTED_POINT_STORAGE_KEY);
+    const savedPointId = Number.parseInt(savedPointIdValue ?? '', 10);
+    const currentPointId = get().point_id
+      ?? (Number.isFinite(savedPointId) ? savedPointId : null);
+    const serverPointId = res.data?.point_id ?? null;
+    const pointId = currentPointId && points.some(point => point.id === currentPointId)
+      ? currentPointId
+      : (serverPointId ?? points[0]?.id ?? null);
+
+    set({ points, point_id: pointId });
     get().getPhoneCafe();
 
     useGlobalStore.getState().setFontSize(parseInt(String(res.data?.fontSize ?? 16), 10));
@@ -667,7 +743,7 @@ export const useSettingsStore = create<SettingsStore>()( (set, get) => ({
     useGlobalStore.getState().setMapScale( parseFloat(String(res.data?.mapScale ?? 1)) );
 
     useGlobalStore.getState().setNeedAvgTime( (res.data?.driver_avg_time ?? 1) == 1 ? true : false );
-    useGlobalStore.getState().setNeedPageStat( (res.data?.driver_page_stat_time ?? 1) == 1 ? true : false );
+    useGlobalStore.getState().setNeedPageStat( (res.data?.driver_page_stat_time ?? 0) == 1 ? true : false );
     useOrdersStore.getState().setUpdateInterval( res.data?.update_interval ?? 30 );
 
     set({
@@ -767,6 +843,7 @@ export const useSettingsStore = create<SettingsStore>()( (set, get) => ({
     const data = {
       token,
       type: 'get_point_phone',
+      ...(get().point_id ? { point_id: get().point_id } : {}),
     };
 
     const json = await api<getPhoneCafeResponse>('settings', data);
@@ -1205,6 +1282,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
       type: 'get_orders',
       type_orders: get().type.id,
       token: token,
+      ...(useSettingsStore.getState().point_id ? { point_id: useSettingsStore.getState().point_id } : {}),
     };
 
     try {
@@ -1346,6 +1424,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
         appToken: useGlobalStore.getState().notifToken,
         latitude: latitude,
         longitude: longitude,
+        ...(useSettingsStore.getState().point_id ? { point_id: useSettingsStore.getState().point_id } : {}),
       };
 
       const res = await api<StatusTextType>('orders', data);
@@ -1397,6 +1476,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
         order_id: order_id,
         latitude: latitude,
         longitude: longitude,
+        ...(useSettingsStore.getState().point_id ? { point_id: useSettingsStore.getState().point_id } : {}),
       };
 
       const res = await api<StatusTextType>('orders', data);
@@ -1496,25 +1576,13 @@ export const useFeedbackStore = create<FeedbackState>((set, get) => ({
   setStatus: (status: FeedbackStatus) => set({ chooseStatus: status }),
 
   fetchFeedbacks: async () => {
-    const token = await useGlobalStore.getState().getAuthToken();
     useGlobalStore.getState().setSpinner(true);
 
-    const data = {
-      type: 'get_feedbacks',
-      token: token,
-    };
-
     try {
-      const response = await api<fetchFeedbacksResponse>('feedback', data);
-      
-      if( response.st === false ){
-        useGlobalStore.getState().setSpinner(false);
-        return ;
-      }
-
-      set({ feedbacks: response?.data?.feedbacks });
+      const feedbacks = await fetchLaravelFeedbacks();
+      set({ feedbacks });
     } catch (error) {
-      
+      set({ error: getLaravelApiErrorInfo(error).message });
     }
 
     setTimeout(() => {
@@ -1523,33 +1591,15 @@ export const useFeedbackStore = create<FeedbackState>((set, get) => ({
   },
   
   fetchFeedbackById: async (id: number) => {
-    const token = await useGlobalStore.getState().getAuthToken();
-    useGlobalStore.getState().setSpinner(true);
-
-    const data = {
-      type: 'get_feedback_id',
-      id: id,
-      token: token,
-    };
-
-    try {
-      const response = await api<fetchFeedbackResponse>('feedback', data);
-      
-      if( response.st === false ){
-        useGlobalStore.getState().setSpinner(false);
-        return ;
-      }
-
-      set({ 
-        modal: { ...get().modal, selectedFeedback: response?.data?.feedback ?? null, isCreateModalOpen: false, isViewModalOpen: true }
-      });
-    } catch (error) {
-      
-    }
-
-    setTimeout(() => {
-      useGlobalStore.getState().setSpinner(false);
-    }, 300);
+    const feedback = get().feedbacks.find(item => item.id === id) ?? null;
+    set({
+      modal: {
+        ...get().modal,
+        selectedFeedback: feedback,
+        isCreateModalOpen: false,
+        isViewModalOpen: feedback !== null,
+      },
+    });
   },
   
   // Создание предложения
@@ -1561,67 +1611,32 @@ export const useFeedbackStore = create<FeedbackState>((set, get) => ({
       set({is_click: true});
     }
 
-    const token = await useGlobalStore.getState().getAuthToken();
     useGlobalStore.getState().setSpinner(true);
 
-    const data = {
-      type: 'create_feedback',
-      token: token,
-      feedback_title: feedback.title,
-      feedback_description: feedback.description,
-      feedback_type: feedback.type,
-      feedback_is_need_notification: feedback.is_need_notification,
-      notifToken: useGlobalStore.getState().notifToken
-    };
-
     try {
-      //createFeedbackResponse
-      const response = await api<createFeedbackResponse>('feedback', data);
+      await createLaravelFeedback({
+        title: feedback.title,
+        description: feedback.description,
+        type: feedback.type,
+        is_need_notification: feedback.is_need_notification,
+        images: feedback.images ?? [],
+      });
 
-      if( response?.data?.st == true ){
-
-        Analytics.log(AnalyticsEvent.FeedbackCreate, 'Создание предложения');
-
-        const successInfo = await get().uploadImages(response?.data?.id, feedback.images ?? []);
-
-        if (successInfo.success) {
-          setTimeout(() => {
-            useGlobalStore.getState().setSpinner(false);
-            set({is_click: false});
-          }, 300);
-
-          useGlobalStore.getState().showAlertText(true, 'Спасибо за обратную связь!');
-          get().closeCreateModal();
-          get().fetchFeedbacks();
-        } else {
-          setTimeout(() => {
-            useGlobalStore.getState().setSpinner(false);
-            set({is_click: false});
-          }, 300);
-
-          useGlobalStore.getState().showAlertText(true, 'Спасибо за обратную связь!');
-          get().closeCreateModal();
-          get().fetchFeedbacks();
-        }
-
-        
-      }else{
-        useGlobalStore.getState().showAlertText(true, 'Произошла ошибка при записи, попробуй еще раз');
-
-        setTimeout(() => {
-          useGlobalStore.getState().setSpinner(false);
-          set({is_click: false});
-        }, 300);
-      }
-      
+      Analytics.log(AnalyticsEvent.FeedbackCreate, 'Создание предложения');
+      useGlobalStore.getState().showAlertText(true, 'Спасибо за обратную связь!');
+      get().closeCreateModal();
+      await get().fetchFeedbacks();
     } catch (error) {
+      useGlobalStore.getState().showAlertText(
+        true,
+        getLaravelApiErrorInfo(error).message || 'Произошла ошибка при записи, попробуйте ещё раз',
+      );
+    } finally {
       setTimeout(() => {
         useGlobalStore.getState().setSpinner(false);
         set({is_click: false});
       }, 300);
     }
-
-    
   },
   
   // Открытие модалки создания обратной связи
@@ -1658,73 +1673,4 @@ export const useFeedbackStore = create<FeedbackState>((set, get) => ({
       selectedFeedback: null 
     } 
   }),
-
-  uploadImages: async (id, images) => {
-    // Если нет изображений, пропускаем
-    if (!images || images.length === 0) {
-      return {
-        success: true,
-        message: 'No images to upload',
-      };
-    }
-
-    try {
-      const data = new FormData();
-
-      images.forEach((img, index) => {
-        const uri = img.uri;
-        if (!uri) return; // пропускаем отсутствующую URI
-
-        // MIME-тип
-        const mimeType = img.type ?? 'image/jpeg';
-
-        // Определяем расширение
-        // можно попробовать получить из fileName, иначе default ".jpg"
-        let extension = '.jpg';
-        if (img.fileName) {
-          const dotIndex = img.fileName.lastIndexOf('.');
-          if (dotIndex !== -1) {
-            extension = img.fileName.substring(dotIndex); // например, ".png"
-          }
-        }
-
-        // Генерируем имя файла: "{id}_{index}.{extension}"
-        const fileName = `${id}_${index}${extension}`;
-
-        data.append('images[]', {
-          uri,
-          type: mimeType,
-          name: fileName,
-        } as any);
-      });
-
-      // Отправляем ID записи тоже, если нужно на сервере
-      data.append('record_id', String(id));
-
-      const response = await fetch('https://api.jacochef.ru/driver/image/upload-images.php', {
-        method: 'POST',
-        body: data,
-      });
-
-      if (!response.ok) {
-        return {
-          success: false,
-          message: `Server returned status ${response.status}`,
-        };
-      }
-
-      const json = await response.json();
-      // Допустим, сервер возвращает { success: boolean, message: string }
-      return {
-        success: !!json.success,
-        message: json.message ?? 'Server response',
-      };
-    } catch (error) {
-      console.error('Error uploading images:', error);
-      return {
-        success: false,
-        message: String(error),
-      };
-    }
-  },
 }));

@@ -279,7 +279,7 @@ export function MainDrawerNavigator() {
           title: 'Статистика времени',
           headerShown: true,
           swipeEnabled: true,
-          drawerItemStyle: __DEV__ || is_need_page_stat
+          drawerItemStyle: is_need_page_stat
             ? {backgroundColor: '#fff'}
             : {backgroundColor: '#fff', height: 0},
           drawerLabelStyle: { fontSize: globalFontSize },

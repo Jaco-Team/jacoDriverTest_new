@@ -2,7 +2,7 @@
 
 ## Дата фиксации
 
-2026-06-30
+2026-09-04
 
 ## Короткий статус
 
@@ -24,9 +24,9 @@ npm run test:unit
 
 Текущий результат:
 
-- `43` suites passed;
-- `140` tests passed;
-- всего `43` suites и `140` tests.
+- `88` suites passed;
+- `339` tests passed;
+- всего `88` suites и `339` tests.
 
 Сделано:
 
@@ -47,6 +47,12 @@ npm run test:unit
   - schedule hooks graph/month/error-modal flow;
   - orders-list hooks and limits;
   - settings/avg-time updater intervals.
+  - Laravel routes, transport, error normalization and DTO adapters;
+  - Bearer-token storage in Keychain/Keystore and logout cleanup;
+  - SSO callback/exchange and SmartCaptcha UI lifecycle;
+  - Laravel auth, settings, feedback, orders and menu visibility;
+  - demo-account deletion guards and absence of destructive requests;
+  - Android/Fabric map marker stability during repeated geolocation.
 
 ## Typecheck
 
@@ -72,7 +78,7 @@ npm run lint
 Текущий статус:
 
 - команда проходит успешно;
-- добавлен [eslint.config.js](../../eslint.config.js) под ESLint 9.
+- добавлен [eslint.config.js](../../eslint.config.js) под ESLint 10.
 - современные lint-плагины закреплены явно в [package.json](../../package.json), включая `@typescript-eslint@8.x`.
 
 Ограничение:
@@ -112,6 +118,17 @@ GitHub gate добавлен:
 - [docs/testing/git-checks.md](./git-checks.md)
 
 ## Журнал решений
+
+### 2026-09-04
+
+Сделано:
+
+- полный мобильный baseline повторно пройден: `lint`, `typecheck`, 88 suites / 339 tests;
+- тестами покрыты Laravel API, защищённый токен, CAPTCHA, SSO, выбор кафе,
+  фейковое удаление demo-аккаунта и стабилизация маркера геопозиции;
+- Android release APK установлен и вручную проверен на реальном Samsung;
+- iOS debug/release и основные auth-сценарии проверены на Simulator;
+- реальный iPhone и production-настройка Laravel CAPTCHA/SSO оставлены внешней проверкой.
 
 ### 2026-06-30
 

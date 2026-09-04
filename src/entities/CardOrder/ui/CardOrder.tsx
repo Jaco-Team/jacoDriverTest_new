@@ -27,8 +27,8 @@ export const CardOrderComponent: React.FC<CardOrderProps> = ({
   const statusOrder = toOrderInt(item.status_order)
   const onlinePay = toOrderInt(item.online_pay)
   const needTime = getOrderNeedTime(item)
-  const textColor = isDeleted ? '#FFFFFF' : appPalette.text
-  const mutedColor = isDeleted ? 'rgba(255, 255, 255, 0.84)' : appPalette.textMuted
+  const textColor = appPalette.text
+  const mutedColor = appPalette.textMuted
   const bodyTextStyle = {
     color: textColor,
     fontSize: globalFontSize,

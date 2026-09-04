@@ -7,7 +7,7 @@ export interface FeedbackResponse {
   title: string;
   description: string;
   user: string;
-  date_time_create: Date;
+  date_time_create: Date | string;
   status: FeedbackStatus;
   answer: string;
   type: FeedbackType;
@@ -30,11 +30,6 @@ export interface ModalState {
   isCreateModalOpen: boolean;
   isViewModalOpen: boolean;
   selectedFeedback: FeedbackResponse | null;
-}
-
-export interface UploadImagesResult {
-  success: boolean;
-  message: string;
 }
 
 // interface ImageAsset {
@@ -72,7 +67,6 @@ export interface FeedbackState {
   closeCreateModal: () => void;
   openViewModal: (feedback: Feedback) => void;
   closeViewModal: () => void;
-  uploadImages: (id: string | number, images: Asset[]) => Promise<UploadImagesResult>;
 }
 
 export interface fetchFeedbacksResponse {

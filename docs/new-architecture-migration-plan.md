@@ -1,6 +1,6 @@
 # План миграции на React Native 0.87 / Fabric
 
-Дата: 24 августа 2026 года. Обновлён 27 августа 2026: текущая версия — RN `0.87.1`, не клиентский `0.86`. После отдельной проверки RN patch обновлены совместимые зависимости внутри текущих major. Tailwind 4, NativeWind 5 и остальные major-переходы в эту волну не входят.
+Дата: 24 августа 2026 года. Последнее обновление: 4 сентября 2026 года. Текущая версия — RN `0.87.1`, не клиентский `0.86`. Совместимые зависимости обновлены внутри текущих major. Tailwind 4, NativeWind 5 и остальные major-переходы в эту волну не входят.
 
 Ветка: `new_architecture`. Ветка `main` не меняется этим планом.
 
@@ -36,11 +36,11 @@
 | --- | --- |
 | 0. Ветка и docs | сделан |
 | 1. Аудит и bump + флаги Fabric | сделан: RN `0.87.1` + Fabric, yamap-plus |
-| 2. Native compile | debug Android и iOS на `0.87.1` собираются; повторно проверены после совместимых обновлений 27 августа |
-| 3. Jest / TS хвост | lint / typecheck / 179 unit-тестов зелёные на `0.87.1` + ESLint 10 |
-| 4. Android debug smoke | список, drawer, карта и маркеры на эмуляторе ок; GPS — на Samsung |
-| 5. iOS debug smoke | симулятор стартует, список ок; карту/drawer с симулятора не докликали (нет a11y-тапа); реального iPhone нет |
-| 6. Release smoke | не начат. Прод-выкладку делает не эта задача |
+| 2. Native compile | Android debug/release и iOS simulator debug/release собираются на `0.87.1` |
+| 3. Jest / TS хвост | `lint`, `typecheck`, 88 suites / 339 unit-тестов зелёные на `0.87.1` + ESLint 10 |
+| 4. Android smoke | debug проверен на эмуляторе; release APK установлен и проверен на реальном Samsung, включая повторное определение геопозиции |
+| 5. iOS smoke | debug/release и основные сценарии, включая CAPTCHA/SSO, проверены на Simulator; реальный iPhone остаётся руководителю |
+| 6. Release smoke | Android на реальном Samsung и iOS Simulator пройдены; реальный iPhone не проверен, production-выкладка не входит в задачу |
 
 После этапа 0 запуск из `new_architecture` был равен `main` (RN `0.77`, Paper). Fabric появился на этапе 1 (сначала `0.86`, сейчас `0.87`).
 
@@ -55,8 +55,8 @@
 - Reanimated `4.6.x` + `react-native-worklets` `0.12.x` (4.5.x 0.87 не поддерживает) + Gesture Handler `3.2.1`
 - Screens `4.27.0` / Safe Area `5.9.1` — актуальные под RN `0.87`
 - Navigation: `@react-navigation/drawer` `^7.13.10`, `native` `^7.3.18`, `native-stack` `^7.18.10` (линейка 7; восьмёрка — alpha, не берём)
-- Sentry `@sentry/react-native` `8.24.0` (патч `7.13.0` снят)
-- Firebase `@react-native-firebase/app` + `messaging` `26.3.2` (одна версия на оба)
+- Sentry `@sentry/react-native` `8.25.0` (патч `7.13.0` снят)
+- Firebase `@react-native-firebase/app` + `messaging` `26.3.3` (одна версия на оба)
 - ESLint `10.x`; Babel `^7.29.7` (не 8; пресет RN 0.87 на семёрке); TypeScript `5.9.3` (не 6/7)
 - Android: compileSdk/buildTools 37, targetSdk 36, NDK `29.0.14206865`, AGP 9 с `android.builtInKotlin=false` и `android.newDsl=false`
 - iOS: `RCT_NEW_ARCH_ENABLED=1` и `RCTNewArchEnabled` в Info.plist; RN SwiftPM не включать; Firebase native — CocoaPods (`$RNFirebaseDisableSPM = true` + static `use_frameworks!`)
@@ -71,15 +71,15 @@
 | `react-native-screens` / `react-native-safe-area-context` | `4.27.0` / `5.9.1` |
 | `nativewind` | `4.2.6` |
 | `react-native-yamap-plus` | `6.11.0` |
-| `@sentry/react-native` | `8.24.0` |
+| `@sentry/react-native` | `8.25.0` |
 | `@appmetrica/react-native-analytics` | `4.2.0` |
-| `@react-native-async-storage/async-storage` | `3.1.1` (default import = legacy v2 backend, токен не мигрируем) |
-| `@react-native-community/datetimepicker` | `9.1.0` (peer `react-native-modal-datetime-picker`, прямой импорт в Calendar закомментирован) |
+| `@react-native-async-storage/async-storage` | `3.1.1` (используется для неавторизационного локального состояния; Bearer-токен хранится отдельно в Keychain/Keystore) |
+| `@react-native-community/datetimepicker` | `9.2.0` (peer `react-native-modal-datetime-picker`, прямой импорт в Calendar закомментирован) |
 | `@fortawesome/react-native-fontawesome` | `1.0.0` (рендерер FA7; core/icons уже 7.x) |
 | `lucide-react-native` | `1.34.0` (JS поверх `react-native-svg`; Copy / QrCode / RefreshCcw / Search). Metro: в `sourceExts` нужен `mjs` — пакет 1.x отдаёт ESM `.mjs`, native-сборку не трогаем |
 | `@react-native-community/netinfo` | `12.0.1` (индикатор сети в AppProviders выключен) |
 | `react-native-device-info` | `15.0.2` (`isLocationEnabled` в выключенном ConnectivityLocationIndicator; breaking 15 = compileSdk 34+, у нас 37) |
-| `@react-native-firebase/app` + `messaging` | `26.3.2` |
+| `@react-native-firebase/app` + `messaging` | `26.3.3` |
 | `@react-navigation/drawer` / `native` / `native-stack` | `^7.13.10` / `^7.3.18` / `^7.18.10` |
 | `eslint` | `^10.9.1` |
 | `@babel/core` | `^7.29.7` |
@@ -90,11 +90,12 @@
 - Font Awesome core/icons `7.3.1`, resolvers `5.9.1`, axios `1.20.0`;
 - dayjs `1.11.23`, query-string `9.5.0`, react-hook-form `7.86.0`, zustand `5.0.15`;
 - react-native-permissions `5.6.1`, baseline-browser-mapping `2.11.19`;
+- 4 сентября: Sentry `8.25.0`, datetimepicker `9.2.0`, Firebase app + messaging `26.3.3`;
 - Tailwind `3.4.19` и NativeWind `4.2.6` оставлены без изменений.
 
-Контроль после обновлений: `npm run lint`, `npm run typecheck`, `npm run test:unit` (51 suite / 179 tests), Android `app:assembleDebug` и iOS Debug simulator build — успешно.
+Контроль 04.09.2026: `npm run lint`, `npm run typecheck`, `npm run test:unit` (88 suites / 339 tests), Android debug/release и iOS Simulator debug/release — успешно. Android release APK дополнительно установлен и вручную проверен на реальном Samsung.
 
-`npm audit` после обновлений показывает 14 транзитивных проблем (2 low / 12 high). Автоматический `audit fix` не применялся: для RN/Metro он предлагает откат на RN `0.86.3`, а для Gluestack — несовместимый откат `@gluestack-ui/nativewind-utils`. Разбирать audit-хвост нужно отдельной задачей без изменения зафиксированного RN-фундамента.
+`npm audit` после обновлений показывает 20 транзитивных проблем (2 low / 5 moderate / 13 high). Автоматический `audit fix` не применялся: предлагаемые изменения затрагивают зафиксированный RN/Metro/Gluestack-фундамент. Разбирать audit-хвост нужно отдельной задачей с повторной полной проверкой.
 
 Костыли, которые остаются: shim `InteractionManager`; Strict TS `react-native-legacy-deep-imports` до RN 0.88; Metro `sourceExts` + `mjs` под lucide 1. Патч Sentry 7 снят.
 
@@ -116,7 +117,7 @@ Babel: `react-native-worklets/plugin`. Не использовать `react-nati
 
 Почему так: оригинал `4.8.3` — последний релиз ноября 2024, New Arch там нет. Plus живой (линейка 6 = New Arch, 5 = Paper + New Arch). Это не «сейчас», а решение плана на этапы 1–2 и карточный smoke.
 
-Что учесть при переходе (когда дойдём до кода):
+Что было учтено при переходе:
 
 - пакет другой: `react-native-yamap` → `react-native-yamap-plus`;
 - init и часть props не drop-in (`YaMap.init` → `YamapInstance.init`, жесты `*Enabled` → `*Disabled`);
@@ -210,7 +211,7 @@ MiniCodePush в этом проекте нет.
 
 1. **Карта** — основной рабочий экран. New Arch проверяем на `react-native-yamap-plus`, не на старой `react-native-yamap@4.8.3`. Точки: [MapScreen.tsx](../src/features/orders-map/ui/MapScreen.tsx), `freezeOnBlur: false` в [MainDrawerNavigator.tsx](../src/app/navigation/MainDrawerNavigator.tsx).
 2. **Геолокация** — `@react-native-community/geolocation` в [store.ts](../src/shared/store/store.ts). Библиотеку не менять, пока 0.87 её не сломает.
-3. **Sentry** — `Sentry.wrap`, metro, [reanimatedGuard.ts](../src/shared/lib/reanimatedGuard.ts). На `8.24.0` iOS использует `RNSentry 8.24.0` без патча `RCTTextView.h` (патч `7.13.0` удалён).
+3. **Sentry** — `Sentry.wrap`, metro, [reanimatedGuard.ts](../src/shared/lib/reanimatedGuard.ts). После `pod install` версия `8.25.0` должна синхронизировать iOS с `RNSentry 8.25.0` без патча `RCTTextView.h` (патч `7.13.0` удалён).
 3a. **Drawer / InteractionManager** — RN `0.87` удалил `InteractionManager`. Drawer `7.13.10` / `react-native-drawer-layout` 4.2.x на RN ≥ 0.82 сами не дергают handle, но shim [interactionManagerCompat.ts](../src/shared/lib/interactionManagerCompat.ts) оставляем: жест меню на устройстве без shim не снимали. Navigation 8 — alpha, не берём.
 3b. **Firebase 26** — modular JS уже был (`getApp` / `getMessaging`). Native iOS: не SPM (статическая линковка), `$RNFirebaseDisableSPM = true`. Откат — парой `app`+`messaging`.
 4. **`react-native-reanimated-table`** в графике и статистике. Если сломается на Reanimated 4 — точечный фикс.
@@ -279,13 +280,13 @@ UI выполняется в ветке `new_architecture`, но отдельн�
 - карта растянута до нижнего края, а её панель и лимиты используют фактический bottom inset; обычные drawer-экраны и нижние шторки также защищены от iOS home indicator и Android navigation bar
 - настройки, блок «Карта»: чекбоксы (тёмная тема / ползунок масштаба / центрировать при взятии-отмене) после включения не отжимаются. Не задумано; было до этой миграции (`CheckboxGroup` с одним значением с апреля 2025). Бэкенд `0/1` уже умеет. Фикс: обычный `Checkbox` `isChecked` + `onChange(boolean)`, после save писать флаги в settings store. Тот же шаблон — «Уведомить о решении» в фидбеке.
 
-RNGH `3.2.1`, screens `4.27.0`, yamap-plus `6.11.0`, safe-area `5.9.1`, AppMetrica `4.2.0`, async-storage `3.1.1`, datetimepicker `9.1.0`, netinfo `12.0.1`, device-info `15.0.2` в этой волне уже подняты (debug Android/iOS собрались). Fontawesome RN `1.0.0` и lucide `1.34.0` — JS-обёртки над `react-native-svg`, native-сборку не требуют.
+RNGH `3.2.1`, screens `4.27.0`, yamap-plus `6.11.0`, safe-area `5.9.1`, AppMetrica `4.2.0`, async-storage `3.1.1`, datetimepicker `9.2.0`, netinfo `12.0.1`, device-info `15.0.2`, Sentry `8.25.0` и Firebase `26.3.3` в этой волне подняты. Native release smoke выполнен на Android/Samsung и iOS Simulator; реальный iPhone остаётся финальной внешней проверкой. Fontawesome RN `1.0.0` и lucide `1.34.0` — JS-обёртки над `react-native-svg`, native-сборку не требуют.
 
 ### Отдельная задача, не этот переезд
 
 Кнопка «Удалить аккаунт» для тестового аккаунта `79990000001` / `DemoDriver1!`.
 
-Сейчас кнопки нет. Кнопка фейковая: бэкенд аккаунт не удаляет. По UX должна имитировать реальный сценарий. В Битрикс — отдельная задача, не пункт этой.
+Кнопка реализована только для demo-пользователя. Она показывает подтверждение, имитирует успешное удаление, очищает локальную сессию и выполняет обычный logout, но не удаляет данные на backend. Для остальных аккаунтов кнопка скрыта; сценарий вручную и тестами проверен.
 
 ## 9. Definition of Done
 
@@ -296,8 +297,13 @@ RNGH `3.2.1`, screens `4.27.0`, yamap-plus `6.11.0`, safe-area `5.9.1`, AppMetri
 - карта, список заказов, логин, GPS, основные drawer-экраны проходят ручной smoke;
 - шиты работают или точечно починены без смены архитектуры;
 - `lint` / `typecheck` / `test:unit` зелёные;
-- release smoke пройден или явно отложен здесь;
+- Android release smoke пройден на реальном Samsung, iOS release smoke — на Simulator; проверка на реальном iPhone явно оставлена руководителю;
 - бизнес-логика store и заказов не переписана «под Fabric».
+
+На 04.09.2026 техническая миграция RN/Fabric выполнена. За её пределами остаются:
+production-настройка Laravel CAPTCHA/SSO ответственным за сервер, реальный iPhone,
+решение по QR-оплате, тема после появления эталона на сайте и отдельный аудит
+транзитивных зависимостей.
 
 ## 10. Роли Cursor
 

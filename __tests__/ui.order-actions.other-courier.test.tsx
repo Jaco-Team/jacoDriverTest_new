@@ -38,7 +38,7 @@ test('у другого курьера: имя/логин видны; клик �
   expect(screen.getByTestId(`order-${item.id}-other-name`)).toHaveStyle({
     height: 44,
     borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+    backgroundColor: '#E0E0E0',
   });
   expect(screen.getByText('Водитель: Иван Петров')).toBeTruthy();
   const loginBtn = screen.getByTestId(`order-${item.id}-other-login`);

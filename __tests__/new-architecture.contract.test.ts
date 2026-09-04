@@ -53,7 +53,7 @@ describe('New Architecture contract', () => {
     expect(pkg.devDependencies.typescript).toMatch(/^\^?5\.9/);
     expect(deps['@appmetrica/react-native-analytics']).toMatch(/^\^?4\.2/);
     expect(deps['@react-native-async-storage/async-storage']).toMatch(/^\^?3\.1/);
-    expect(deps['@react-native-community/datetimepicker']).toMatch(/^\^?9\.1/);
+    expect(deps['@react-native-community/datetimepicker']).toMatch(/^\^?9\.2/);
     expect(deps['@fortawesome/react-native-fontawesome']).toMatch(/^\^?1\.0/);
     expect(deps['lucide-react-native']).toMatch(/^\^?1\.34/);
     expect(deps['@react-native-community/netinfo']).toMatch(/^\^?12\.0/);
@@ -137,14 +137,28 @@ describe('New Architecture contract', () => {
     expect(providers).toContain('initialMetrics={initialWindowMetrics}');
   });
 
-  it('токен в store остаётся на default AsyncStorage, не createAsyncStorage', () => {
+  it('токен авторизации читается из защищённого Laravel token storage', () => {
     const store = read('src/shared/store/store.ts');
-    expect(store).toMatch(
-      /import AsyncStorage from '@react-native-async-storage\/async-storage'/,
-    );
-    expect(store).not.toContain('createAsyncStorage');
-    expect(store).toContain("AsyncStorage.setItem('token'");
-    expect(store).toContain("AsyncStorage.getItem('token'");
+    expect(store).toContain('getLaravelAuthToken');
+    expect(store).toContain('saveLaravelAuthToken');
+    expect(store).not.toContain("AsyncStorage.setItem('token'");
+    expect(store).not.toContain("AsyncStorage.getItem('token'");
+  });
+
+  it('регистрирует системную SSO auth-сессию и deep link на обеих платформах', () => {
+    const pkg = JSON.parse(read('package.json')) as {
+      dependencies: Record<string, string>;
+    };
+    const manifest = read('android/app/src/main/AndroidManifest.xml');
+    const infoPlist = read('ios/jacoDriverTest/Info.plist');
+    const appDelegate = read('ios/jacoDriverTest/AppDelegate.swift');
+
+    expect(pkg.dependencies['react-native-inappbrowser-reborn']).toBeTruthy();
+    expect(manifest).toContain('android:scheme="jacodriver"');
+    expect(manifest).toContain('android:host="auth"');
+    expect(manifest).toContain('android:pathPrefix="/sso"');
+    expect(infoPlist).toMatch(/<string>jacodriver<\/string>/);
+    expect(appDelegate).toContain('RCTLinkingManager.application');
   });
 
   it('index.js подключает InteractionManager shim до App', () => {

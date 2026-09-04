@@ -24,6 +24,15 @@ jest.mock('@/shared/ui/auth/AuthScreenLayout', () => {
   return { AuthScreenLayout }
 })
 
+jest.mock('@/shared/ui/auth/AuthSmartCaptcha', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+  return {
+    AuthSmartCaptcha: ({ testID }: { testID: string }) =>
+      React.createElement(View, { testID }),
+  }
+})
+
 import { ResetPwdScreen } from '@/features/reset-pwd/ui/ResetPwdScreen'
 
 describe('ResetPwdScreen', () => {
@@ -45,6 +54,9 @@ describe('ResetPwdScreen', () => {
       showPassword: false,
       handleTogglePassword: mockHandleTogglePassword,
       errorText: '',
+      captchaResetKey: 0,
+      handleCaptchaTokenChange: jest.fn(),
+      handleCaptchaError: jest.fn(),
       isLoading: false,
       canRequestCode: false,
       canConfirmCode: false,
@@ -68,7 +80,7 @@ describe('ResetPwdScreen', () => {
     expect(screen.getByTestId('reset-password-input').props.keyboardType).toBe('default')
     expect(screen.getByTestId('reset-password-input').props.secureTextEntry).toBe(true)
     expect(screen.getByTestId('reset-password-requirements')).toBeTruthy()
-    expect(screen.getByTestId('reset-captcha-placeholder')).toBeTruthy()
+    expect(screen.getByTestId('reset-captcha')).toBeTruthy()
     expect(screen.getByTestId('reset-hint')).toBeTruthy()
     expect(screen.getByTestId('reset-submit').props.disabled).toBe(true)
   })
@@ -90,22 +102,22 @@ describe('ResetPwdScreen', () => {
     expect(mockGoToAuth).toHaveBeenCalledTimes(1)
   })
 
-  it('показывает второй шаг с одним четырёхзначным SMS-инпутом', async () => {
+  it('показывает второй шаг с одним шестизначным SMS-инпутом', async () => {
     mockResetState.activeStep = 1
     mockResetState.panelTitle = 'Подтверждение по SMS'
     mockResetState.panelText =
       'Введите код из SMS, чтобы подтвердить номер и завершить восстановление пароля.'
     mockResetState.helperText =
       'Если код не пришел, проверьте номер телефона и повторите отправку позже.'
-    mockResetState.myCode = '1107'
+    mockResetState.myCode = '110712'
     mockResetState.canConfirmCode = true
 
     const screen = await render(<ResetPwdScreen />)
     const codeInput = screen.getByTestId('reset-code-input')
 
     expect(screen.getByText('Подтверждение по SMS')).toBeTruthy()
-    expect(codeInput.props.maxLength).toBe(4)
-    expect(screen.queryByTestId('reset-captcha-placeholder')).toBeNull()
+    expect(codeInput.props.maxLength).toBe(6)
+    expect(screen.queryByTestId('reset-captcha')).toBeNull()
 
     await fireEvent.changeText(codeInput, '1234')
     await fireEvent.press(screen.getByTestId('reset-submit'))

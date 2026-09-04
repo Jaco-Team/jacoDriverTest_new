@@ -81,7 +81,7 @@ npm run typecheck
 npm run lint
 ```
 
-На 2026-06-30 команда проходит через [eslint.config.js](../../eslint.config.js). Подробности:
+На 2026-09-04 команда проходит через [eslint.config.js](../../eslint.config.js) под ESLint 10. Подробности:
 
 - [docs/quality-baseline.md](../quality-baseline.md)
 
@@ -102,6 +102,14 @@ npm run lint
 - группировку заказов на карте;
 - статистику;
 - updater-интервалы.
+- Laravel API transport/routes/errors и DTO adapters;
+- Bearer-токен в Keychain/Keystore;
+- SSO callback/exchange и SmartCaptcha;
+- выбор кафе, backend-флаг статистики и фейковое удаление demo-аккаунта;
+- стабильность маркера геопозиции Android/Fabric.
+
+Текущий результат: 88 suites / 339 tests. Нативные release-проверки ведутся
+отдельно в [release checklist](./release-checklist.md).
 
 ## Текущий обязательный baseline
 

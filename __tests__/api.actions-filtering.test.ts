@@ -9,7 +9,14 @@
  */
 
 import 'jest';
-jest.mock('axios'); // мок целого модуля
+
+jest.mock('@/shared/api/laravel/connector', () => ({
+  bearerHeaders: (token: string) => ({ Authorization: `Bearer ${token}` }),
+  laravelHttp: { get: jest.fn(), post: jest.fn() },
+}));
+jest.mock('@/shared/lib/laravelAuthTokenStorage', () => ({
+  getLaravelAuthToken: jest.fn().mockResolvedValue('laravel-token'),
+}));
 
 describe('api.ts: режим actions — фильтрация скрытых id из списков', () => {
   const realEnv = process.env.NODE_ENV;
@@ -50,10 +57,9 @@ describe('api.ts: режим actions — фильтрация скрытых id 
       expect(hidden).toBeDefined();
       expect([...hidden]).toContain('7');
 
-      // 2) Реальный get_orders — мок через axios.default.post внутри isolate
-      type AxiosDefault = typeof import('axios')['default'];
-      const axiosInIso = (require('axios') as { default: jest.Mocked<AxiosDefault> }).default;
-      const postInIso = axiosInIso.post as jest.Mock;
+      // 2) Реальный get_orders — мок Laravel HTTP-клиента внутри isolate
+      const { laravelHttp } = require('@/shared/api/laravel/connector');
+      const postInIso = laravelHttp.post as jest.Mock;
 
       postInIso.mockResolvedValueOnce({
         data: {
@@ -95,9 +101,8 @@ describe('api.ts: режим actions — фильтрация скрытых id 
       expect([...hidden]).toContain('42');
 
       // 2) get_orders — мок через axios.default.post
-      type AxiosDefault = typeof import('axios')['default'];
-      const axiosInIso = (require('axios') as { default: jest.Mocked<AxiosDefault> }).default;
-      const postInIso = axiosInIso.post as jest.Mock;
+      const { laravelHttp } = require('@/shared/api/laravel/connector');
+      const postInIso = laravelHttp.post as jest.Mock;
 
       postInIso.mockResolvedValueOnce({
         data: {

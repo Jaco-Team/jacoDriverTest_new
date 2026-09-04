@@ -14,6 +14,9 @@ const DRIVER_ICON_SIZE = 24
 const DRIVER_TEXT_LEFT = 29
 const DRIVER_TIME_MIN_FONT_SIZE = 16
 const DRIVER_FALLBACK_WIDTH = 80
+// Keep the native map child mounted at a stable index. Adding/removing Marker
+// after YaMap has mounted corrupts its Fabric child order on Android.
+const DRIVER_MARKER_PLACEHOLDER_POINT = { lat: 0, lon: 0 }
 const DRIVER_MARKER_FALLBACK: ImageSourcePropType = {
   uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABACAMAAAC6GQAEAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAABgUExURQAAAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAP8AAAAAAMWCKEYAAAAedFJOUwAANZHgKEMBs/GwUwZbkgyulA45DwQXrK0dHlx3eaDxh6AAAAABYktHRACIBR1IAAAAB3RJTUUH6ggfDRMgEVhsRQAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyNi0wOC0zMVQxMzoxOTozMiswMDowMI5whJoAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjYtMDgtMzFUMTM6MTk6MzIrMDA6MDD/LTwmAAAAKHRFWHRkYXRlOnRpbWVzdGFtcAAyMDI2LTA4LTMxVDEzOjE5OjMyKzAwOjAwqDgd+QAAAWJJREFUWMPtmOcOgzAMhEsp0AUddI+8/2N2RWAHk8SJ1UoV9zO6fr3EOMiMRoNkNU4nykeTdOyDy/xompk5eTkD91LuysfkKWXPWHD2q3ddWOvB5illrUwaAExtQP6On3umizENQGnJFNcBjMhHA2N48gk/ms0XS6EzbFXKVBmosrbNW6s1i7hxE7e8jG5iwty1k8hM6CQyz7AhClX5oyoR6OViA1ZKiV5GRJFehkSZ2wYQhe7Dlih1YxfdpZDnj7hX4zrEE+jfwz9KGHuGor0c+xxSQNl8sb38lYTiZyheZfM5GoD/DOxMAfVzsbb+lnQ0QHNO2b1XdxYe7WiAxiRV6+X+jD2O9rWF97zXy/teIO0AsxBu6sT5fqEdcEJF83JgQjxDw4k+6Ay7Uz745sCuct93iANM0Pz7geXAOhJhTkwH0pmwX5gOrLLjvrIdWDfDfQ9w2BJcgxzGObbnfjzzHA8O1Zd9slg9hAAAAABJRU5ErkJggg==',
 }
@@ -205,16 +208,29 @@ export const DriverMarkerImage = memo(function DriverMarkerImage({ onImage }: Dr
 
 export const DriverMarker = memo(function DriverMarker({ image }: DriverMarkerProps) {
   const { location_driver, location_driver_time_text, globalFontSize, mapScale, theme } = useDriverMarkerLogic()
+  const lastVisibleMarkerRef = useRef<{
+    point: NonNullable<typeof location_driver>
+    timeText: string
+  } | null>(null)
 
-  if (!location_driver) return null
+  if (location_driver) {
+    lastVisibleMarkerRef.current = {
+      point: location_driver,
+      timeText: location_driver_time_text,
+    }
+  }
 
-  const signature = getMarkerSignature(
-    location_driver.lat,
-    location_driver.lon,
-    location_driver_time_text,
-    globalFontSize,
-    theme,
-  )
+  const markerState = lastVisibleMarkerRef.current
+  const point = markerState?.point ?? DRIVER_MARKER_PLACEHOLDER_POINT
+  const signature = markerState
+    ? getMarkerSignature(
+        markerState.point.lat,
+        markerState.point.lon,
+        markerState.timeText,
+        globalFontSize,
+        theme,
+      )
+    : ''
 
   const hasCapturedImage = image?.signature === signature
   const source = hasCapturedImage ? image.source : DRIVER_MARKER_FALLBACK
@@ -222,10 +238,11 @@ export const DriverMarker = memo(function DriverMarker({ image }: DriverMarkerPr
 
   return (
     <Marker
-      point={location_driver}
+      point={point}
       anchor={{ x: 0.03, y: 0.8 }}
       scale={markerScale}
       source={source}
+      visible={location_driver !== null}
     />
   )
 })

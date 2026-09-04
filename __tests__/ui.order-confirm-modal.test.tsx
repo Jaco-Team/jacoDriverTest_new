@@ -77,6 +77,18 @@ describe('подтверждение действия заказа', () => {
     expect(screen.getByTestId('order-confirm-message')).toHaveTextContent(
       'Заказ #910002 будет отмечен как доставленный.',
     )
+    expect(screen.getByTestId('order-confirm-message')).toHaveStyle({
+      width: '100%',
+      alignSelf: 'stretch',
+      textAlign: 'left',
+    })
+    expect(screen.getByTestId('order-confirm-modal')).toHaveStyle({
+      width: '100%',
+      alignSelf: 'stretch',
+    })
+    expect(
+      screen.getByTestId('order-confirm-icon-check-circle'),
+    ).toBeTruthy()
     expect(screen.getByText('Нет')).toBeTruthy()
     expect(screen.getByText('Завершить')).toBeTruthy()
 
@@ -118,6 +130,13 @@ describe('подтверждение действия заказа', () => {
         borderRadius: 12,
         backgroundColor: confirmColor,
       })
+      expect(
+        screen.getByTestId(
+          `order-confirm-icon-${
+            typeConfirm === 'cancel' ? 'cancel' : 'person-off'
+          }`,
+        ),
+      ).toBeTruthy()
     },
   )
 })

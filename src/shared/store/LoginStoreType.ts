@@ -1,4 +1,5 @@
 import { Status } from '@/shared/types/globalTypes'
+import type { LaravelAuthUser } from '@/shared/api/laravel/auth'
 
 export type CheckTokenResponse = {
   st: Status;
@@ -22,6 +23,7 @@ export interface LoginTypes {
   is_loadToken: boolean,
 
   authData: object,
+  currentUser: LaravelAuthUser | null,
 
   initialPage: string,
   loginErr: string,
@@ -29,9 +31,10 @@ export interface LoginTypes {
   wallpaper_btn: boolean,
   formAuth: boolean,
   
-  sendSMS: (login: string, pwd: string) => Promise<StatusTextType>,
-  sendCode: (login: string, code: string) => Promise<StatusTextType>,
-  auth: (login: string, pwd: string) => Promise<StatusTextType>,
+  sendSMS: (login: string, pwd: string, captchaToken?: string) => Promise<StatusTextType>,
+  sendCode: (login: string, code: string, pwd: string) => Promise<StatusTextType>,
+  auth: (login: string, pwd: string, captchaToken?: string) => Promise<StatusTextType>,
+  authWithSsoCode: (loginCode: string) => Promise<StatusTextType>,
   check_token: () => Promise<Status>,
-  logogout: () => void,
+  logogout: () => Promise<void>,
 }

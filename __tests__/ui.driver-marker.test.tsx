@@ -13,12 +13,13 @@ jest.mock('react-native-yamap-plus', () => {
   const { View } = require('react-native')
 
   return {
-    Marker: ({ point, scale, source }: any) =>
+    Marker: ({ point, scale, source, visible }: any) =>
       React.createElement(View, {
         testID: 'orders-map-driver-native-marker',
         point,
         scale,
         source,
+        visible,
       }),
   }
 })
@@ -91,6 +92,19 @@ describe('DriverMarker', () => {
     jest.restoreAllMocks()
   })
 
+  it('не создаёт изображение и держит скрытый маркер до получения координат', async () => {
+    mockDriverMarkerState = {
+      ...mockDriverMarkerState,
+      location_driver: null,
+    }
+
+    const screen = await render(<DriverMarker image={null} />)
+
+    const marker = screen.getByTestId('orders-map-driver-native-marker')
+    expect(marker.props.visible).toBe(false)
+    expect(marker.props.point).toEqual({ lat: 0, lon: 0 })
+  })
+
   it('создаёт PNG и передаёт его вместе с координатами нативному маркеру', async () => {
     const screen = await render(<DriverMarkerProbe />)
 
@@ -122,12 +136,4 @@ describe('DriverMarker', () => {
     expect(getDriverMarkerNativeScale(1, true, 'android', 3.75)).toBe(1)
   })
 
-  it('не создаёт изображение и маркер до получения координат', async () => {
-    mockDriverMarkerState.location_driver = null
-
-    const screen = await render(<DriverMarkerProbe />)
-
-    expect(screen.queryByTestId('orders-map-driver-svg')).toBeNull()
-    expect(screen.queryByTestId('orders-map-driver-native-marker')).toBeNull()
-  })
 })

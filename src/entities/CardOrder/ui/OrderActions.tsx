@@ -8,7 +8,10 @@ import { appPalette } from '@/shared/styles/appPalette'
 
 const BUTTON_HEIGHT = 44
 const BUTTON_FONT_SIZE = 14
-const PHONE_BUTTON_BACKGROUND = 'rgba(0, 0, 0, 0.08)'
+// The site renders the Material phone action as an opaque grey surface.
+// A translucent fill blends with deleted-order cards in React Native and
+// incorrectly turns the button dark red.
+const PHONE_BUTTON_BACKGROUND = '#E0E0E0'
 
 interface ActionButtonProps {
   backgroundColor: string

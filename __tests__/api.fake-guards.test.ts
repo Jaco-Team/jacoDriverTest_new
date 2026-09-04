@@ -1,7 +1,11 @@
 // __tests__/api.fake-guards.test.ts
-import axios from 'axios';
-
-jest.mock('axios');
+jest.mock('@/shared/api/laravel/connector', () => ({
+  bearerHeaders: (token: string) => ({ Authorization: `Bearer ${token}` }),
+  laravelHttp: { get: jest.fn(), post: jest.fn() },
+}));
+jest.mock('@/shared/lib/laravelAuthTokenStorage', () => ({
+  getLaravelAuthToken: jest.fn().mockResolvedValue('laravel-token'),
+}));
 
 describe('api.ts: фейк-сторажи', () => {
   const realEnv = process.env.NODE_ENV;
@@ -9,9 +13,6 @@ describe('api.ts: фейк-сторажи', () => {
 
   beforeEach(async () => {
     jest.resetModules();
-    (axios.post as jest.Mock).mockReset().mockResolvedValue({
-      data: { st: true, text: '', data: { ok: true } },
-    });
     (global as any).__FAKE_ORDERS__ = undefined;
     (global as any).__FAKE_HIDDEN_IDS__ = undefined;
   });
@@ -23,7 +24,7 @@ describe('api.ts: фейк-сторажи', () => {
 
   /**
    * Запускаем код в изоляции и возвращаем,
-   * сколько раз дернули ИМЕННО тот axios.post,
+   * сколько раз дернули Laravel HTTP-клиент,
    * который видит изолированный модуль.
    */
   async function runIsolated({
@@ -52,9 +53,9 @@ describe('api.ts: фейк-сторажи', () => {
 
       const { api } = require('@/shared/store/api');
 
-      // ⚠️ берем axios из ЭТОЙ ЖЕ изоляции
-      const axiosLocal = require('axios');
-      const postLocal = axiosLocal.post as jest.Mock;
+      const { laravelHttp } = require('@/shared/api/laravel/connector');
+      const postLocal = laravelHttp.post as jest.Mock;
+      postLocal.mockResolvedValue({ data: { st: true } });
 
       await call(api);
 

@@ -1648,6 +1648,28 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-webview (14.0.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - React-NativeModulesApple (0.87.1):
     - hermes-engine
     - React-bridging
@@ -2028,7 +2050,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNDateTimePicker (9.1.0):
+  - RNDateTimePicker (9.2.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2052,7 +2074,7 @@ PODS:
     - Yoga
   - RNDeviceInfo (15.0.2):
     - React-Core
-  - RNFBApp (26.3.2):
+  - RNFBApp (26.3.3):
     - Firebase/CoreOnly (= 12.18.0)
     - hermes-engine
     - RCTRequired
@@ -2075,7 +2097,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNFBMessaging (26.3.2):
+  - RNFBMessaging (26.3.3):
     - Firebase/Messaging (= 12.18.0)
     - FirebaseCoreExtension (= 12.18.0)
     - hermes-engine
@@ -2122,6 +2144,30 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - RNWorklets (>= 0.8.0)
+    - Yoga
+  - RNInAppBrowser (3.7.1):
+    - React-Core
+  - RNKeychain (10.0.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
     - Yoga
   - RNNotifee (9.1.8):
     - React-Core
@@ -2296,7 +2342,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSentry (8.24.0):
+  - RNSentry (8.25.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2545,6 +2591,7 @@ DEPENDENCIES:
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - react-native-webview (from `../node_modules/react-native-webview`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-networking (from `../node_modules/react-native/ReactCommon/react/networking`)
   - React-oscompat (from `../node_modules/react-native/ReactCommon/oscompat`)
@@ -2587,6 +2634,8 @@ DEPENDENCIES:
   - "RNFBApp (from `../node_modules/@react-native-firebase/app`)"
   - "RNFBMessaging (from `../node_modules/@react-native-firebase/messaging`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
+  - RNInAppBrowser (from `../node_modules/react-native-inappbrowser-reborn`)
+  - RNKeychain (from `../node_modules/react-native-keychain`)
   - "RNNotifee (from `../node_modules/@notifee/react-native`)"
   - RNPermissions (from `../node_modules/react-native-permissions`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
@@ -2747,6 +2796,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-community/netinfo"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-webview:
+    :path: "../node_modules/react-native-webview"
   React-NativeModulesApple:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios"
   React-networking:
@@ -2831,6 +2882,10 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-firebase/messaging"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
+  RNInAppBrowser:
+    :path: "../node_modules/react-native-inappbrowser-reborn"
+  RNKeychain:
+    :path: "../node_modules/react-native-keychain"
   RNNotifee:
     :path: "../node_modules/@notifee/react-native"
   RNPermissions:
@@ -2944,6 +2999,7 @@ SPEC CHECKSUMS:
   react-native-image-picker: 870b31525256975a2d4b6b20a54db9b380cd725d
   react-native-netinfo: 58601963060e4df0c1b6b6980d4f24ce2751e64c
   react-native-safe-area-context: f17f4ec987ecdd130820a4a850498b874fb70388
+  react-native-webview: f189adab64d5d71cec3b9e9ec3261355376ec7a2
   React-NativeModulesApple: adb1dd8361dff80e9f6652fb3fdbf033cfbe2a89
   React-networking: c00b437c4408f0640ba0d4158357133488521eca
   React-oscompat: 3175a287dd7175d1a20fdce5048a4b9e11f4b915
@@ -2981,16 +3037,18 @@ SPEC CHECKSUMS:
   ReactCommon: 749169e12aa3461a3df3656a00e48dbe0456b2d6
   ReactNativeDependencies: 94c922c39e0e6150ee9ad05e2ca1946e0ef55783
   RNCClipboard: a4d3243922d75b241b7ab9c0f8b62995a601ff2b
-  RNDateTimePicker: 60407baf13e973fe3644aa2657908b1c9cf00270
+  RNDateTimePicker: 2971f91a94cb78f099894168378d15c58f4da22f
   RNDeviceInfo: 4c852998208b60dc192ae3529e5867817719ad1e
-  RNFBApp: 7d345141b00de756bd2ad5131e7d5c03ec58cd3a
-  RNFBMessaging: 7c6eefdac6c946be087f1626f4e6e9fa561c480c
+  RNFBApp: 2d44e4ddc5c7e9a4631e436b2ee179218c895d92
+  RNFBMessaging: 0292fe9422e3234ca45a1fb7615a63257c04b40e
   RNGestureHandler: ec5fccd94cfa3ef0014ca794e4acd9807e497939
+  RNInAppBrowser: 904d24dc75e8e6c6c98a3160329192608946f9df
+  RNKeychain: 551d42b0ef53426f82551a0cc961cfa10ad33afa
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
   RNPermissions: dfb6d452fca3ca8faf8adadd871392227268ec6a
   RNReanimated: a40a23cfa56063c9b0c7af8794c847c0ddf8a99c
   RNScreens: 0135deb65b65d207ee6294d0baf06681e1071d93
-  RNSentry: 4540beefda4c6efcd22ed703266e309b38adae69
+  RNSentry: dc655af1c6cc66783d8c9d4b31b5c3b817bb8953
   RNSVG: 6c9bcbf53822153be6f6c1484f6b0b57c0040d21
   RNVectorIcons: 4f353aed7dde2ecfc77da4130afce046d147ae8a
   RNWorklets: a140b8a8c63ab3f1ac247f5c6e8ae192bf70b0a0

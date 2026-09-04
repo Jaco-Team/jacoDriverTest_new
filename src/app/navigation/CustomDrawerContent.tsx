@@ -200,7 +200,7 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
   const contactLabelFontSize = clampFontSize(globalFontSize - 1, 14, 17)
   const contactPhoneFontSize = clampFontSize(globalFontSize - 2, 12, 15)
 
-  const navigationItems = __DEV__ || isNeedPageStat
+  const navigationItems = isNeedPageStat
     ? NAVIGATION_ITEMS
     : NAVIGATION_ITEMS.filter((item) => item.route !== 'Statistics')
 
@@ -242,12 +242,12 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
     dialCall(item.phone)
   }
 
-  function logOut(): void {
+  async function logOut(): Promise<void> {
     const title = RU_SCREEN_NAMES.Auth ?? 'Авторизация'
     Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${title}`)
 
     props.navigation.closeDrawer()
-    logogout()
+    await logogout()
     props.navigation.reset({ index: 0, routes: [{ name: 'Auth' }] })
   }
 
@@ -314,7 +314,7 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
             accessibilityRole="button"
             style={styles.logoutButton}
             testID="drawer-logout"
-            onPress={logOut}
+            onPress={() => void logOut()}
           >
             <FontAwesomeIcon
               color={appPalette.brand}

@@ -14,7 +14,7 @@ import { useResetPwdLogic } from '../model/useResetPwdLogic'
 import { PasswordRequirements } from './PasswordRequirements'
 import { RecoveryStepper } from './RecoveryStepper'
 
-import { AuthCaptchaPlaceholder } from '@/shared/ui/auth/AuthCaptchaPlaceholder'
+import { AuthSmartCaptcha } from '@/shared/ui/auth/AuthSmartCaptcha'
 import { AuthScreenLayout } from '@/shared/ui/auth/AuthScreenLayout'
 import { AuthTextField } from '@/shared/ui/auth/AuthTextField'
 
@@ -37,6 +37,9 @@ export function ResetPwdScreen(): React.JSX.Element {
     showPassword,
     handleTogglePassword,
     errorText,
+    captchaResetKey,
+    handleCaptchaTokenChange,
+    handleCaptchaError,
     isLoading,
     canRequestCode,
     canConfirmCode,
@@ -138,7 +141,12 @@ export function ResetPwdScreen(): React.JSX.Element {
             <PasswordRequirements password={myPWD} />
           </View>
 
-          <AuthCaptchaPlaceholder testID="reset-captcha-placeholder" />
+          <AuthSmartCaptcha
+            onError={handleCaptchaError}
+            onTokenChange={handleCaptchaTokenChange}
+            resetKey={captchaResetKey}
+            testID="reset-captcha"
+          />
         </>
       ) : (
         <View style={styles.fieldGroup}>
@@ -150,7 +158,7 @@ export function ResetPwdScreen(): React.JSX.Element {
             inputMode="numeric"
             keyboardType="number-pad"
             label="Код из смс"
-            maxLength={4}
+            maxLength={6}
             returnKeyType="done"
             testID="reset-code-input"
             textContentType="oneTimeCode"

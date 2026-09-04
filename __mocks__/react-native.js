@@ -71,6 +71,14 @@ const Keyboard = {
 };
 def(rn, 'Keyboard', Keyboard);
 
+/** Linking отсутствует в RN 0.87 Jest shim, но нужен для SSO/deep links. */
+def(rn, 'Linking', {
+  addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+  canOpenURL: jest.fn(async () => true),
+  getInitialURL: jest.fn(async () => null),
+  openURL: jest.fn(async () => true),
+});
+
 /** Android hardware back button used by the root navigation provider. */
 if (!rn.BackHandler || typeof rn.BackHandler.addEventListener !== 'function') {
   def(rn, 'BackHandler', {

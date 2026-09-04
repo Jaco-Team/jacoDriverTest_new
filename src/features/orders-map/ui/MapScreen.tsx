@@ -42,6 +42,7 @@ export function MapScreen() {
     home,
     set_type_location,
     type_location,
+    driver_location_requesting,
     night_map,
     is_scaleMap,
     rotate_map,
@@ -126,6 +127,7 @@ export function MapScreen() {
         }}
         testID="orders-map-driver-location"
         onPress={set_type_location}
+        disabled={driver_location_requesting}
       >
         <FontAwesomeIcon 
           size={25} 

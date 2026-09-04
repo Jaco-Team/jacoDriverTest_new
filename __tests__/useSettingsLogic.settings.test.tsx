@@ -14,12 +14,22 @@ jest.mock('@/analytics/AppMetricaService', () => ({
 
 const mockGetSettings = jest.fn();
 const mockSaveSettings = jest.fn();
+const mockLogogout = jest.fn();
+const mockShowAlertText = jest.fn();
 
 let mockSettingsState: any;
+let mockCurrentUser: any;
 
 jest.mock('@/shared/store/store', () => ({
   useSettingsStore: (selector: any) => selector(mockSettingsState),
-  useGlobalStore: (selector: any) => selector({ globalFontSize: 18 }),
+  useGlobalStore: (selector: any) => selector({
+    globalFontSize: 18,
+    showAlertText: mockShowAlertText,
+  }),
+  useLoginStore: (selector: any) => selector({
+    currentUser: mockCurrentUser,
+    logogout: mockLogogout,
+  }),
 }));
 
 import { useSettingsLogic } from '@/features/settings/model/useSettingsLogic';
@@ -36,6 +46,8 @@ describe('useSettingsLogic: локальное состояние и сохра�
   beforeEach(async () => {
     jest.clearAllMocks();
     api = null;
+    mockCurrentUser = { login: 'driver' };
+    mockLogogout.mockResolvedValue(undefined);
     mockSettingsState = {
       getSettings: mockGetSettings,
       saveSettings: mockSaveSettings,
@@ -103,5 +115,34 @@ describe('useSettingsLogic: локальное состояние и сохра�
       ['is_night'],
       [],
     );
+  });
+
+  it('разрешает фейковое удаление только demo-аккаунту и очищает обычную сессию', async () => {
+    mockCurrentUser = { login: '79990000001' };
+    await render(<Probe />);
+
+    expect(api!.isDemoAccount).toBe(true);
+
+    await act(async () => {
+      await api!.deleteDemoAccount();
+    });
+
+    expect(mockLogogout).toHaveBeenCalledTimes(1);
+    expect(mockShowAlertText).toHaveBeenCalledWith(true, 'Аккаунт удалён');
+  });
+
+  it('не запускает удаление для обычного пользователя', async () => {
+    await render(<Probe />);
+
+    expect(api!.isDemoAccount).toBe(false);
+
+    let result = true;
+    await act(async () => {
+      result = await api!.deleteDemoAccount();
+    });
+
+    expect(result).toBe(false);
+    expect(mockLogogout).not.toHaveBeenCalled();
+    expect(mockShowAlertText).not.toHaveBeenCalled();
   });
 });

@@ -12,7 +12,7 @@ import {
 
 import { useAuthLogic } from '../model/useAuthLogic'
 
-import { AuthCaptchaPlaceholder } from '@/shared/ui/auth/AuthCaptchaPlaceholder'
+import { AuthSmartCaptcha } from '@/shared/ui/auth/AuthSmartCaptcha'
 import { AuthScreenLayout } from '@/shared/ui/auth/AuthScreenLayout'
 import { AuthTextField } from '@/shared/ui/auth/AuthTextField'
 
@@ -29,9 +29,13 @@ export function AuthScreen(): React.JSX.Element {
     showPassword,
     handleTogglePassword,
     captchaRequired,
+    captchaResetKey,
+    handleCaptchaTokenChange,
+    handleCaptchaError,
     loginError,
     isLoading,
     LogIn,
+    LoginWithSSO,
     GoToResetPWD,
   } = useAuthLogic()
 
@@ -106,7 +110,12 @@ export function AuthScreen(): React.JSX.Element {
       </View>
 
       {captchaRequired ? (
-        <AuthCaptchaPlaceholder testID="auth-captcha-placeholder" />
+        <AuthSmartCaptcha
+          onError={handleCaptchaError}
+          onTokenChange={handleCaptchaTokenChange}
+          resetKey={captchaResetKey}
+          testID="auth-captcha"
+        />
       ) : null}
 
       {loginError ? (
@@ -143,11 +152,12 @@ export function AuthScreen(): React.JSX.Element {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Продолжить через SSO"
-        accessibilityHint="Визуальная заглушка, вход через SSO пока недоступен"
-        accessibilityState={{ disabled: true }}
-        disabled
-        style={styles.secondaryButton}
-        testID="auth-sso-placeholder"
+        accessibilityHint="Открывает защищённый вход через SSO"
+        accessibilityState={{ busy: isLoading, disabled: isLoading }}
+        disabled={isLoading}
+        style={[styles.secondaryButton, isLoading && styles.primaryButtonDisabled]}
+        testID="auth-sso"
+        onPress={() => void LoginWithSSO()}
       >
         <Text style={styles.secondaryButtonText}>Продолжить через SSO</Text>
       </Pressable>

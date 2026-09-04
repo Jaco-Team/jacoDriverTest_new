@@ -62,6 +62,8 @@ describe('useSettingsStore.getSettings', () => {
           driver_page_stat_time: 1,
           night_map: 1,
           is_scaleMap: 1,
+          point_id: 15,
+          all_points: [{ id: 15, name: 'Самара, Металлургов 76А' }],
         },
       })
       .mockResolvedValueOnce({
@@ -85,6 +87,7 @@ describe('useSettingsStore.getSettings', () => {
     expect(mockApi).toHaveBeenNthCalledWith(2, 'settings', {
       type: 'get_point_phone',
       token: 'test-token',
+      point_id: 15,
     });
 
     expect(useGlobalStore.getState().globalFontSize).toBe(18);
@@ -93,6 +96,10 @@ describe('useSettingsStore.getSettings', () => {
     expect(useGlobalStore.getState().is_need_avg_time).toBe(false);
     expect(useGlobalStore.getState().is_need_page_stat).toBe(true);
     expect(useOrdersStore.getState().update_interval).toBe(45);
+    expect(useSettingsStore.getState().point_id).toBe(15);
+    expect(useSettingsStore.getState().points).toEqual([
+      { id: 15, name: 'Самара, Металлургов 76А' },
+    ]);
     await waitFor(() => {
       expect(useGlobalStore.getState().phones).toEqual({
         phone_center: '+70000000000',

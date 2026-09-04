@@ -19,7 +19,16 @@ export interface MySettingsResponse {
   driver_avg_time: number|boolean,
   driver_page_stat_time: number|boolean,
   night_map: number,
-  is_scaleMap: number
+  is_scaleMap: number,
+  point_id?: number | null,
+  all_points?: SettingsPoint[]
+}
+
+export interface SettingsPoint {
+  id: number,
+  name: string,
+  city_id?: number,
+  base?: string,
 }
 
 export interface MapPointType{
@@ -50,10 +59,13 @@ export interface getPhoneCafeResponse {
 
 export interface SettingsStore extends MySettingsResponse {
   isClick: boolean,
+  points: SettingsPoint[],
+  point_id: number | null,
 
   rotate_map: boolean,
 
   setRotateMap: (is_rotate: boolean) => void,
+  setPointId: (pointId: number | null) => void,
 
   getSettings: () => Promise<void>,
 

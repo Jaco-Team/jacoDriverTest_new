@@ -2,6 +2,12 @@
 
 Эта папка нужна как единое место для рабочей документации по `jacoDriverTest`.
 
+Актуальный статус на 04.09.2026: RN `0.87.1` / Fabric, UI и мобильный переход
+на Laravel API реализованы; локальный baseline — 88 suites / 339 tests. Android
+release проверен на реальном Samsung, iOS — на Simulator. Открыты production-
+развёртывание mobile CAPTCHA/SSO ответственным за сервер, реальный iPhone, решение
+по QR-оплате и тема после появления готового эталона на сайте.
+
 Сюда входят:
 
 - общий обзор проекта;
@@ -65,6 +71,16 @@
 - известные UI-недоработки;
 - критерии проверки Android и iOS.
 
+[docs/laravel-api-mobile-migration-plan.md](./laravel-api-mobile-migration-plan.md)
+
+План переключения React Native-приложения с legacy API на готовый Laravel API:
+
+- правила сохранения работоспособности сайта `jaco_driver_site/api-laravel`;
+- локальный запуск backend и сайта;
+- порядок переноса endpoint по модулям;
+- Bearer auth, secure storage, SSO и CAPTCHA;
+- фейковое удаление тестового аккаунта.
+
 ### Раздел тестирования
 
 [docs/testing/README.md](./testing/README.md)
@@ -90,6 +106,7 @@
 7. Перед релизом проходить [docs/testing/release-checklist.md](./testing/release-checklist.md).
 8. Для переезда на New Architecture смотреть [docs/new-architecture-migration-plan.md](./new-architecture-migration-plan.md).
 9. Для переноса UI курьерского сайта смотреть [docs/driver-site-ui-migration-plan.md](./driver-site-ui-migration-plan.md).
+10. Для подключения приложения к Laravel API смотреть [docs/laravel-api-mobile-migration-plan.md](./laravel-api-mobile-migration-plan.md).
 
 ## Правило оформления ссылок
 

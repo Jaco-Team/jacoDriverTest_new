@@ -1,10 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  clearLaravelAuthToken,
+  saveLaravelAuthToken,
+} from '@/shared/lib/laravelAuthTokenStorage';
 import { useGlobalStore } from '@/shared/store/store';
 
 describe('useGlobalStore state helpers', () => {
   beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    await clearLaravelAuthToken();
     useGlobalStore.setState({
       loadSpinner: false,
       loadSpinnerHidden: false,
@@ -28,11 +33,20 @@ describe('useGlobalStore state helpers', () => {
     jest.useRealTimers();
   });
 
-  it('setTokenAuth: сохраняет token в store и AsyncStorage', async () => {
+  it('setTokenAuth: хранит token только в памяти store', async () => {
     await useGlobalStore.getState().setTokenAuth('auth-token');
 
     expect(useGlobalStore.getState().tokenAuth).toBe('auth-token');
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith('token', 'auth-token');
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  });
+
+  it('setTokenAuth: очищает token в памяти store', async () => {
+    useGlobalStore.setState({ tokenAuth: 'auth-token' });
+
+    await useGlobalStore.getState().setTokenAuth('');
+
+    expect(useGlobalStore.getState().tokenAuth).toBe('');
+    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
   });
 
   it('getAuthToken: если token уже есть в store, не читает AsyncStorage', async () => {
@@ -44,12 +58,12 @@ describe('useGlobalStore state helpers', () => {
     expect(AsyncStorage.getItem).not.toHaveBeenCalled();
   });
 
-  it('getAuthToken: если token пустой, читает AsyncStorage и кеширует результат', async () => {
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('stored-token');
+  it('getAuthToken: если token пустой, читает защищённое хранилище и кеширует результат', async () => {
+    await saveLaravelAuthToken('stored-token');
 
     const token = await useGlobalStore.getState().getAuthToken();
 
-    expect(AsyncStorage.getItem).toHaveBeenCalledWith('token');
+    expect(AsyncStorage.getItem).not.toHaveBeenCalled();
     expect(token).toBe('stored-token');
     expect(useGlobalStore.getState().tokenAuth).toBe('stored-token');
   });

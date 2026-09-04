@@ -50,7 +50,14 @@ export function useMapLogic() {
     ])
   );
 
-  const [ showLocationDriver, set_type_location, type_location ] = useGEOStore( useShallow( state => [ state.showLocationDriver, state.set_type_location, state.type_location ] ) )
+  const [ showLocationDriver, set_type_location, type_location, driver_location_requesting ] = useGEOStore(
+    useShallow(state => [
+      state.showLocationDriver,
+      state.set_type_location,
+      state.type_location,
+      state.driver_location_requesting,
+    ]),
+  )
 
   const isFocused = useIsFocused();
 
@@ -199,6 +206,7 @@ export function useMapLogic() {
     isOpenOrderMap,
     set_type_location,
     type_location,
+    driver_location_requesting,
     trafficVisible,
     toggleTrafficVisible,
     mapInitStatus,

@@ -22,7 +22,7 @@ Baseline нужен, чтобы перед заливкой и при прове
 
 - [.github/workflows/ci-baseline.yml](../.github/workflows/ci-baseline.yml)
 
-## Текущий статус на 2026-06-30
+## Текущий статус на 2026-09-04
 
 ### `lint`
 
@@ -37,7 +37,7 @@ npm run lint
 - команда проходит успешно;
 - проект использует flat config [eslint.config.js](../eslint.config.js);
 - старый [.eslintrc.js](../.eslintrc.js) оставлен как исторический файл, но ESLint 10 берет `eslint.config.js`;
-- `@typescript-eslint`, `eslint-plugin-react-hooks` и `eslint-plugin-react-native` закреплены явными dev-зависимостями с поддержкой ESLint 10 / TypeScript 5.7;
+- `@typescript-eslint`, `eslint-plugin-react-hooks` и `eslint-plugin-react-native` закреплены явными dev-зависимостями с поддержкой ESLint 10 / TypeScript 5.9;
 - текущий lint baseline минимальный: он проверяет парсинг и базовые правила, но строгие RN/hooks правила пока не включены как обязательный gate.
 
 Вывод:
@@ -80,8 +80,8 @@ npm run test:unit
 
 Текущий результат:
 
-- `43` test suites passed;
-- `140` tests passed;
+- `88` test suites passed;
+- `339` tests passed;
 - `0` snapshots;
 - команда использует `--runInBand --watchman=false`.
 
@@ -106,7 +106,13 @@ npm run test:unit
   - [__tests__/orders-list-hooks.test.tsx](../__tests__/orders-list-hooks.test.tsx);
   - [__tests__/updater-hooks.test.tsx](../__tests__/updater-hooks.test.tsx);
   - [__tests__/login-store.auth.test.ts](../__tests__/login-store.auth.test.ts);
-  - [__tests__/stat-store.api-flow.test.ts](../__tests__/stat-store.api-flow.test.ts).
+  - [__tests__/stat-store.api-flow.test.ts](../__tests__/stat-store.api-flow.test.ts);
+  - [__tests__/laravel-api-routing.test.ts](../__tests__/laravel-api-routing.test.ts);
+  - [__tests__/laravel-api-errors.test.ts](../__tests__/laravel-api-errors.test.ts);
+  - [__tests__/laravel-auth-api.test.ts](../__tests__/laravel-auth-api.test.ts);
+  - [__tests__/laravel-auth-token-storage.test.ts](../__tests__/laravel-auth-token-storage.test.ts);
+  - [__tests__/sso-callback.test.ts](../__tests__/sso-callback.test.ts);
+  - [__tests__/ui.auth-smart-captcha.test.tsx](../__tests__/ui.auth-smart-captcha.test.tsx).
 
 ## Обязательный локальный baseline
 
@@ -144,7 +150,7 @@ npm run test:unit
 
 Готово:
 
-- добавлен [eslint.config.js](../eslint.config.js) под ESLint 9;
+- добавлен [eslint.config.js](../eslint.config.js) под ESLint 10;
 - явно добавлены современные lint dev-зависимости:
   - `@eslint/js`;
   - `@typescript-eslint/parser`;

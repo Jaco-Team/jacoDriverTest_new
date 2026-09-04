@@ -30,11 +30,13 @@ export function useResetPwdLogic() {
   const [myPWD, setMyPWD] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [errorText, setErrorText] = useState('')
+  const [captchaToken, setCaptchaToken] = useState('')
+  const [captchaResetKey, setCaptchaResetKey] = useState(0)
 
   const isPasswordValid = isPasswordStrong(myPWD)
   const canRequestCode =
-    myLogin.trim().length > 0 && isPasswordValid && !isLoading
-  const canConfirmCode = myCode.length === 4 && !isLoading
+    myLogin.trim().length > 0 && isPasswordValid && captchaToken.length > 0 && !isLoading
+  const canConfirmCode = myCode.length === 6 && !isLoading
 
   const resetRecoveryState = useCallback(() => {
     setActiveStep(0)
@@ -43,6 +45,8 @@ export function useResetPwdLogic() {
     setMyPWD('')
     setShowPassword(false)
     setErrorText('')
+    setCaptchaToken('')
+    setCaptchaResetKey((currentValue) => currentValue + 1)
   }, [])
 
   useFocusEffect(
@@ -76,7 +80,7 @@ export function useResetPwdLogic() {
   }
 
   function handleCodeChange(value: string): void {
-    setMyCode(value.replace(/\D/g, '').slice(0, 4))
+    setMyCode(value.replace(/\D/g, '').slice(0, 6))
     setErrorText('')
   }
 
@@ -95,8 +99,15 @@ export function useResetPwdLogic() {
       return
     }
 
+    if (!captchaToken) {
+      setErrorText('Пройдите CAPTCHA, чтобы продолжить.')
+      return
+    }
+
     setErrorText('')
-    const result = await sendSMS(myLogin, myPWD)
+    const result = await sendSMS(myLogin, myPWD, captchaToken)
+    setCaptchaToken('')
+    setCaptchaResetKey((currentValue) => currentValue + 1)
 
     if (result.st === true) {
       setActiveStep(1)
@@ -107,13 +118,13 @@ export function useResetPwdLogic() {
   }
 
   async function confirmRecoveryCode(): Promise<void> {
-    if (myCode.length !== 4) {
-      setErrorText('Введите четырёхзначный код из SMS.')
+    if (myCode.length !== 6) {
+      setErrorText('Введите шестизначный код из SMS.')
       return
     }
 
     setErrorText('')
-    const result = await sendCode(myLogin, myCode)
+    const result = await sendCode(myLogin, myCode, myPWD)
 
     if (result.st === true) {
       const title = RU_SCREEN_NAMES.List_orders ?? 'Список заказов'
@@ -128,6 +139,18 @@ export function useResetPwdLogic() {
   function goToAuth(): void {
     Analytics.log(AnalyticsEvent.ScreenOpen, 'Открытие страницы Авторизации')
     navigation.navigate('Auth')
+  }
+
+  function handleCaptchaTokenChange(token: string): void {
+    setCaptchaToken(token)
+    if (token) {
+      setErrorText('')
+    }
+  }
+
+  function handleCaptchaError(message: string): void {
+    setCaptchaToken('')
+    setErrorText(message)
   }
 
   const panelTitle =
@@ -155,6 +178,9 @@ export function useResetPwdLogic() {
     showPassword,
     handleTogglePassword,
     errorText,
+    captchaResetKey,
+    handleCaptchaTokenChange,
+    handleCaptchaError,
     isPasswordValid,
     isLoading,
     canRequestCode,

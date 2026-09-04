@@ -1,5 +1,6 @@
 import React from 'react'
 import {
+  ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
@@ -7,8 +8,19 @@ import {
   Text,
   View,
 } from 'react-native'
+import { useNavigation, type ParamListBase } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import ColorPicker from 'react-native-wheel-color-picker'
-import { Check } from 'lucide-react-native'
+import { Check, X } from 'lucide-react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import {
+  Actionsheet,
+  ActionsheetBackdrop,
+  ActionsheetContent,
+  ActionsheetDragIndicator,
+  ActionsheetDragIndicatorWrapper,
+} from '@/components/ui/actionsheet'
 
 import {
   Slider,
@@ -38,13 +50,29 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
 
-function SettingsCard({ children, testID }: { children: React.ReactNode; testID?: string }) {
-  return <View testID={testID} style={styles.card}>{children}</View>
+function SettingsCard({
+  children,
+  roomy = false,
+  testID,
+}: {
+  children: React.ReactNode
+  roomy?: boolean
+  testID?: string
+}) {
+  return <View testID={testID} style={[styles.card, roomy && styles.cardRoomy]}>{children}</View>
 }
 
 function SectionTitle({ children, fontSize, centered = false }: { children: string; fontSize: number; centered?: boolean }) {
+  const titleFontSize = clamp(fontSize + 2, 16, 28)
+
   return (
-    <Text style={[styles.sectionTitle, centered && styles.textCentered, { fontSize: clamp(fontSize + 2, 16, 28) }]}>
+    <Text
+      style={[
+        styles.sectionTitle,
+        centered && styles.textCentered,
+        { fontSize: titleFontSize, lineHeight: titleFontSize * 1.2 },
+      ]}
+    >
       {children}
     </Text>
   )
@@ -126,6 +154,11 @@ function SettingsSlider({ value, min, max, step, onChange, testID }: SettingsSli
 }
 
 export function SettingsScreen(): React.JSX.Element {
+  const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>()
+  const insets = useSafeAreaInsets()
+  const [isPointListOpen, setIsPointListOpen] = React.useState(false)
+  const [isDeleteSheetOpen, setIsDeleteSheetOpen] = React.useState(false)
+  const [isDeletingAccount, setIsDeletingAccount] = React.useState(false)
   const {
     globalFontSize,
     typeShowDel,
@@ -152,6 +185,11 @@ export function SettingsScreen(): React.JSX.Element {
     setShowMapScale,
     isSaving,
     saveSettings,
+    points = [],
+    pointId = null,
+    setPointId,
+    isDemoAccount,
+    deleteDemoAccount,
   } = useSettingsLogic()
 
   const normalizedFontSize = Number.isFinite(globalFontSize) && globalFontSize > 0
@@ -171,14 +209,48 @@ export function SettingsScreen(): React.JSX.Element {
     { value: 'white_border', text: '21:46 (53 мин.)' },
     { value: 'black', text: '21:46 (53 мин.)' },
   ]
+  const pointOptions = [...points]
+    .filter(point => Number(point.id) > 0)
+    .sort((left, right) => {
+      const cityDiff = Number(left.city_id ?? 0) - Number(right.city_id ?? 0)
+      return cityDiff !== 0 ? cityDiff : Number(left.id) - Number(right.id)
+    })
+  const selectedPoint = pointOptions.find(point => point.id === pointId) ?? null
+
+  const closePointList = () => setIsPointListOpen(false)
+  const closeDeleteSheet = () => {
+    if (!isDeletingAccount) {
+      setIsDeleteSheetOpen(false)
+    }
+  }
+
+  const confirmDemoAccountDeletion = async () => {
+    if (isDeletingAccount) {
+      return
+    }
+
+    setIsDeletingAccount(true)
+
+    try {
+      const deleted = await deleteDemoAccount()
+
+      if (deleted) {
+        setIsDeleteSheetOpen(false)
+        navigation.reset({ index: 0, routes: [{ name: 'Auth' }] })
+      }
+    } finally {
+      setIsDeletingAccount(false)
+    }
+  }
 
   return (
-    <ScreenLayout>
-      <ScrollView
-        scrollEnabled={!isColorPickerActive}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
+    <>
+      <ScreenLayout>
+        <ScrollView
+          scrollEnabled={!isColorPickerActive}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
+        >
         <View style={styles.intro}>
           <Text style={[styles.introTitle, { fontSize: clamp(normalizedFontSize + 4, 18, 32) }]}>
             Настройки приложения
@@ -187,6 +259,65 @@ export function SettingsScreen(): React.JSX.Element {
             Настройте отображение карты и интерфейса под свой рабочий ритм.
           </Text>
         </View>
+
+        {pointOptions.length > 0 ? (
+          <SettingsCard roomy testID="settings-cafe-card">
+            <SectionTitle fontSize={normalizedFontSize}>Кафе</SectionTitle>
+            <View style={styles.pointSelect} testID="settings-cafe-field">
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded: isPointListOpen }}
+                onPress={() => setIsPointListOpen(true)}
+                style={styles.pointSelectValue}
+                testID="settings-cafe-select"
+              >
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.pointSelectText,
+                    !selectedPoint && styles.pointSelectPlaceholder,
+                    {
+                      fontSize: selectedPoint
+                        ? clamp(normalizedFontSize, 14, 22)
+                        : clamp(normalizedFontSize - 1, 12, 20),
+                    },
+                  ]}
+                >
+                  {selectedPoint?.name ?? 'Выберите кафе'}
+                </Text>
+              </Pressable>
+
+              <View style={styles.pointSelectControls}>
+                {selectedPoint ? (
+                  <Pressable
+                    accessibilityLabel="Очистить выбранное кафе"
+                    accessibilityRole="button"
+                    hitSlop={6}
+                    onPress={() => {
+                      setPointId(null)
+                      closePointList()
+                    }}
+                    style={styles.pointSelectControl}
+                    testID="settings-cafe-clear"
+                  >
+                    <X color={MUTED} size={21} strokeWidth={2.2} />
+                  </Pressable>
+                ) : null}
+
+                <Pressable
+                  accessibilityLabel="Открыть список кафе"
+                  accessibilityRole="button"
+                  hitSlop={6}
+                  onPress={() => setIsPointListOpen(true)}
+                  style={styles.pointSelectControl}
+                  testID="settings-cafe-open"
+                >
+                  <View style={styles.pointSelectArrow} />
+                </Pressable>
+              </View>
+            </View>
+          </SettingsCard>
+        ) : null}
 
         <SettingsCard testID="settings-map-data-card">
           <SectionTitle fontSize={normalizedFontSize}>Формат данных на карте</SectionTitle>
@@ -326,8 +457,140 @@ export function SettingsScreen(): React.JSX.Element {
             </View>
           </Pressable>
         </View>
-      </ScrollView>
-    </ScreenLayout>
+
+        {isDemoAccount ? (
+          <View style={styles.dangerZone} testID="settings-delete-account-zone">
+            <Text style={[styles.dangerTitle, { fontSize: clamp(normalizedFontSize + 2, 16, 24) }]}>
+              Удаление аккаунта
+            </Text>
+            <Text style={[styles.dangerText, { fontSize: helperFontSize }]}>
+              После удаления вы выйдете из аккаунта. Это действие нельзя отменить.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setIsDeleteSheetOpen(true)}
+              style={({ pressed }) => [styles.deleteAccountButton, pressed && styles.deleteAccountButtonPressed]}
+              testID="settings-delete-account"
+            >
+              <Text style={[styles.deleteAccountButtonText, { fontSize: clamp(normalizedFontSize, 14, 22) }]}>
+                Удалить аккаунт
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+        </ScrollView>
+      </ScreenLayout>
+
+      <Actionsheet isOpen={isPointListOpen} onClose={closePointList}>
+        <ActionsheetBackdrop testID="settings-cafe-backdrop" />
+        <ActionsheetContent
+          style={[styles.pointSheet, { paddingBottom: insets.bottom + 24 }]}
+          testID="settings-cafe-sheet"
+        >
+          <ActionsheetDragIndicatorWrapper>
+            <ActionsheetDragIndicator style={styles.pointSheetHandleArea}>
+              <View style={styles.pointSheetHandle} />
+            </ActionsheetDragIndicator>
+          </ActionsheetDragIndicatorWrapper>
+
+          <Text
+            style={[
+              styles.pointSheetTitle,
+              { fontSize: clamp(normalizedFontSize + 8, 22, 30) },
+            ]}
+          >
+            Выберите кафе
+          </Text>
+
+          <ScrollView
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator
+            style={styles.pointOptionsScroll}
+            contentContainerStyle={styles.pointOptionsContent}
+          >
+            {pointOptions.map(point => {
+              const selected = point.id === pointId
+
+              return (
+                <Pressable
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  key={point.id}
+                  onPress={() => {
+                    setPointId(point.id)
+                    closePointList()
+                  }}
+                  style={[
+                    styles.pointOption,
+                    selected && styles.pointOptionSelected,
+                  ]}
+                  testID={`settings-cafe-${point.id}`}
+                >
+                  <Text
+                    numberOfLines={2}
+                    style={[
+                      styles.pointOptionText,
+                      { fontSize: clamp(normalizedFontSize + 2, 16, 22) },
+                      selected && styles.pointOptionTextSelected,
+                    ]}
+                  >
+                    {point.name}
+                  </Text>
+                </Pressable>
+              )
+            })}
+          </ScrollView>
+        </ActionsheetContent>
+      </Actionsheet>
+
+      <Actionsheet isOpen={isDeleteSheetOpen} onClose={closeDeleteSheet}>
+        <ActionsheetBackdrop testID="settings-delete-account-backdrop" />
+        <ActionsheetContent
+          style={[styles.deleteSheet, { paddingBottom: insets.bottom + 24 }]}
+          testID="settings-delete-account-sheet"
+        >
+          <ActionsheetDragIndicatorWrapper>
+            <ActionsheetDragIndicator style={styles.pointSheetHandleArea}>
+              <View style={styles.pointSheetHandle} />
+            </ActionsheetDragIndicator>
+          </ActionsheetDragIndicatorWrapper>
+
+          <Text style={[styles.deleteSheetTitle, { fontSize: clamp(normalizedFontSize + 6, 20, 28) }]}>
+            Удалить аккаунт?
+          </Text>
+          <Text style={[styles.deleteSheetText, { fontSize: clamp(normalizedFontSize, 14, 21) }]}>
+            Вы уверены? После удаления вы выйдете из аккаунта, а локальная сессия будет очищена.
+          </Text>
+
+          <View style={styles.deleteSheetActions}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isDeletingAccount}
+              onPress={closeDeleteSheet}
+              style={styles.deleteSheetCancel}
+              testID="settings-delete-account-cancel"
+            >
+              <Text style={styles.deleteSheetCancelText}>Отмена</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ busy: isDeletingAccount, disabled: isDeletingAccount }}
+              disabled={isDeletingAccount}
+              onPress={() => void confirmDemoAccountDeletion()}
+              style={[styles.deleteSheetConfirm, isDeletingAccount && styles.deleteSheetConfirmDisabled]}
+              testID="settings-delete-account-confirm"
+            >
+              {isDeletingAccount ? (
+                <ActivityIndicator color="#ffffff" size="small" testID="settings-delete-account-loading" />
+              ) : (
+                <Text style={styles.deleteSheetConfirmText}>Удалить</Text>
+              )}
+            </Pressable>
+          </View>
+        </ActionsheetContent>
+      </Actionsheet>
+    </>
   )
 }
 
@@ -342,13 +605,31 @@ const styles = StyleSheet.create({
   introTitle: { color: TEXT, fontWeight: '800', lineHeight: 28 },
   introText: { color: MUTED, lineHeight: 22, marginTop: 8 },
   card: { borderRadius: 24, borderWidth: 1, borderColor: BORDER, backgroundColor: '#ffffff', padding: 16, overflow: 'visible', ...cardShadow },
-  sectionTitle: { color: TEXT, fontWeight: '700', lineHeight: 28, marginBottom: 12 },
+  cardRoomy: { padding: 20 },
+  sectionTitle: { color: TEXT, fontWeight: '700', marginBottom: 12 },
   previewSurface: { minHeight: 170, borderRadius: 20, borderWidth: 1, borderColor: BORDER, backgroundColor: '#e5e5e5', paddingHorizontal: 12, paddingVertical: 12, justifyContent: 'space-around', overflow: 'hidden' },
   themePreviewSurface: { minHeight: 400 },
   choiceRow: { minHeight: 43, borderRadius: 12, justifyContent: 'center' },
   choiceRowContent: { width: '100%', minHeight: 43, paddingHorizontal: 4, paddingVertical: 7, flexDirection: 'row', alignItems: 'center' },
   choicePressed: { backgroundColor: '#eef2f5' },
   choiceLabel: { color: TEXT, lineHeight: 24, flex: 1 },
+  pointSelect: { width: '100%', minHeight: 58, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(66, 98, 125, 0.22)', backgroundColor: '#ffffff', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, shadowColor: '#1f2b36', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 1 },
+  pointSelectValue: { flex: 1, minHeight: 56, justifyContent: 'center' },
+  pointSelectText: { color: TEXT, fontWeight: '600', lineHeight: 22 },
+  pointSelectPlaceholder: { color: MUTED },
+  pointSelectControls: { flexDirection: 'row', alignItems: 'center' },
+  pointSelectControl: { width: 34, minHeight: 56, alignItems: 'center', justifyContent: 'center' },
+  pointSelectArrow: { width: 0, height: 0, borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 6, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: MUTED },
+  pointSheet: { minHeight: '68%', maxHeight: '90%', overflow: 'hidden', paddingTop: 8, paddingHorizontal: 0, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 0, backgroundColor: '#ffffff' },
+  pointSheetHandleArea: { width: '100%', height: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
+  pointSheetHandle: { width: 56, height: 5, borderRadius: 999, backgroundColor: 'rgba(31, 43, 54, 0.22)' },
+  pointSheetTitle: { width: '100%', color: TEXT, fontWeight: '800', lineHeight: 36, textAlign: 'center', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 18 },
+  pointOptionsScroll: { width: '100%', flexGrow: 0 },
+  pointOptionsContent: { paddingHorizontal: 32, paddingBottom: 24 },
+  pointOption: { width: '100%', minHeight: 62, paddingHorizontal: 15, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: 'rgba(31, 43, 54, 0.20)', justifyContent: 'center', backgroundColor: '#ffffff' },
+  pointOptionSelected: { backgroundColor: SURFACE_ALT },
+  pointOptionText: { color: '#333333', fontWeight: '400', lineHeight: 24 },
+  pointOptionTextSelected: { fontWeight: '700' },
   radioOuter: { width: 21, height: 21, borderRadius: 11, borderWidth: 2, borderColor: '#9aabb8', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   radioOuterSelected: { borderColor: BRAND },
   radioInner: { width: 11, height: 11, borderRadius: 6, backgroundColor: BRAND },
@@ -376,4 +657,19 @@ const styles = StyleSheet.create({
   saveButtonPressed: { backgroundColor: '#a9002a' },
   saveButtonDisabled: { opacity: 0.65 },
   saveButtonText: { color: '#ffffff', fontWeight: '700' },
+  dangerZone: { borderRadius: 20, borderWidth: 1, borderColor: 'rgba(204, 0, 51, 0.24)', backgroundColor: '#fff6f7', padding: 16, marginBottom: 22 },
+  dangerTitle: { color: '#8f0024', fontWeight: '800', lineHeight: 28 },
+  dangerText: { color: '#6f4b54', lineHeight: 21, marginTop: 7, marginBottom: 16 },
+  deleteAccountButton: { minHeight: 50, borderRadius: 15, borderWidth: 1.5, borderColor: BRAND, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 },
+  deleteAccountButtonPressed: { backgroundColor: '#ffe9ee' },
+  deleteAccountButtonText: { color: BRAND, fontWeight: '700' },
+  deleteSheet: { paddingTop: 8, paddingHorizontal: 20, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 0, backgroundColor: '#ffffff' },
+  deleteSheetTitle: { width: '100%', color: TEXT, fontWeight: '800', lineHeight: 34, textAlign: 'left', paddingTop: 14 },
+  deleteSheetText: { width: '100%', color: MUTED, lineHeight: 23, marginTop: 8 },
+  deleteSheetActions: { width: '100%', flexDirection: 'row', gap: 10, marginTop: 24 },
+  deleteSheetCancel: { flex: 1, minHeight: 52, borderRadius: 15, backgroundColor: '#e8edf1', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  deleteSheetCancelText: { color: TEXT, fontSize: 16, fontWeight: '700' },
+  deleteSheetConfirm: { flex: 1, minHeight: 52, borderRadius: 15, backgroundColor: BRAND, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  deleteSheetConfirmDisabled: { opacity: 0.65 },
+  deleteSheetConfirmText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
 })

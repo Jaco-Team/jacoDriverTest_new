@@ -32,13 +32,13 @@
 
 ## Основной стек
 
-- `React Native`
+- `React Native 0.87.1` с New Architecture / Fabric и Hermes
 - `TypeScript`
 - `Zustand` для глобального состояния
 - `React Navigation` с `Drawer.Navigator`
 - `NativeWind` и `Gluestack UI` для UI-слоя
 - `Axios` для API-запросов
-- `AsyncStorage` для хранения токена и локальных данных
+- `react-native-keychain` для Bearer-токена; `AsyncStorage` — только для несекретного локального состояния
 - `Firebase Messaging` и локальная notification-обвязка
 - `AppMetrica` для аналитики
 - `Sentry` для crash/error reporting
@@ -64,15 +64,19 @@
 - `npm run ios`
 - `npm start`
 - `npm run lint`
+- `npm run typecheck`
+- `npm run test:unit`
 - `npm test`
 - `npm run test:ib`
 - `npm run test:clean`
 - `npm run test:ci`
 
-На момент фиксации документации отдельного скрипта `typecheck` еще нет. Фактическая команда проверки типов:
+Обязательный локальный baseline:
 
 ```bash
-npx tsc --noEmit
+npm run lint
+npm run typecheck
+npm run test:unit
 ```
 
 Подробнее про текущий статус проверок:
@@ -255,11 +259,19 @@ npx tsc --noEmit
 
 ### Backend API
 
-Основная точка:
+Приложение использует Laravel REST API `/api/v1`; legacy API удалён из production-кода.
+Debug обращается к `http://localhost:8080`, Release — к
+`https://apidriver.jacochef.ru`. Основные точки:
 
 - [src/shared/store/api.ts](../src/shared/store/api.ts)
+- [src/shared/api/laravel/config.ts](../src/shared/api/laravel/config.ts)
+- [src/shared/api/laravel/connector.ts](../src/shared/api/laravel/connector.ts)
+- [src/shared/api/laravel/routes.ts](../src/shared/api/laravel/routes.ts)
 
-API используется через store-методы и бизнес-хуки.
+API используется через именованные routes, store-методы и бизнес-хуки. Авторизация
+работает через Bearer-токен в Keychain/Keystore; CAPTCHA и SSO имеют отдельные
+mobile-сценарии, для которых требуется production-развёртывание подготовленных
+изменений Laravel.
 
 ### Аналитика
 
@@ -381,7 +393,7 @@ API используется через store-методы и бизнес-ху�
 
 - много нативных зависимостей замокано вручную;
 - тесты завязаны на fake timers;
-- текущий Jest baseline почти рабочий, но требует стабилизации.
+- текущий Jest baseline стабилен: на 04.09.2026 проходят 88 suites / 339 tests.
 
 ## Минимальный безопасный подход к изменениям
 
@@ -398,3 +410,6 @@ API используется через store-методы и бизнес-ху�
 - [docs/project-rules.md](./project-rules.md)
 - [docs/quality-baseline.md](./quality-baseline.md)
 - [docs/testing/README.md](./testing/README.md)
+- [docs/new-architecture-migration-plan.md](./new-architecture-migration-plan.md)
+- [docs/driver-site-ui-migration-plan.md](./driver-site-ui-migration-plan.md)
+- [docs/laravel-api-mobile-migration-plan.md](./laravel-api-mobile-migration-plan.md)

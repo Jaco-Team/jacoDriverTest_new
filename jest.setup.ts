@@ -469,14 +469,6 @@ try {
   async () => ({ok: true, json: async () => ({})}) as any,
 );
 
-jest.mock('query-string', () => ({
-  __esModule: true,
-  default: {
-    stringify: (obj: any) => new URLSearchParams(obj as any).toString(),
-    parse: (s: string) => Object.fromEntries(new URLSearchParams(s)),
-  },
-}));
-
 jest.mock('react-native-screens', () => require('react-native-screens/mock'));
 
 jest.mock('@react-native-clipboard/clipboard', () => {

@@ -22,7 +22,7 @@ export interface globalTypes {
   showAlertText: (is_open: boolean, text?: string) => void,
 
   tokenAuth: string,
-  setTokenAuth: (token: string) => void,
+  setTokenAuth: (token: string) => Promise<void>,
   getTokenAuth: () => Promise<string>,
   getAuthToken: () => Promise<string>,
 

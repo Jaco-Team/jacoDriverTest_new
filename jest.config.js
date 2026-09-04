@@ -9,11 +9,14 @@ module.exports = {
   testMatch: ['**/?(*.)+(spec|test).[tj]s?(x)'],
 
   transformIgnorePatterns: [
-    'node_modules/(?!(?:@react-native|react-native|@react-navigation|@react-navigation/elements|@react-navigation/drawer|@react-navigation/native|@react-navigation/native-stack|@react-navigation/routers|react-native-drawer-layout|@react-native-firebase|@notifee|@gluestack-ui|@gorhom|react-native-yamap-plus|react-native-reanimated|react-native-gesture-handler|nativewind|react-native-css-interop|@legendapp/motion|@expo/html-elements|react-native-wheel-color-picker|@fortawesome/react-native-fontawesome|@fortawesome/free-solid-svg-icons|@fortawesome/fontawesome-svg-core|react-native-modal-datetime-picker|@react-native-community/datetimepicker|react-native-image-viewing|react-native-image-picker)/)',
+    'node_modules/(?!(?:@react-native|react-native|@react-navigation|@react-navigation/elements|@react-navigation/drawer|@react-navigation/native|@react-navigation/native-stack|@react-navigation/routers|react-native-drawer-layout|@react-native-firebase|@notifee|@gluestack-ui|@gorhom|react-native-yamap-plus|react-native-reanimated|react-native-gesture-handler|react-native-vector-icons|nativewind|react-native-css-interop|@legendapp/motion|@expo/html-elements|react-native-wheel-color-picker|@fortawesome/react-native-fontawesome|@fortawesome/free-solid-svg-icons|@fortawesome/fontawesome-svg-core|react-native-modal-datetime-picker|@react-native-community/datetimepicker|react-native-image-viewing|react-native-image-picker)/)',
   ],
 
   moduleNameMapper: {
     '^react-native$': '<rootDir>/__mocks__/react-native.js',
+    '^react-native-keychain$': '<rootDir>/__mocks__/reactNativeKeychainMock.js',
+    '^react-native-webview$': '<rootDir>/__mocks__/reactNativeWebViewMock.js',
+    '^react-native-inappbrowser-reborn$': '<rootDir>/__mocks__/reactNativeInAppBrowserMock.js',
 
     // сторонние
     '^@react-spring/native$': '<rootDir>/__mocks__/reactSpringNativeMock.js',
@@ -60,5 +63,3 @@ module.exports = {
   // clearMocks: true,
   // resetMocks: true,
 };
-
-

@@ -9,6 +9,7 @@ const mockMapLogic = {
   home: { lat: 53.2, lon: 50.1 },
   set_type_location: jest.fn(),
   type_location: 'none' as 'none' | 'location' | 'watch',
+  driver_location_requesting: false,
   night_map: 0,
   is_scaleMap: 1,
   rotate_map: false,
@@ -82,6 +83,7 @@ import { MapScreen } from '@/features/orders-map/ui/MapScreen'
 describe('экран карты заказов', () => {
   beforeEach(() => {
     mockMapLogic.type_location = 'none'
+    mockMapLogic.driver_location_requesting = false
     mockMapLogic.set_type_location.mockClear()
   })
 
@@ -130,6 +132,15 @@ describe('экран карты заказов', () => {
     expect(screen.getByTestId('orders-map-driver-location-icon').props.icon.iconName).toBe(
       'location-pin',
     )
+  })
+
+  it('оставляет иконку геопозиции на месте во время поиска координаты', async () => {
+    mockMapLogic.driver_location_requesting = true
+
+    await render(<MapScreen />)
+
+    expect(screen.getByTestId('orders-map-driver-location-icon')).toBeTruthy()
+    expect(screen.getByTestId('orders-map-driver-location').props.disabled).toBe(true)
   })
 
   it('не добавляет локальные кнопки фильтра и обновления поверх карты', async () => {

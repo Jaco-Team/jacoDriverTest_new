@@ -103,6 +103,12 @@ describe('визуальная структура карточки заказа'
     expect(screen.getByTestId('order-card')).toHaveStyle({
       backgroundColor: '#D95030',
     })
+    expect(screen.getByTestId('order-card-title')).toHaveStyle({
+      color: '#1F2D38',
+    })
+    expect(screen.getByText('Адрес: ')).toHaveStyle({
+      color: '#1F2D38',
+    })
     expect(screen.getByTestId('order-delete-reason')).toHaveTextContent(
       'Причина удаления: Клиент отменил заказ',
     )

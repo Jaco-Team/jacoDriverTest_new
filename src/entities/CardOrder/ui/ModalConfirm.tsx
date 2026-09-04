@@ -6,8 +6,8 @@ import {
   Text,
   View,
 } from 'react-native'
-import { CircleCheck, CircleX, TriangleAlert, UserX } from 'lucide-react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
 import { useShallow } from 'zustand/react/shallow'
 
 import {
@@ -28,11 +28,7 @@ interface ConfirmConfig {
   confirmText: string
   confirmColor: string
   iconBackground: string
-  icon: React.ComponentType<{
-    color?: string
-    size?: number
-    strokeWidth?: number
-  }>
+  iconName: 'check-circle' | 'cancel' | 'person-off' | 'warning'
 }
 
 interface OrderConfirmModalProps {
@@ -63,7 +59,7 @@ function getConfig(
         confirmText: 'Завершить',
         confirmColor: '#2196F3',
         iconBackground: 'rgba(33, 150, 243, 0.10)',
-        icon: CircleCheck,
+        iconName: 'check-circle',
       }
     case 'cancel':
       return {
@@ -72,7 +68,7 @@ function getConfig(
         confirmText: 'Отменить',
         confirmColor: appPalette.brand,
         iconBackground: 'rgba(204, 0, 51, 0.10)',
-        icon: CircleX,
+        iconName: 'cancel',
       }
     case 'fake':
       return {
@@ -81,7 +77,7 @@ function getConfig(
         confirmText: 'Подтвердить',
         confirmColor: '#FF9800',
         iconBackground: 'rgba(255, 152, 0, 0.10)',
-        icon: UserX,
+        iconName: 'person-off',
       }
     default:
       return {
@@ -90,7 +86,7 @@ function getConfig(
         confirmText: 'Подтвердить',
         confirmColor: appPalette.primary,
         iconBackground: 'rgba(66, 98, 125, 0.10)',
-        icon: TriangleAlert,
+        iconName: 'warning',
       }
   }
 }
@@ -106,7 +102,6 @@ export function OrderConfirmModal({
 }: OrderConfirmModalProps): React.JSX.Element {
   const insets = useSafeAreaInsets()
   const config = getConfig(typeConfirm, orderId)
-  const ConfigIcon = config.icon
   const titleFontSize = clampFontSize(globalFontSize + 4, 18, 24)
   const bodyFontSize = clampFontSize(globalFontSize, 14, 18)
   const actionFontSize = clampFontSize(globalFontSize + 1, 14, 18)
@@ -148,10 +143,11 @@ export function OrderConfirmModal({
               { backgroundColor: config.iconBackground },
             ]}
           >
-            <ConfigIcon
+            <MaterialIcons
               color={config.confirmColor}
+              name={config.iconName}
               size={24}
-              strokeWidth={2}
+              testID={`order-confirm-icon-${config.iconName}`}
             />
           </View>
           <Text
@@ -297,6 +293,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(31, 43, 54, 0.2)',
   },
   headingRow: {
+    width: '100%',
+    alignSelf: 'stretch',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -316,6 +314,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Roboto-Bold',
   },
   message: {
+    width: '100%',
+    alignSelf: 'stretch',
+    textAlign: 'left',
     marginBottom: 20,
     color: appPalette.textMuted,
     fontFamily: 'Roboto-Regular',

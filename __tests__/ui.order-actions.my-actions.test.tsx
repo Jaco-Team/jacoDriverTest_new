@@ -66,7 +66,7 @@ test('мой заказ: cancel/finish/fake → корректные setActiveCo
   expect(phoneButton).toHaveStyle({
     height: 44,
     borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+    backgroundColor: '#E0E0E0',
   });
   expect(screen.getByText(item.number)).toHaveStyle({
     color: '#1F2D38',

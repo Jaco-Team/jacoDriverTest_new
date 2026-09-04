@@ -91,7 +91,7 @@ describe('боковое меню', () => {
     }
   })
 
-  it('показывает активный раздел, среднее время и временно открывает статистику в DEV', async () => {
+  it('показывает активный раздел и скрывает статистику без разрешения API', async () => {
     const screen = await render(
       <CustomDrawerContent {...drawerProps('List_orders')} />,
     )
@@ -106,7 +106,7 @@ describe('боковое меню', () => {
       borderWidth: 1,
       backgroundColor: '#E9EEF3',
     })
-    expect(screen.getByTestId('drawer-route-Statistics')).toBeTruthy()
+    expect(screen.queryByTestId('drawer-route-Statistics')).toBeNull()
     expect(screen.getByTestId('drawer-route-OrdersUiPreview')).toBeTruthy()
     expect(screen.getByText('+7 (900) 123-45-67')).toBeTruthy()
     expect(screen.getByTestId('drawer-contact-Директор')).toHaveStyle({
@@ -116,6 +116,16 @@ describe('боковое меню', () => {
       backgroundColor: '#FFFFFF',
     })
     expect(screen.queryByTestId('drawer-contact-Контакт-центр')).toBeNull()
+  })
+
+  it('показывает статистику только при разрешении API', async () => {
+    mockGlobalState.is_need_page_stat = true
+
+    const screen = await render(
+      <CustomDrawerContent {...drawerProps('List_orders')} />,
+    )
+
+    expect(screen.getByTestId('drawer-route-Statistics')).toBeTruthy()
   })
 
   it('сохраняет переходы, звонок и выход', async () => {

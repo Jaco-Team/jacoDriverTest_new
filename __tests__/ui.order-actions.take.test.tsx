@@ -92,7 +92,7 @@ describe('OrderActions — кнопка «Взять»', () => {
     expect(phoneBtn).toHaveStyle({
       height: 44,
       borderRadius: 8,
-      backgroundColor: 'rgba(0, 0, 0, 0.08)',
+      backgroundColor: '#E0E0E0',
     });
     expect(screen.getByText(props.item.number)).toHaveStyle({
       color: '#1F2D38',

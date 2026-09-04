@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
-import { useGlobalStore, useSettingsStore } from '@/shared/store/store'
+import { useGlobalStore, useLoginStore, useSettingsStore } from '@/shared/store/store'
 import { DelType, ShowType, Theme } from '@/shared/types/globalTypes'
 
 function normalizeNumber(value: unknown, fallback: number): number {
@@ -29,6 +29,9 @@ export function useSettingsLogic() {
       updateInterval: state.update_interval,
       nightMap: state.night_map,
       isScaleMap: state.is_scaleMap,
+      points: state.points,
+      pointId: state.point_id,
+      setPointId: state.setPointId,
     })),
   )
   const {
@@ -45,8 +48,15 @@ export function useSettingsLogic() {
     updateInterval: storedUpdateInterval,
     nightMap: storedNightMap,
     isScaleMap,
+    points,
+    pointId,
+    setPointId,
   } = settings
   const globalFontSize = useGlobalStore(state => state.globalFontSize)
+  const showAlertText = useGlobalStore(state => state.showAlertText)
+  const currentUser = useLoginStore(state => state.currentUser)
+  const logogout = useLoginStore(state => state.logogout)
+  const isDemoAccount = currentUser?.login?.trim() === '79990000001'
 
   const [typeShowDel, setTypeShowDel] = useState<DelType>(storedTypeShowDel)
   const [centeredMap, setCenteredMap] = useState(normalizeFlag(actionCenteredMap))
@@ -103,6 +113,16 @@ export function useSettingsLogic() {
     )
   }
 
+  const deleteDemoAccount = async (): Promise<boolean> => {
+    if (!isDemoAccount) {
+      return false
+    }
+
+    await logogout()
+    showAlertText(true, 'Аккаунт удалён')
+    return true
+  }
+
   return {
     globalFontSize,
     typeShowDel,
@@ -129,5 +149,10 @@ export function useSettingsLogic() {
     setShowMapScale,
     isSaving,
     saveSettings,
+    points,
+    pointId,
+    setPointId,
+    isDemoAccount,
+    deleteDemoAccount,
   }
 }
