@@ -105,6 +105,19 @@ describe('DriverMarker', () => {
     expect(marker.props.point).toEqual({ lat: 0, lon: 0 })
   })
 
+  it('не передаёт нативной карте некорректную координату курьера', async () => {
+    mockDriverMarkerState = {
+      ...mockDriverMarkerState,
+      location_driver: { lat: Number.NaN, lon: 49.40071 },
+    }
+
+    const screen = await render(<DriverMarker image={null} />)
+
+    const marker = screen.getByTestId('orders-map-driver-native-marker')
+    expect(marker.props.visible).toBe(false)
+    expect(marker.props.point).toEqual({ lat: 0, lon: 0 })
+  })
+
   it('создаёт PNG и передаёт его вместе с координатами нативному маркеру', async () => {
     const screen = await render(<DriverMarkerProbe />)
 

@@ -8,6 +8,10 @@ module.exports = function (api) {
       ...(!isTest ? ['nativewind/babel'] : []),
     ],
     plugins: [
+      [
+        'transform-inline-environment-variables',
+        { include: ['JACO_LARAVEL_API'] },
+      ],
       ['module-resolver', { root: ['./src'], alias: { '@': './src' } }],
       '@babel/plugin-transform-class-static-block',
       'react-native-worklets/plugin',

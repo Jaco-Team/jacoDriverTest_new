@@ -2,7 +2,7 @@
 
 ## Дата фиксации
 
-2026-09-04
+2026-09-07
 
 ## Короткий статус
 
@@ -24,9 +24,9 @@ npm run test:unit
 
 Текущий результат:
 
-- `88` suites passed;
-- `339` tests passed;
-- всего `88` suites и `339` tests.
+- `90` suites passed;
+- `346` tests passed;
+- всего `90` suites и `346` tests.
 
 Сделано:
 
@@ -52,7 +52,8 @@ npm run test:unit
   - SSO callback/exchange and SmartCaptcha UI lifecycle;
   - Laravel auth, settings, feedback, orders and menu visibility;
   - demo-account deletion guards and absence of destructive requests;
-  - Android/Fabric map marker stability during repeated geolocation.
+  - Android/Fabric map marker stability during repeated geolocation;
+  - iOS/Fabric marker geometry initialization and invalid-coordinate filtering.
 
 ## Typecheck
 
@@ -118,6 +119,15 @@ GitHub gate добавлен:
 - [docs/testing/git-checks.md](./git-checks.md)
 
 ## Журнал решений
+
+### 2026-09-07
+
+Сделано:
+
+- iOS/Fabric crash при mount маркера с неинициализированной geometry закрыт
+  воспроизводимым `patch-package`-патчем для `react-native-yamap-plus@6.11.0`;
+- координаты заказов, домашней точки и курьера валидируются до передачи в MapKit;
+- `lint`, `typecheck`, 90 suites / 346 tests пройдены без запуска эмуляторов.
 
 ### 2026-09-04
 

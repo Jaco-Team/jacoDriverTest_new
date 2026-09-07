@@ -29,6 +29,7 @@ const { width, height } = Dimensions.get('window')
 const MAP_CONTROL_RIGHT = 20
 
 import { useMapLogic } from '../model/useMapLogic'
+import { isValidMapPoint } from '../model/mapPoint'
 
 import { Center } from '@/components/ui/center'
 import { Spinner } from '@/components/ui/spinner'
@@ -59,6 +60,7 @@ export function MapScreen() {
   } = useMapLogic()
   const [hasViewport, setHasViewport] = useState(false)
   const [driverMarkerImage, setDriverMarkerImage] = useState<DriverMarkerImageSource | null>(null)
+  const validHome = isValidMapPoint(home) ? home : null
 
   const mtop = (height - 300) / 4
 
@@ -185,11 +187,11 @@ export function MapScreen() {
             style={StyleSheet.absoluteFill}
             rotateGesturesDisabled={!rotate_map}
             nightMode={night_map == 1}
-            initialRegion={home ? { lat: home.lat, lon: home.lon, zoom: 12 } : undefined}
+            initialRegion={validHome ? { lat: validHome.lat, lon: validHome.lon, zoom: 12 } : undefined}
             onMapLoaded={handleMapLoaded}
             collapsable={false}
           >
-            {home && <HomeMarker point={home} getHome={getHome} />}
+            {validHome && <HomeMarker point={validHome} getHome={getHome} />}
             <DriverMarker image={driverMarkerImage} />
             <ListOrders />
           </YaMap>

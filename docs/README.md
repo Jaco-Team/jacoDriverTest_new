@@ -2,8 +2,8 @@
 
 Эта папка нужна как единое место для рабочей документации по `jacoDriverTest`.
 
-Актуальный статус на 04.09.2026: RN `0.87.1` / Fabric, UI и мобильный переход
-на Laravel API реализованы; локальный baseline — 88 suites / 339 tests. Android
+Актуальный статус на 07.09.2026: RN `0.87.1` / Fabric, UI и мобильный переход
+на Laravel API реализованы; локальный baseline — 90 suites / 346 tests. Android
 release проверен на реальном Samsung, iOS — на Simulator. Открыты production-
 развёртывание mobile CAPTCHA/SSO ответственным за сервер, реальный iPhone, решение
 по QR-оплате и тема после появления готового эталона на сайте.

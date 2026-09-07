@@ -50,12 +50,13 @@ describe('New Architecture contract', () => {
     expect(deps['@react-native-firebase/messaging']).toMatch(/^\^?26\./);
     expect(pkg.devDependencies.eslint).toMatch(/^\^?10\./);
     expect(pkg.devDependencies['@babel/core']).toMatch(/^\^?7\.29/);
-    expect(pkg.devDependencies.typescript).toMatch(/^\^?5\.9/);
+    expect(pkg.devDependencies['@typescript/native']).toBeUndefined();
+    expect(pkg.devDependencies.typescript).toBe('6.0.3');
     expect(deps['@appmetrica/react-native-analytics']).toMatch(/^\^?4\.2/);
     expect(deps['@react-native-async-storage/async-storage']).toMatch(/^\^?3\.1/);
     expect(deps['@react-native-community/datetimepicker']).toMatch(/^\^?9\.2/);
     expect(deps['@fortawesome/react-native-fontawesome']).toMatch(/^\^?1\.0/);
-    expect(deps['lucide-react-native']).toMatch(/^\^?1\.34/);
+    expect(deps['lucide-react-native']).toMatch(/^\^?1\.41/);
     expect(deps['@react-native-community/netinfo']).toMatch(/^\^?12\.0/);
     expect(deps['react-native-device-info']).toMatch(/^\^?15\.0/);
     expect(read('ios/Podfile')).toMatch(/\$RNFirebaseDisableSPM\s*=\s*true/);
@@ -80,6 +81,13 @@ describe('New Architecture contract', () => {
     expect(read('android/build.gradle')).toContain("maps.mobile:4.42.0-full");
     expect(read('android/app/build.gradle')).toContain("maps.mobile:4.42.0-full");
     expect(read('android/app/build.gradle')).not.toContain('4.19.0-full');
+  });
+
+  it('инициализирует geometry iOS-маркера до Fabric mount', () => {
+    const markerPatch = read('patches/react-native-yamap-plus+6.11.0.patch');
+
+    expect(markerPatch).toContain('_point = [YMKPoint pointWithLatitude:0 longitude:0]');
+    expect(markerPatch).toContain('prepareForRecycle');
   });
 
   it('Android использует edge-to-edge и системный Splash в стиле Greeting', () => {

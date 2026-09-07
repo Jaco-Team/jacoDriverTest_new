@@ -207,7 +207,7 @@ describe('auth/reset hooks', () => {
     });
 
     expect(mockInAppBrowserOpenAuth).toHaveBeenCalledWith(
-      'http://localhost:8080/auth/sso/login?client=mobile',
+      'https://apidriver.jacochef.ru/auth/sso/login?client=mobile',
       'jacodriver://auth/sso',
       expect.objectContaining({
         ephemeralWebSession: false,
@@ -358,7 +358,7 @@ describe('auth/reset hooks', () => {
     });
 
     expect(Linking.openURL).toHaveBeenCalledWith(
-      'http://localhost:8080/auth/sso/login?client=mobile',
+      'https://apidriver.jacochef.ru/auth/sso/login?client=mobile',
     );
   });
 

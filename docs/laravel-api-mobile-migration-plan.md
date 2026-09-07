@@ -133,12 +133,14 @@ npm run build
 PORT=3225 npm run start
 ```
 
-Адрес Laravel API для мобильного клиента выбирается по типу сборки:
+Адрес Laravel API для мобильного клиента выбирается явным режимом:
 
-- Debug: `http://localhost:8080`;
-- Release: `https://apidriver.jacochef.ru`.
+- по умолчанию Debug и Release: `https://apidriver.jacochef.ru`;
+- локальная разработка Laravel/CAPTCHA/SSO: запустить Metro командой
+  `npm run start:local-api`, которая подставляет `JACO_LARAVEL_API=local` и
+  использует `http://localhost:8080`.
 
-На Android перед Debug-проверкой выполнить `adb reverse tcp:8080 tcp:8080`, чтобы
+На Android перед local-проверкой выполнить `adb reverse tcp:8080 tcp:8080`, чтобы
 `localhost:8080` устройства был направлен в локальный Laravel на Mac. iOS Simulator
 доступен по этому адресу напрямую. Такой единый hostname также соответствует
 локальной конфигурации SmartCaptcha.
@@ -180,8 +182,9 @@ Android уже разрешает cleartext для локальной разра
 
 ### Этап 1. Новый транспорт и конфигурация API
 
-- [x] Добавить единый конфиг origin без URL в store: Debug использует
-  `http://localhost:8080`, Release — `https://apidriver.jacochef.ru`.
+- [x] Добавить единый конфиг origin без URL в store: Debug и Release по умолчанию
+  используют `https://apidriver.jacochef.ru`, а локальный backend включается
+  явно через `JACO_LARAVEL_API=local` / `npm run start:local-api`.
 - [x] Добавить отдельный Axios-клиент и именованные Laravel routes.
 - [x] Передавать токен только через `Authorization: Bearer <token>`.
 - [x] Нормализовать `401`, `403`, `422`, `429`, timeout и отсутствие сети.

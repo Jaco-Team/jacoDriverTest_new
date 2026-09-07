@@ -260,8 +260,9 @@ npm run test:unit
 ### Backend API
 
 Приложение использует Laravel REST API `/api/v1`; legacy API удалён из production-кода.
-Debug обращается к `http://localhost:8080`, Release — к
-`https://apidriver.jacochef.ru`. Основные точки:
+Debug и Release по умолчанию обращаются к `https://apidriver.jacochef.ru`.
+Локальный `http://localhost:8080` включается только явным build-time флагом
+`JACO_LARAVEL_API=local`. Основные точки:
 
 - [src/shared/store/api.ts](../src/shared/store/api.ts)
 - [src/shared/api/laravel/config.ts](../src/shared/api/laravel/config.ts)
@@ -300,6 +301,12 @@ mobile-сценарии, для которых требуется production-р�
 Основной экран:
 
 - [src/features/orders-map/ui/MapScreen.tsx](../src/features/orders-map/ui/MapScreen.tsx)
+
+Для iOS/Fabric используется `patch-package`, который инициализирует geometry
+маркера `react-native-yamap-plus` до нативного mount/recycle. Перед передачей в
+MapKit координаты заказов, домашней точки и курьера проверяются на конечность и
+допустимый диапазон; некорректный заказ остаётся в store и списке, но его маркер
+на карте не создаётся.
 
 ### Геолокация
 
@@ -393,7 +400,7 @@ mobile-сценарии, для которых требуется production-р�
 
 - много нативных зависимостей замокано вручную;
 - тесты завязаны на fake timers;
-- текущий Jest baseline стабилен: на 04.09.2026 проходят 88 suites / 339 tests.
+- текущий Jest baseline стабилен: на 07.09.2026 проходят 90 suites / 346 tests.
 
 ## Минимальный безопасный подход к изменениям
 

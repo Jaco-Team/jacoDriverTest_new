@@ -22,7 +22,7 @@ Baseline нужен, чтобы перед заливкой и при прове
 
 - [.github/workflows/ci-baseline.yml](../.github/workflows/ci-baseline.yml)
 
-## Текущий статус на 2026-09-04
+## Текущий статус на 2026-09-07
 
 ### `lint`
 
@@ -37,13 +37,13 @@ npm run lint
 - команда проходит успешно;
 - проект использует flat config [eslint.config.js](../eslint.config.js);
 - старый [.eslintrc.js](../.eslintrc.js) оставлен как исторический файл, но ESLint 10 берет `eslint.config.js`;
-- `@typescript-eslint`, `eslint-plugin-react-hooks` и `eslint-plugin-react-native` закреплены явными dev-зависимостями с поддержкой ESLint 10 / TypeScript 5.9;
+- `@typescript-eslint`, `eslint-plugin-react-hooks` и `eslint-plugin-react-native` закреплены явными dev-зависимостями; единый TypeScript 6.0.3 используется и как `tsc`, и как compiler API для `typescript-eslint`;
 - текущий lint baseline минимальный: он проверяет парсинг и базовые правила, но строгие RN/hooks правила пока не включены как обязательный gate.
 
 Вывод:
 
 - `lint` восстановлен как рабочий gate;
-- warning про неподдерживаемую версию TypeScript для `@typescript-eslint/typescript-estree` снят обновлением `@typescript-eslint` до 8.x;
+- проверенная прямая установка TypeScript 7 ломает `typescript-eslint`; итоговый TypeScript 6.0.3 входит в его поддерживаемый диапазон `<6.1.0`;
 - усиление правил стоит делать отдельной задачей, чтобы не смешивать baseline и большую чистку lint-замечаний.
 
 ### `typecheck`
@@ -80,8 +80,8 @@ npm run test:unit
 
 Текущий результат:
 
-- `88` test suites passed;
-- `339` tests passed;
+- `90` test suites passed;
+- `346` tests passed;
 - `0` snapshots;
 - команда использует `--runInBand --watchman=false`.
 

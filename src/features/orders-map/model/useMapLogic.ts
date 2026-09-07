@@ -6,6 +6,7 @@ import YaMap, { Animation } from 'react-native-yamap-plus'
 
 import { useOrdersStore, useGEOStore, useSettingsStore } from '@/shared/store/store'
 import { initYaMap } from '@/shared/lib/yaMapInit'
+import { isValidMapPoint } from './mapPoint'
 
 import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
 
@@ -77,7 +78,7 @@ export function useMapLogic() {
   // Метод для центрирования на «home»
   const getHome = useCallback(() => {
     Analytics.log(AnalyticsEvent.MapHomeCenter, 'Центрирование карты на домашнюю точку');
-    if (mapRef.current && home) {
+    if (mapRef.current && isValidMapPoint(home)) {
       mapRef.current.setCenter(
         { lon: home.lon, lat: home.lat },
         12,

@@ -1,9 +1,9 @@
 {
   "extends": "@react-native/typescript-config",
   "compilerOptions": {
-    "baseUrl": ".",
+    "noUncheckedSideEffectImports": false,
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
     "customConditions": ["react-native", "react-native-legacy-deep-imports"]
   },

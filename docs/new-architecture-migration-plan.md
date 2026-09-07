@@ -1,6 +1,6 @@
 # План миграции на React Native 0.87 / Fabric
 
-Дата: 24 августа 2026 года. Последнее обновление: 4 сентября 2026 года. Текущая версия — RN `0.87.1`, не клиентский `0.86`. Совместимые зависимости обновлены внутри текущих major. Tailwind 4, NativeWind 5 и остальные major-переходы в эту волну не входят.
+Дата: 24 августа 2026 года. Последнее обновление: 7 сентября 2026 года. Текущая версия — RN `0.87.1`, не клиентский `0.86`. Совместимые зависимости обновлены внутри текущих major. Tailwind 4, NativeWind 5 и остальные major-переходы в эту волну не входят.
 
 Ветка: `new_architecture`. Ветка `main` не меняется этим планом.
 
@@ -56,12 +56,13 @@
 - Screens `4.27.0` / Safe Area `5.9.1` — актуальные под RN `0.87`
 - Navigation: `@react-navigation/drawer` `^7.13.10`, `native` `^7.3.18`, `native-stack` `^7.18.10` (линейка 7; восьмёрка — alpha, не берём)
 - Sentry `@sentry/react-native` `8.25.0` (патч `7.13.0` снят)
-- Firebase `@react-native-firebase/app` + `messaging` `26.3.3` (одна версия на оба)
-- ESLint `10.x`; Babel `^7.29.7` (не 8; пресет RN 0.87 на семёрке); TypeScript `5.9.3` (не 6/7)
+- Firebase `@react-native-firebase/app` + `messaging` `26.4.0` (одна версия на оба)
+- ESLint `10.x`; Babel `^7.29.7` (не 8; пресет RN 0.87 на семёрке); TypeScript `6.0.3`
 - Android: compileSdk/buildTools 37, targetSdk 36, NDK `29.0.14206865`, AGP 9 с `android.builtInKotlin=false` и `android.newDsl=false`
 - iOS: `RCT_NEW_ARCH_ENABLED=1` и `RCTNewArchEnabled` в Info.plist; RN SwiftPM не включать; Firebase native — CocoaPods (`$RNFirebaseDisableSPM = true` + static `use_frameworks!`)
 
-Рабочие версии после волны (debug Android/iOS собрались):
+Текущие версии после волны; базовый native-стек собран на Android/iOS, а для
+patch-группы от 7 сентября выполнен non-native baseline:
 
 | Пакет | package.json |
 | --- | --- |
@@ -76,26 +77,39 @@
 | `@react-native-async-storage/async-storage` | `3.1.1` (используется для неавторизационного локального состояния; Bearer-токен хранится отдельно в Keychain/Keystore) |
 | `@react-native-community/datetimepicker` | `9.2.0` (peer `react-native-modal-datetime-picker`, прямой импорт в Calendar закомментирован) |
 | `@fortawesome/react-native-fontawesome` | `1.0.0` (рендерер FA7; core/icons уже 7.x) |
-| `lucide-react-native` | `1.34.0` (JS поверх `react-native-svg`; Copy / QrCode / RefreshCcw / Search). Metro: в `sourceExts` нужен `mjs` — пакет 1.x отдаёт ESM `.mjs`, native-сборку не трогаем |
+| `lucide-react-native` | `1.41.0` (JS поверх `react-native-svg`; Copy / QrCode / RefreshCcw / Search). Metro: в `sourceExts` нужен `mjs` — пакет 1.x отдаёт ESM `.mjs`, native-сборку не трогаем |
 | `@react-native-community/netinfo` | `12.0.1` (индикатор сети в AppProviders выключен) |
 | `react-native-device-info` | `15.0.2` (`isLocationEnabled` в выключенном ConnectivityLocationIndicator; breaking 15 = compileSdk 34+, у нас 37) |
-| `@react-native-firebase/app` + `messaging` | `26.3.3` |
+| `@react-native-firebase/app` + `messaging` | `26.4.0` |
 | `@react-navigation/drawer` / `native` / `native-stack` | `^7.13.10` / `^7.3.18` / `^7.18.10` |
-| `eslint` | `^10.9.1` |
+| `eslint` | `^10.10.0` |
 | `@babel/core` | `^7.29.7` |
-| `typescript` | `5.9.3` |
+| `typescript` | `6.0.3` |
 
 Совместимые обновления внутри текущих major от 27 августа 2026:
 
 - Font Awesome core/icons `7.3.1`, resolvers `5.9.1`, axios `1.20.0`;
-- dayjs `1.11.23`, query-string `9.5.0`, react-hook-form `7.86.0`, zustand `5.0.15`;
-- react-native-permissions `5.6.1`, baseline-browser-mapping `2.11.19`;
+- dayjs `1.11.23`, query-string `9.5.0`, react-hook-form `7.87.0`, zustand `5.0.15`;
+- react-native-permissions `5.6.1`, baseline-browser-mapping `2.11.21`;
 - 4 сентября: Sentry `8.25.0`, datetimepicker `9.2.0`, Firebase app + messaging `26.3.3`;
+- 7 сентября: Firebase app + messaging `26.4.0`, lucide `1.41.0`,
+  react-hook-form `7.87.0`, ESLint `10.10.0`, Jest `30.5.1` и
+  `@typescript-eslint` / `typescript-eslint` `8.69.0`.
+- 7 сентября, отдельный эксперимент: прямая замена на TypeScript 7.0.2
+  подтвердила несовместимость с `typescript-eslint`, а официальный side-by-side
+  вариант TS7/TS6 прошёл проверки, но был признан избыточным для проекта.
+  Итоговая версия — TypeScript `6.0.3`: один compiler/API, совместимый с
+  `typescript-eslint@8.69.0`, и подготовленный к будущему переходу на TS7.
 - Tailwind `3.4.19` и NativeWind `4.2.6` оставлены без изменений.
 
 Контроль 04.09.2026: `npm run lint`, `npm run typecheck`, `npm run test:unit` (88 suites / 339 tests), Android debug/release и iOS Simulator debug/release — успешно. Android release APK дополнительно установлен и вручную проверен на реальном Samsung.
 
-`npm audit` после обновлений показывает 20 транзитивных проблем (2 low / 5 moderate / 13 high). Автоматический `audit fix` не применялся: предлагаемые изменения затрагивают зафиксированный RN/Metro/Gluestack-фундамент. Разбирать audit-хвост нужно отдельной задачей с повторной полной проверкой.
+Контроль TypeScript-эксперимента 07.09.2026: итоговый `tsc` и compiler API —
+TypeScript 6.0.3; `npm run lint`, `npm run typecheck` и `npm run test:unit`
+(88 suites / 339 tests) — успешно. Нативные сборки и эмуляторы для этого
+эксперимента не запускались.
+
+`npm audit` после безопасного обновления транзитивных версий показывает 14 проблем (2 low / 4 moderate / 8 high). Автоматический `audit fix` не применялся: предлагаемые изменения затрагивают зафиксированный RN/Metro/Gluestack-фундамент. Разбирать audit-хвост нужно отдельной задачей с повторной полной проверкой.
 
 Костыли, которые остаются: shim `InteractionManager`; Strict TS `react-native-legacy-deep-imports` до RN 0.88; Metro `sourceExts` + `mjs` под lucide 1. Патч Sentry 7 снят.
 
@@ -252,13 +266,13 @@ MiniCodePush в этом проекте нет.
 
 - `tailwindcss` 4 — другой движок. NativeWind 4 и Gluestack `className` заточены под Tailwind 3. `^3.4.19` = последний 3.x (npm `v3-lts`).
 - `@babel/core` 8 — пресет `@react-native/babel-preset@0.87.1` на Babel 7 и плагинах семёрки. `^7.29.7` = последняя семёрка.
-- `typescript` 7 — нативный Go-`tsc`, нет JS compiler API; `typescript-eslint@8` требует `>=4.8.4 <6.1.0` и на 7 падает. `5.9.3` = последняя пятёрка.
+- прямая замена пакета `typescript` на 7 — нативный Go-`tsc` не предоставляет
+  прежний JS compiler API; `typescript-eslint@8` требует `>=4.8.4 <6.1.0` и
+  на 7 падает. Рекомендованный Microsoft side-by-side TS7/TS6 технически
+  работает, но для этого проекта пока избыточен; оставлен единый TypeScript
+  `6.0.3`.
 - `@expo/html-elements` 55+ — нумерация Expo SDK, не drop-in с `^0.13.8`. Gluestack (Heading / Table / Actionsheet) сидит на 0.13.
 - Android `edgeToEdgeEnabled` / splash — не npm, флаг вёрстки; ломает системные инсеты (шапка, карта). С клиентского приложения не копировать.
-
-**Можно по semver, но не эта волна**
-
-- `typescript` `6.0.3` — `typescript-eslint` ещё ест (`<6.1.0`). Major `tsc`, риск жёлтого `typecheck`. К Fabric не привязан.
 
 **Не пакеты этой волны**
 
@@ -280,7 +294,7 @@ UI выполняется в ветке `new_architecture`, но отдельн�
 - карта растянута до нижнего края, а её панель и лимиты используют фактический bottom inset; обычные drawer-экраны и нижние шторки также защищены от iOS home indicator и Android navigation bar
 - настройки, блок «Карта»: чекбоксы (тёмная тема / ползунок масштаба / центрировать при взятии-отмене) после включения не отжимаются. Не задумано; было до этой миграции (`CheckboxGroup` с одним значением с апреля 2025). Бэкенд `0/1` уже умеет. Фикс: обычный `Checkbox` `isChecked` + `onChange(boolean)`, после save писать флаги в settings store. Тот же шаблон — «Уведомить о решении» в фидбеке.
 
-RNGH `3.2.1`, screens `4.27.0`, yamap-plus `6.11.0`, safe-area `5.9.1`, AppMetrica `4.2.0`, async-storage `3.1.1`, datetimepicker `9.2.0`, netinfo `12.0.1`, device-info `15.0.2`, Sentry `8.25.0` и Firebase `26.3.3` в этой волне подняты. Native release smoke выполнен на Android/Samsung и iOS Simulator; реальный iPhone остаётся финальной внешней проверкой. Fontawesome RN `1.0.0` и lucide `1.34.0` — JS-обёртки над `react-native-svg`, native-сборку не требуют.
+RNGH `3.2.1`, screens `4.27.0`, yamap-plus `6.11.0`, safe-area `5.9.1`, AppMetrica `4.2.0`, async-storage `3.1.1`, datetimepicker `9.2.0`, netinfo `12.0.1`, device-info `15.0.2`, Sentry `8.25.0` и Firebase `26.4.0` в этой волне подняты. Для iOS/Fabric `yamap-plus` пропатчен: нативная geometry маркера инициализируется до mount/recycle, а JS-слой не монтирует маркеры с нечисловыми или выходящими за диапазон координатами. Native release smoke выполнен на Android/Samsung и iOS Simulator до patch-группы от 7 сентября; её повторный native smoke выполняет пользователь. Реальный iPhone остаётся финальной внешней проверкой. Fontawesome RN `1.0.0` и lucide `1.41.0` — JS-обёртки над `react-native-svg`, native-сборку не требуют.
 
 ### Отдельная задача, не этот переезд
 

@@ -1,0 +1,19 @@
+diff --git a/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm b/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
+index 2f4fdb1..8c8601d 100644
+--- a/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
++++ b/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
+@@ -44,5 +44,6 @@ @implementation MarkerView {
+         static const auto defaultProps = std::make_shared<const MarkerViewProps>();
+         _props = defaultProps;
++        _point = [YMKPoint pointWithLatitude:0 longitude:0];
+ 
+         zIndex = 1;
+         scale = [NSNumber numberWithInt:1];
+@@ -112,6 +113,7 @@ @implementation MarkerView {
+ - (void)prepareForRecycle
+ {
+     [super prepareForRecycle];
++    _point = [YMKPoint pointWithLatitude:0 longitude:0];
+     zIndex = 1;
+     scale = [NSNumber numberWithInt:1];
+     rotated = NO;

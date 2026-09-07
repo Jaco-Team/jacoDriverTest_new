@@ -65,7 +65,11 @@ jest.mock('@/features/orders-map/ui/ListOrders', () => ({
   ListOrders: () => null,
 }))
 jest.mock('@/features/orders-map/ui/HomeMarker', () => ({
-  HomeMarker: () => null,
+  HomeMarker: ({ point }: any) => {
+    const React = require('react')
+    const { View } = require('react-native')
+    return React.createElement(View, { testID: 'orders-map-home-marker', point })
+  },
 }))
 jest.mock('@/features/orders-map/ui/ModalOrder', () => ({
   ModalOrder: () => null,
@@ -82,6 +86,7 @@ import { MapScreen } from '@/features/orders-map/ui/MapScreen'
 
 describe('экран карты заказов', () => {
   beforeEach(() => {
+    mockMapLogic.home = { lat: 53.2, lon: 50.1 }
     mockMapLogic.type_location = 'none'
     mockMapLogic.driver_location_requesting = false
     mockMapLogic.set_type_location.mockClear()
@@ -148,5 +153,19 @@ describe('экран карты заказов', () => {
 
     expect(screen.queryByTestId('orders-map-filter')).toBeNull()
     expect(screen.queryByTestId('orders-map-refresh')).toBeNull()
+  })
+
+  it('не передаёт карте некорректную домашнюю координату', async () => {
+    mockMapLogic.home = { lat: Number.NaN, lon: 50.1 }
+
+    await render(<MapScreen />)
+    await act(async () => {
+      fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
+        nativeEvent: { layout: { width: 390, height: 700 } },
+      })
+    })
+
+    expect(screen.getByTestId('native-yandex-map').props.initialRegion).toBeUndefined()
+    expect(screen.queryByTestId('orders-map-home-marker')).toBeNull()
   })
 })

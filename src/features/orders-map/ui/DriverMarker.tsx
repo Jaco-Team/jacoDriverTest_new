@@ -8,6 +8,7 @@ import { Marker } from 'react-native-yamap-plus'
 import type { Theme } from '@/shared/types/globalTypes'
 
 import { useDriverMarkerLogic } from '../model/useDriverMarkerLogic'
+import { isValidMapPoint } from '../model/mapPoint'
 
 const DRIVER_MARKER_WIDTH = 96
 const DRIVER_ICON_SIZE = 24
@@ -117,10 +118,11 @@ export const DriverMarkerImage = memo(function DriverMarkerImage({ onImage }: Dr
   const { location_driver, location_driver_time_text, globalFontSize, theme } = useDriverMarkerLogic()
   const svgRef = useRef<React.ElementRef<typeof Svg>>(null)
   const capturedSignatureRef = useRef<string | null>(null)
+  const hasValidLocation = isValidMapPoint(location_driver)
 
   const markerHeight = getMarkerHeight(globalFontSize)
   const markerFontSize = Math.max(globalFontSize, DRIVER_TIME_MIN_FONT_SIZE)
-  const signature = location_driver
+  const signature = hasValidLocation
     ? getMarkerSignature(
         location_driver.lat,
         location_driver.lon,
@@ -149,7 +151,7 @@ export const DriverMarkerImage = memo(function DriverMarkerImage({ onImage }: Dr
     )
   }, [markerHeight, onImage, signature])
 
-  if (!location_driver) return null
+  if (!hasValidLocation) return null
 
   const iconTop = (markerHeight - DRIVER_ICON_SIZE) / 2
   const textBaseline = markerHeight / 2 + markerFontSize * 0.35
@@ -213,7 +215,9 @@ export const DriverMarker = memo(function DriverMarker({ image }: DriverMarkerPr
     timeText: string
   } | null>(null)
 
-  if (location_driver) {
+  const hasValidLocation = isValidMapPoint(location_driver)
+
+  if (hasValidLocation) {
     lastVisibleMarkerRef.current = {
       point: location_driver,
       timeText: location_driver_time_text,
@@ -242,7 +246,7 @@ export const DriverMarker = memo(function DriverMarker({ image }: DriverMarkerPr
       anchor={{ x: 0.03, y: 0.8 }}
       scale={markerScale}
       source={source}
-      visible={location_driver !== null}
+      visible={hasValidLocation}
     />
   )
 })
