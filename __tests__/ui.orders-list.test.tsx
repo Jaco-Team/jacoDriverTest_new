@@ -83,6 +83,17 @@ describe('список заказов', () => {
     )
   })
 
+  it('не скрывает загруженные заказы во время неудачного фонового обновления', async () => {
+    const order = { id_text: '#169126' }
+    const screen = await render(
+      <OrdersList {...createProps({ orders: [order], isChecking: true })} />,
+    )
+
+    expect(screen.getByTestId('order-card-#169126')).toBeTruthy()
+    expect(screen.queryByTestId('orders-list-loading')).toBeNull()
+    expect(screen.queryByTestId('orders-list-empty')).toBeNull()
+  })
+
   it('обновляет список pull-to-refresh и не дублирует запрос', async () => {
     let resolveRequest: (() => void) | undefined
     const getOrders = jest.fn(() => new Promise<void>(resolve => {

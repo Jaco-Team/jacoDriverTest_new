@@ -23,6 +23,13 @@ export interface OrdersStore {
   limit_summ: string,
   limit_count: string,
   orders: Array<Order>,
+  ordersCache: Record<string, Array<Order>>,
+  ordersContextKey: string,
+  is_prefetching: boolean,
+  ordersPrefetchPaused: boolean,
+  ordersWarmupKey: string,
+  ordersPrefetchCursor: number,
+  ordersRefreshPending: boolean,
   home: null|XY,
   mapHomeCenterRequestId: number,
 
@@ -50,7 +57,8 @@ export interface OrdersStore {
   filterOrdersByTypes: ( orders: Array<Order>, types: string[] ) => Array<Order>,
 
   getOrders: (is_reload?: boolean) => Promise<void>;
-  selectType: (item: {id: number, text: string}) => void;
+  prefetchOrders: (warmAll?: boolean) => Promise<void>;
+  selectType: (item: {id: number, text: string}) => Promise<void>;
   setUpdateInterval: (interval: number) => void,
   actionButtonOrder: (type: number, order_id: number) => void,
   actionOrder: (params: actionOrderType) => Promise<void>,

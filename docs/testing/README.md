@@ -109,7 +109,7 @@ npm run lint
 - стабильность маркера геопозиции Android/Fabric;
 - инициализацию geometry iOS/Fabric и фильтрацию некорректных координат MapKit.
 
-Текущий результат: 90 suites / 346 tests. Нативные release-проверки ведутся
+Текущий результат: 91 suites / 357 tests. Нативные release-проверки ведутся
 отдельно в [release checklist](./release-checklist.md).
 
 ## Текущий обязательный baseline

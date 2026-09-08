@@ -35,6 +35,7 @@ import { HStack } from '@/components/ui/hstack';
 import { useAvgTimeUpdater } from '@/shared/lib/useAvgTimeUpdater'
 import { useSettingsUpdater } from '@/shared/lib/useSettingsUpdater'
 import { useUserLocationUpdater } from '@/shared/lib/useUserLocationUpdater'
+import { useOrdersBackgroundUpdater } from '@/shared/lib/useOrdersBackgroundUpdater'
 import { initializeNotifications, requestNotificationPermission } from '@/shared/lib/notifications'
 import { appPalette } from '@/shared/styles/appPalette'
 
@@ -59,13 +60,40 @@ export function MainDrawerNavigator() {
   const insets = useSafeAreaInsets()
   const [ globalFontSize, is_need_avg_time, is_need_page_stat, setNotifToken ] = useGlobalStore(useShallow( state => [ state.globalFontSize, state.is_need_avg_time, state.is_need_page_stat, state.setNotifToken ]));
   
-  const [ getOrders, types_dop, type_dop, showModalTypeDop ] = useOrdersStore(useShallow(state => [ state.getOrders, state.types_dop, state.type_dop, state.showModalTypeDop ]));
+  const [
+    getOrders,
+    types_dop,
+    type_dop,
+    showModalTypeDop,
+    prefetchOrders,
+    ordersContextKey,
+    hasCurrentOrdersCache,
+    ordersPrefetchPaused,
+    isCheckingOrders,
+  ] = useOrdersStore(useShallow(state => [
+    state.getOrders,
+    state.types_dop,
+    state.type_dop,
+    state.showModalTypeDop,
+    state.prefetchOrders,
+    state.ordersContextKey,
+    state.ordersCache?.[state.ordersContextKey ?? ''] !== undefined,
+    state.ordersPrefetchPaused ?? false,
+    state.is_check ?? false,
+  ]));
 
   const [ checkMyPos ] = useGEOStore(useShallow(state => [ state.checkMyPos ]));
 
   useAvgTimeUpdater(is_need_avg_time);
   useUserLocationUpdater(checkMyPos);
   useSettingsUpdater();
+  useOrdersBackgroundUpdater(
+    prefetchOrders,
+    ordersContextKey,
+    hasCurrentOrdersCache,
+    ordersPrefetchPaused,
+    isCheckingOrders,
+  );
 
   useEffect(() => {
     //Инициализация уведомлений и получение токена

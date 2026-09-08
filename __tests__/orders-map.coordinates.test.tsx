@@ -1,5 +1,5 @@
 import React from 'react'
-import { render } from '@testing-library/react-native'
+import { fireEvent, render } from '@testing-library/react-native'
 
 let mockListOrdersState: any
 
@@ -9,11 +9,14 @@ jest.mock('@/features/orders-map/model/useListOrdersLogic', () => ({
 
 jest.mock('@/features/orders-map/ui/OrderMarker', () => {
   const React = require('react')
-  const { View } = require('react-native')
+  const { Pressable } = require('react-native')
 
   return {
-    OrderMarker: ({ item }: any) =>
-      React.createElement(View, { testID: `orders-map-order-${item.id}` }),
+    OrderMarker: ({ item, showOrdersMap }: any) =>
+      React.createElement(Pressable, {
+        testID: `orders-map-order-${item.id}`,
+        onPress: () => showOrdersMap(item.id),
+      }),
   }
 })
 
@@ -53,5 +56,16 @@ describe('координаты маркеров карты заказов', () =
     expect(screen.getByTestId('orders-map-order-1')).toBeTruthy()
     expect(screen.queryByTestId('orders-map-order-2')).toBeNull()
     expect(screen.queryByTestId('orders-map-order-3')).toBeNull()
+  })
+
+  it('открывает сохранённый заказ нажатием на маркер без запроса к API', async () => {
+    mockListOrdersState.orders = [
+      { id: 1, to_time_sec_min: 1, xy: { lat: 53.2, lon: 50.1 } },
+    ]
+
+    const screen = await render(<ListOrders />)
+    fireEvent.press(screen.getByTestId('orders-map-order-1'))
+
+    expect(mockListOrdersState.showOrdersMap).toHaveBeenCalledWith(1)
   })
 })

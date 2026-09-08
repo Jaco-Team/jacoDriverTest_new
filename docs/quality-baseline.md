@@ -80,8 +80,8 @@ npm run test:unit
 
 Текущий результат:
 
-- `90` test suites passed;
-- `346` tests passed;
+- `91` test suites passed;
+- `357` tests passed;
 - `0` snapshots;
 - команда использует `--runInBand --watchman=false`.
 

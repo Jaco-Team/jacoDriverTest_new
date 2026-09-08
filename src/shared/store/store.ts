@@ -31,7 +31,7 @@ import { StatusTextType, LoginTypes, LoginResponse } from './LoginStoreType';
 import { StatTypes, PriceResponse, GraphResponse, GraphErrCam, GraphErrOrder, AnswerErrCamResponse, StatResponse } from './StatStoreType';
 import { MySettingsResponse, SettingsStore, SaveSettingsResponse, getPhoneCafeResponse, phoneType } from './SettingsStoreType';
 
-import { OrdersStore, GetOrdersResponse, TypeOrder, actionOrderType } from './OrdersStoreType';
+import { OrdersStore, GetOrdersResponse, Order, TypeOrder, actionOrderType } from './OrdersStoreType';
 import { FeedbackStatus, FeedbackState } from './FeedbackStoreType'
 
 import { GEOStore } from './GEOStoreType';
@@ -1172,6 +1172,37 @@ export const useGEOStore = create<GEOStore>()((set, get) => ({
   },
 }))
 
+function getOrdersCacheScopeKey(): string {
+  const currentUser = useLoginStore.getState().currentUser
+  const ownerId = currentUser?.user_id ?? currentUser?.login ?? 'session'
+  const pointId = useSettingsStore.getState().point_id ?? null
+
+  return JSON.stringify([String(ownerId), pointId])
+}
+
+function getOrdersCacheKey(typeId: number): string {
+  const currentUser = useLoginStore.getState().currentUser
+  const ownerId = currentUser?.user_id ?? currentUser?.login ?? 'session'
+  const pointId = useSettingsStore.getState().point_id ?? null
+
+  return JSON.stringify([String(ownerId), pointId, typeId])
+}
+
+function getVisibleOrders(
+  orders: Array<Order>,
+  type: TypeOrder,
+  typeDop: string[],
+  typesDop: OrdersStore['types_dop'],
+  typeToStatus: OrdersStore['typeToStatus'],
+): Array<Order> {
+  if (type.id !== 1 || typeDop.length === typesDop.length) {
+    return orders
+  }
+
+  const statuses = typeDop.map(item => typeToStatus[item])
+  return orders.filter(order => statuses.includes(order.status))
+}
+
 export const useOrdersStore = create<OrdersStore>()((set, get) => ({
   isClick: false,
   is_load: false,
@@ -1206,6 +1237,13 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
   limit_count: '',
 
   orders: [],
+  ordersCache: {},
+  ordersContextKey: '',
+  is_prefetching: false,
+  ordersPrefetchPaused: false,
+  ordersWarmupKey: '',
+  ordersPrefetchCursor: 0,
+  ordersRefreshPending: false,
   home: null,
   mapHomeCenterRequestId: 0,
 
@@ -1234,8 +1272,17 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
   setTypeDop: (type: string[]) => {
     if( type.length == 0 ){
       type = ['1', '2', '3'];
-    } 
-    set({type_dop: type});
+    }
+
+    const state = get()
+    const cacheKey = getOrdersCacheKey(state.type.id)
+    const cachedOrders = state.ordersCache[cacheKey]
+    set({
+      type_dop: type,
+      ...(cachedOrders
+        ? { orders: getVisibleOrders(cachedOrders, state.type, type, state.types_dop, state.typeToStatus) }
+        : {}),
+    });
 
     get().getOrders(true);
   },
@@ -1254,19 +1301,36 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
   // получение заказов
   getOrders: async (is_reload = false) => {
-    const token = await useGlobalStore.getState().getAuthToken();
-
     const type_dop = get().type_dop;
     const types_dop = get().types_dop;
     const type = get().type;
+    const cacheKey = getOrdersCacheKey(type.id)
+    const cachedOrders = get().ordersCache[cacheKey]
+
+    if (get().ordersContextKey !== cacheKey) {
+      set({
+        orders: cachedOrders
+          ? getVisibleOrders(cachedOrders, type, type_dop, types_dop, get().typeToStatus)
+          : [],
+        ordersContextKey: cacheKey,
+      })
+    }
+
+    const token = await useGlobalStore.getState().getAuthToken();
 
     if (!token || token.length == 0) {
       return;
     }
 
+    if (get().is_prefetching) {
+      set({ ordersRefreshPending: true })
+      return
+    }
+
     if (!get().is_check) {
       set({
         is_check: true,
+        ordersRefreshPending: false,
       });
     } else {
       return;
@@ -1280,7 +1344,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
     const data = {
       type: 'get_orders',
-      type_orders: get().type.id,
+      type_orders: type.id,
       token: token,
       ...(useSettingsStore.getState().point_id ? { point_id: useSettingsStore.getState().point_id } : {}),
     };
@@ -1292,18 +1356,29 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
         Analytics.log(AnalyticsEvent.OrdersFetchFail, 'Ошибка при получении списка заказов');
 
         useGlobalStore.getState().setSpinner(false);
+        useGlobalStore.getState().setSpinnerHidden(false);
         set({
           is_check: false,
+          ordersPrefetchPaused: true,
+          ordersWarmupKey: '',
         });
         return ;
       }
 
       if (json.data?.orders) {
-        let orders = json.data?.orders;
-
-        if( type.id == 1 && type_dop.length !== types_dop.length ){
-          orders = get().filterOrdersByTypes(orders, type_dop);
+        const responseOrders = json.data.orders;
+        const orders = getVisibleOrders(
+          responseOrders,
+          type,
+          type_dop,
+          types_dop,
+          get().typeToStatus,
+        )
+        const ordersCache = {
+          ...get().ordersCache,
+          [cacheKey]: responseOrders,
         }
+        const isCurrentContext = getOrdersCacheKey(get().type.id) === cacheKey
 
         const nextHome = json.data?.home
         const prevHome = get().home
@@ -1315,14 +1390,21 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
         )
 
         set({
-          orders: orders,
-          limit_summ: json.data?.limit,
-          limit_count: json.data?.limit_count,
-          update_interval: json.data?.update_interval,
-          driver_need_gps: json.data?.driver_need_gps == 1 ? true : false,
-          home: homeUnchanged ? prevHome : (nextHome ?? prevHome),
-          //del_orders: json?.arr_del_list,
-          //driver_pay: json?.driver_pay,
+          ordersCache,
+          ordersPrefetchPaused: false,
+          ...(isCurrentContext
+            ? {
+              orders,
+              ordersContextKey: cacheKey,
+              limit_summ: json.data?.limit,
+              limit_count: json.data?.limit_count,
+              update_interval: json.data?.update_interval,
+              driver_need_gps: json.data?.driver_need_gps == 1 ? true : false,
+              home: homeUnchanged ? prevHome : (nextHome ?? prevHome),
+              //del_orders: json?.arr_del_list,
+              //driver_pay: json?.driver_pay,
+            }
+            : {}),
         });
 
       } else {
@@ -1332,6 +1414,10 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
     } catch (err) {
       console.log(err);
       Analytics.log(AnalyticsEvent.OrdersFetchFail, 'Ошибка при получении списка заказов');
+      set({
+        ordersPrefetchPaused: true,
+        ordersWarmupKey: '',
+      })
     }
 
     setTimeout(() => {
@@ -1344,12 +1430,101 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
     }, 300);
   },
 
+  // Фоновое наполнение и обновление кэша остальных разделов заказов.
+  prefetchOrders: async (warmAll = false) => {
+    const state = get()
+    if (state.is_check || state.is_prefetching || state.ordersPrefetchPaused) return
+
+    const token = await useGlobalStore.getState().getAuthToken()
+    if (!token || token.length === 0) return
+
+    const scopeKey = getOrdersCacheScopeKey()
+    const currentTypeId = get().type.id
+    const backgroundTypes = get().types.filter(item => item.id !== currentTypeId)
+    if (backgroundTypes.length === 0) return
+
+    const needsWarmup = warmAll && get().ordersWarmupKey !== scopeKey
+    const cursor = get().ordersPrefetchCursor % backgroundTypes.length
+    const typesToLoad = needsWarmup ? backgroundTypes : [backgroundTypes[cursor]]
+    const pointId = useSettingsStore.getState().point_id
+    let completed = true
+
+    set({ is_prefetching: true })
+
+    try {
+      for (const backgroundType of typesToLoad) {
+        const json = await api<GetOrdersResponse>('orders', {
+          type: 'get_orders',
+          type_orders: backgroundType.id,
+          token,
+          ...(pointId ? { point_id: pointId } : {}),
+        })
+
+        if (getOrdersCacheScopeKey() !== scopeKey) {
+          completed = false
+          break
+        }
+
+        if (json.st === false || !json.data?.orders) {
+          completed = false
+          set({
+            ordersPrefetchPaused: true,
+            ordersWarmupKey: '',
+          })
+          break
+        }
+
+        const cacheKey = getOrdersCacheKey(backgroundType.id)
+        set({
+          ordersCache: {
+            ...get().ordersCache,
+            [cacheKey]: json.data.orders,
+          },
+        })
+      }
+
+      if (completed) {
+        set({
+          ordersWarmupKey: needsWarmup ? scopeKey : get().ordersWarmupKey,
+          ordersPrefetchCursor: needsWarmup
+            ? get().ordersPrefetchCursor
+            : get().ordersPrefetchCursor + 1,
+        })
+      }
+    } catch (err) {
+      completed = false
+      set({
+        ordersPrefetchPaused: true,
+        ordersWarmupKey: '',
+      })
+    } finally {
+      const shouldRefreshCurrent = get().ordersRefreshPending
+      set({
+        is_prefetching: false,
+        ordersRefreshPending: false,
+      })
+
+      if (shouldRefreshCurrent) {
+        void get().getOrders(false)
+      }
+    }
+  },
+
   // выбор типа заказа
   selectType: (item: TypeOrder) => {
     Analytics.log(AnalyticsEvent.OrderSelect, 'Выбор типа заказа');
 
-    set({type: item});
-    get().getOrders(true);
+    const state = get()
+    const cacheKey = getOrdersCacheKey(item.id)
+    const cachedOrders = state.ordersCache[cacheKey]
+    set({
+      type: item,
+      orders: cachedOrders
+        ? getVisibleOrders(cachedOrders, item, state.type_dop, state.types_dop, state.typeToStatus)
+        : [],
+      ordersContextKey: cacheKey,
+    });
+    return get().getOrders(true);
   },
 
   // интервал обновления заказов

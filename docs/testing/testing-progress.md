@@ -24,9 +24,9 @@ npm run test:unit
 
 Текущий результат:
 
-- `90` suites passed;
-- `346` tests passed;
-- всего `90` suites и `346` tests.
+- `91` suites passed;
+- `357` tests passed;
+- всего `91` suites и `357` tests.
 
 Сделано:
 
@@ -53,7 +53,8 @@ npm run test:unit
   - Laravel auth, settings, feedback, orders and menu visibility;
   - demo-account deletion guards and absence of destructive requests;
   - Android/Fabric map marker stability during repeated geolocation;
-  - iOS/Fabric marker geometry initialization and invalid-coordinate filtering.
+  - iOS/Fabric marker geometry initialization and invalid-coordinate filtering;
+  - сохранение списка и маркеров заказов при временной потере сети.
 
 ## Typecheck
 
@@ -119,6 +120,18 @@ GitHub gate добавлен:
 - [docs/testing/git-checks.md](./git-checks.md)
 
 ## Журнал решений
+
+### 2026-09-08
+
+Сделано:
+
+- при временной потере сети заказы сохраняются в памяти раздельно по пользователю,
+  кафе и типу списка, без подмены данными другого раздела;
+- после первой загрузки все разделы последовательно прогреваются в фоне, а затем
+  обновляются по одному раз в 45 секунд без параллельного запроса текущего раздела;
+- после сетевой ошибки фоновое обновление приостанавливается до успешного обычного запроса;
+- сохранённые маркеры открывают карточки заказов без дополнительного API-запроса;
+- `lint`, `typecheck`, 91 suites / 357 tests пройдены без запуска эмуляторов.
 
 ### 2026-09-07
 

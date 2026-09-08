@@ -19,6 +19,11 @@ const mockOrdersState = {
   types_dop: [],
   type_dop: [],
   showModalTypeDop: jest.fn(),
+  prefetchOrders: jest.fn(async () => undefined),
+  ordersContextKey: '',
+  ordersCache: {},
+  ordersPrefetchPaused: false,
+  is_check: false,
 };
 
 const mockGeoState = {
