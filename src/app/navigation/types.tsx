@@ -6,7 +6,7 @@ export const RU_SCREEN_NAMES: Record<string, string> = {
   Map: 'Карта заказов',
   Price: 'Расчет',
   Graph: 'График работы',
-  Statistics: 'Статистика времени',
+  Statistics: 'Статистика',
   Settings: 'Настройки',
   FeedbackScreen: 'Предложения',
   OrdersUiPreview: 'UI заказов (DEV)',

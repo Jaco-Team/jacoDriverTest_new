@@ -58,7 +58,7 @@ export interface FeedbackState {
   setSearchQuery: (query: string) => void,
 
   // Методы для управления состоянием списка
-  fetchFeedbacks: () => Promise<void>;
+  fetchFeedbacks: () => Promise<boolean>;
   fetchFeedbackById: (id: number) => Promise<void>;
   createFeedback: (feedback: FeedbackCreate) => Promise<void>;
   

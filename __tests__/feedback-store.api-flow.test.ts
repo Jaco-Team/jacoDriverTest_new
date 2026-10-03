@@ -80,18 +80,15 @@ describe('useFeedbackStore api flow', () => {
     expect(useFeedbackStore.getState().searchQuery).toBe('ошибка');
   });
 
-  it('fetchFeedbacks: загружает список обращений и гасит spinner по таймеру', async () => {
+  it('fetchFeedbacks: загружает список обращений и гасит spinner после запроса', async () => {
     mockFetchLaravelFeedbacks.mockResolvedValueOnce([feedback]);
 
     await useFeedbackStore.getState().fetchFeedbacks();
 
     expect(mockFetchLaravelFeedbacks).toHaveBeenCalledTimes(1);
     expect(useFeedbackStore.getState().feedbacks).toEqual([feedback]);
-    expect(useGlobalStore.getState().loadSpinner).toBe(true);
-
-    jest.advanceTimersByTime(300);
-
     expect(useGlobalStore.getState().loadSpinner).toBe(false);
+    expect(useFeedbackStore.getState().isLoading).toBe(false);
   });
 
   it('fetchFeedbacks: при ошибке не затирает текущий список', async () => {
@@ -101,7 +98,8 @@ describe('useFeedbackStore api flow', () => {
     await useFeedbackStore.getState().fetchFeedbacks();
 
     expect(useFeedbackStore.getState().feedbacks).toEqual([feedback]);
-    expect(useGlobalStore.getState().loadSpinner).toBe(true);
+    expect(useGlobalStore.getState().loadSpinner).toBe(false);
+    expect(useFeedbackStore.getState().isLoading).toBe(false);
   });
 
   it('fetchFeedbackById: открывает view modal с выбранным обращением', async () => {

@@ -91,6 +91,8 @@ describe('OrderActions — кнопка «Взять»', () => {
     const phoneBtn = screen.getByTestId(`order-${props.item.id}-phone`);
     expect(phoneBtn).toHaveStyle({
       height: 44,
+      borderWidth: 1,
+      borderColor: 'rgba(66, 98, 125, 0.16)',
       borderRadius: 8,
       backgroundColor: '#E0E0E0',
     });

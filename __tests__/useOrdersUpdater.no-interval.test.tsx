@@ -44,12 +44,14 @@ const { useOrdersUpdater } = require('@/shared/lib/useOrdersUpdater');
 // Тестовая обёртка, чтобы прогнать хук
 function TestComp({
   getOrders,
+  getSettings,
   interval,
 }: {
   getOrders: () => void;
+  getSettings?: () => void | Promise<void>;
   interval: number;
 }) {
-  useOrdersUpdater(getOrders, interval);
+  useOrdersUpdater(getOrders, interval, getSettings);
   return null as any;
 }
 
@@ -85,6 +87,28 @@ describe('useOrdersUpdater: поведение интервала', () => {
       jest.advanceTimersByTime(60_000);
     });
     expect(getOrders).toHaveBeenCalledTimes(1);
+  });
+
+  it('при открытии списка ждёт настройки точки перед загрузкой заказов', async () => {
+    let finishSettings!: () => void;
+    const getSettings = jest.fn(() => new Promise<void>(resolve => {
+      finishSettings = resolve;
+    }));
+    const getOrders = jest.fn();
+
+    const {unmount} = await render(
+      <TestComp getOrders={getOrders} getSettings={getSettings} interval={0} />,
+    );
+
+    expect(getSettings).toHaveBeenCalledTimes(1);
+    expect(getOrders).not.toHaveBeenCalled();
+
+    await act(async () => {
+      finishSettings();
+    });
+
+    expect(getOrders).toHaveBeenCalledTimes(1);
+    await unmount();
   });
 
   it('при interval>0: тикает по интервалу и останавливается после unmount', async () => {

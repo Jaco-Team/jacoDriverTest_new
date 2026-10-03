@@ -1,6 +1,6 @@
 # План миграции на React Native 0.87 / Fabric
 
-Дата: 24 августа 2026 года. Последнее обновление: 8 сентября 2026 года. Текущая версия — RN `0.87.1`, не клиентский `0.86`. Совместимые зависимости обновлены внутри текущих major. Tailwind 4, NativeWind 5 и остальные major-переходы в эту волну не входят.
+Дата: 24 августа 2026 года. Последнее обновление: 1 октября 2026 года. Текущая версия — RN `0.87.1`, не клиентский `0.86`. Совместимые зависимости обновлены внутри текущих major. Tailwind 4, NativeWind 5 и остальные major-переходы в эту волну не входят.
 
 Ветка: `new_architecture`. Ветка `main` не меняется этим планом.
 
@@ -36,8 +36,8 @@
 | --- | --- |
 | 0. Ветка и docs | сделан |
 | 1. Аудит и bump + флаги Fabric | сделан: RN `0.87.1` + Fabric, yamap-plus |
-| 2. Native compile | Android debug/release и iOS simulator debug/release собираются на `0.87.1` |
-| 3. Jest / TS хвост | `lint`, `typecheck`, 88 suites / 339 unit-тестов зелёные на `0.87.1` + ESLint 10 |
+| 2. Native compile | Android debug/release и iOS simulator debug/release ранее собирались на `0.87.1`; после последних изменений нужна новая проверка обеих платформ |
+| 3. Jest / TS хвост | На 01.10.2026 `lint`, `typecheck` и 103 набора / 424 unit-теста прошли на `0.87.1` + ESLint 10; нативную сборку в этот прогон не включали |
 | 4. Android smoke | debug проверен на эмуляторе; release APK установлен и проверен на реальном Samsung, включая повторное определение геопозиции |
 | 5. iOS smoke | debug/release и основные сценарии, включая CAPTCHA/SSO, проверены на Simulator; реальный iPhone остаётся руководителю |
 | 6. Release smoke | Android на реальном Samsung и iOS Simulator пройдены; реальный iPhone не проверен, production-выкладка не входит в задачу |
@@ -50,39 +50,39 @@
 
 - Node `>=24 <25` (минимум RN 0.87 — `>= 22.13`; CI на Node 24)
 - React Native `0.87.1`
-- React / React DOM `19.2.x` (не даунгрейдить патч ниже шаблонного)
+- React / React DOM `19.3.0`
 - New Architecture / Fabric / Hermes включены
-- Reanimated `4.6.x` + `react-native-worklets` `0.12.x` (4.5.x 0.87 не поддерживает) + Gesture Handler `3.2.1`
-- Screens `4.27.0` / Safe Area `5.9.1` — актуальные под RN `0.87`
-- Navigation: `@react-navigation/drawer` `^7.13.10`, `native` `^7.3.18`, `native-stack` `^7.18.10` (линейка 7; восьмёрка — alpha, не берём)
-- Sentry `@sentry/react-native` `8.25.0` (патч `7.13.0` снят)
+- Reanimated `4.6.0` + `react-native-worklets` `0.12.2` + Gesture Handler `3.3.0`
+- Screens `4.28.0` / Safe Area `5.10.0`
+- Navigation: `@react-navigation/drawer` `^7.14.2`, `native` `^7.4.1`, `native-stack` `^7.19.2` (линейка 7; восьмёрка — alpha, не берём)
+- Sentry `@sentry/react-native` `8.27.0` (патч `7.13.0` снят)
 - Firebase `@react-native-firebase/app` + `messaging` `26.4.0` (одна версия на оба)
 - ESLint `10.x`; Babel `^7.29.7` (не 8; пресет RN 0.87 на семёрке); TypeScript `6.0.3`
 - Android: compileSdk/buildTools 37, targetSdk 36, NDK `29.0.14206865`, AGP 9 с `android.builtInKotlin=false` и `android.newDsl=false`
 - iOS: `RCT_NEW_ARCH_ENABLED=1` и `RCTNewArchEnabled` в Info.plist; RN SwiftPM не включать; Firebase native — CocoaPods (`$RNFirebaseDisableSPM = true` + static `use_frameworks!`)
 
-Текущие версии после волны; базовый native-стек и последующие patch-обновления
-собраны на Android/iOS:
+Текущие версии после волны. Нативная группа обновлений от 21 сентября ожидает
+ручной smoke на Android/iOS:
 
 | Пакет | package.json |
 | --- | --- |
 | `react-native` | `0.87.1` |
 | `react-native-reanimated` / `react-native-worklets` | `4.6.0` / `0.12.2` |
-| `react-native-gesture-handler` | `3.2.1` |
-| `react-native-screens` / `react-native-safe-area-context` | `4.27.0` / `5.9.1` |
-| `nativewind` | `4.2.6` |
+| `react-native-gesture-handler` | `3.3.0` |
+| `react-native-screens` / `react-native-safe-area-context` | `4.28.0` / `5.10.0` |
+| `nativewind` | `4.2.7` |
 | `react-native-yamap-plus` | `6.11.0` |
-| `@sentry/react-native` | `8.25.0` |
+| `@sentry/react-native` | `8.27.0` |
 | `@appmetrica/react-native-analytics` | `4.2.0` |
-| `@react-native-async-storage/async-storage` | `3.1.1` (используется для неавторизационного локального состояния; Bearer-токен хранится отдельно в Keychain/Keystore) |
+| `@react-native-async-storage/async-storage` | `3.1.1` (локальные настройки, телефоны и офлайн-кэш заказов; Bearer-токен хранится отдельно в Keychain/Keystore) |
 | `@react-native-community/datetimepicker` | `9.2.1` (peer `react-native-modal-datetime-picker`, прямой импорт в Calendar закомментирован) |
 | `@fortawesome/react-native-fontawesome` | `1.0.0` (рендерер FA7; core/icons уже 7.x) |
-| `lucide-react-native` | `1.41.0` (JS поверх `react-native-svg`; Copy / QrCode / RefreshCcw / Search). Metro: в `sourceExts` нужен `mjs` — пакет 1.x отдаёт ESM `.mjs`, native-сборку не трогаем |
-| `@react-native-community/netinfo` | `12.0.1` (индикатор сети в AppProviders выключен) |
-| `react-native-device-info` | `15.0.2` (`isLocationEnabled` в выключенном ConnectivityLocationIndicator; breaking 15 = compileSdk 34+, у нас 37) |
+| `lucide-react-native` | `1.47.0` (JS поверх `react-native-svg`; Copy / QrCode / RefreshCcw / Search). Metro: в `sourceExts` нужен `mjs` — пакет 1.x отдаёт ESM `.mjs`, native-сборку не трогаем |
+| `@react-native-community/netinfo` | `12.0.1` (глобальный индикатор сети включён в AppProviders; refresh каждые 15 секунд) |
+| `react-native-device-info` | `15.0.2` (breaking 15 = compileSdk 34+, у нас 37; индикатор интернета его не использует) |
 | `@react-native-firebase/app` + `messaging` | `26.4.0` |
-| `@react-navigation/drawer` / `native` / `native-stack` | `^7.13.10` / `^7.3.18` / `^7.18.10` |
-| `eslint` | `^10.10.0` |
+| `@react-navigation/drawer` / `native` / `native-stack` | `^7.14.2` / `^7.4.1` / `^7.19.2` |
+| `eslint` | `^10.11.0` |
 | `@babel/core` | `^7.29.7` |
 | `typescript` | `6.0.3` |
 
@@ -99,10 +99,19 @@
   подтвердила несовместимость с `typescript-eslint`, а официальный side-by-side
   вариант TS7/TS6 прошёл проверки, но был признан избыточным для проекта.
   Итоговая версия — TypeScript `6.0.3`: один compiler/API, совместимый с
-  `typescript-eslint@8.69.0`, и подготовленный к будущему переходу на TS7.
+  `typescript-eslint@8.70.0`, и подготовленный к будущему переходу на TS7.
 - Tailwind `3.4.19` и NativeWind `4.2.6` оставлены без изменений.
 - 8 сентября: `react-native-worklets` `0.12.2` и datetimepicker `9.2.1`;
   Android release и iOS Simulator debug собраны успешно без запуска эмуляторов.
+- 21 сентября: обновлены Navigation `7.14.2` / `7.4.1` / `7.19.2`, React и
+  связанные пакеты `19.3.0`, Sentry `8.27.0`, NativeWind `4.2.7`,
+  Gesture Handler `3.3.0`, Reanimated `4.6.0`, Worklets `0.12.2`,
+  Safe Area `5.10.0`, Screens `4.28.0`, Permissions `5.6.2`, Edge-to-Edge
+  `1.8.2`, lucide `1.47.0`, react-hook-form `7.88.0`, ESLint `10.11.0`,
+  Jest `30.5.2`, Prettier `3.9.8`, TypeScript-ESLint `8.70.0` и
+  baseline-browser-mapping `2.11.25`. Reanimated и Worklets оставлены на
+  стабильной паре `4.6.0` / `0.12.2`: Worklets `0.13.0` пока имеет npm-тег
+  `next`, хотя требуется Reanimated `4.7.0`.
 
 Контроль 04.09.2026: `npm run lint`, `npm run typecheck`, `npm run test:unit` (88 suites / 339 tests), Android debug/release и iOS Simulator debug/release — успешно. Android release APK дополнительно установлен и вручную проверен на реальном Samsung.
 
@@ -111,7 +120,12 @@ TypeScript 6.0.3; `npm run lint`, `npm run typecheck` и `npm run test:unit`
 (88 suites / 339 tests) — успешно. Нативные сборки и эмуляторы для этого
 эксперимента не запускались.
 
-`npm audit` после безопасного обновления транзитивных версий показывает 14 проблем (2 low / 4 moderate / 8 high). Автоматический `audit fix` не применялся: предлагаемые изменения затрагивают зафиксированный RN/Metro/Gluestack-фундамент. Разбирать audit-хвост нужно отдельной задачей с повторной полной проверкой.
+Контроль 21.09.2026 после полного согласованного обновления: `npm run lint`,
+`npm run typecheck` и `npm run test:unit` (91 suite / 357 тестов) — успешно;
+`pod install` синхронизировал iOS-зависимости. Нативные сборки, симуляторы и
+эмуляторы не запускались.
+
+`npm audit` после обновления 21 сентября показывает 7 проблем (2 low / 5 high). Автоматический `audit fix` не применялся: оставшиеся проблемы находятся в зафиксированных RN/Metro/Gluestack-зависимостях. Разбирать audit-хвост нужно отдельной задачей с повторной полной проверкой.
 
 Костыли, которые остаются: shim `InteractionManager`; Strict TS `react-native-legacy-deep-imports` до RN 0.88; Metro `sourceExts` + `mjs` под lucide 1. Патч Sentry 7 снят.
 
@@ -193,7 +207,7 @@ npm run test:unit
 
 Это нужно сделать до ручного smoke. Не смешивать с починкой карты.
 
-Контракт `__tests__/new-architecture.contract.test.ts` дополнительно держит: индикатор сети/GPS в `AppProviders` выключен; токен в `store.ts` на default import AsyncStorage (`getItem`/`setItem('token'`), не `createAsyncStorage`; shim `InteractionManager` в `index.js` до `App`.
+Контракт `__tests__/new-architecture.contract.test.ts` дополнительно держит: глобальный индикатор отсутствия интернета включён в `AppProviders`; токен в `store.ts` на default import AsyncStorage (`getItem`/`setItem('token'`), не `createAsyncStorage`; shim `InteractionManager` в `index.js` до `App`.
 
 ### Этап 4. Android debug smoke
 
@@ -227,9 +241,9 @@ MiniCodePush в этом проекте нет.
 
 1. **Карта** — основной рабочий экран. New Arch проверяем на `react-native-yamap-plus`, не на старой `react-native-yamap@4.8.3`. Точки: [MapScreen.tsx](../src/features/orders-map/ui/MapScreen.tsx), `freezeOnBlur: false` в [MainDrawerNavigator.tsx](../src/app/navigation/MainDrawerNavigator.tsx).
 2. **Геолокация** — `@react-native-community/geolocation` в [store.ts](../src/shared/store/store.ts). Библиотеку не менять, пока 0.87 её не сломает.
-3. **Sentry** — `Sentry.wrap`, metro, [reanimatedGuard.ts](../src/shared/lib/reanimatedGuard.ts). После `pod install` версия `8.25.0` должна синхронизировать iOS с `RNSentry 8.25.0` без патча `RCTTextView.h` (патч `7.13.0` удалён).
-3a. **Drawer / InteractionManager** — RN `0.87` удалил `InteractionManager`. Drawer `7.13.10` / `react-native-drawer-layout` 4.2.x на RN ≥ 0.82 сами не дергают handle, но shim [interactionManagerCompat.ts](../src/shared/lib/interactionManagerCompat.ts) оставляем: жест меню на устройстве без shim не снимали. Navigation 8 — alpha, не берём.
-    Отложенные dev-предупреждения RN `0.87`: `DrawerLayoutAndroid` приходит из внутреннего legacy-экспорта `react-native-gesture-handler@3.2.1`; повторяющийся Reanimated `dependencies should only be used in web implementation` — из overlay `react-native-drawer-layout@4.2.10`; `ImageBackground` — из регистрации компонентов `react-native-css-interop@0.2.6` / NativeWind 4, а не из кода приложения. Сейчас функциональных сбоев нет: первые два повторно проверить после обновлений Gesture Handler и Drawer, Reanimated-патч добавлять только если предупреждение останется; `ImageBackground` проверить при переходе на стабильный NativeWind 5 / Tailwind 4 и совместимый Gluestack.
+3. **Sentry** — `Sentry.wrap`, metro, [reanimatedGuard.ts](../src/shared/lib/reanimatedGuard.ts). После `pod install` версия `8.27.0` должна синхронизировать iOS с `RNSentry 8.27.0` без патча `RCTTextView.h` (патч `7.13.0` удалён).
+3a. **Drawer / InteractionManager** — RN `0.87` удалил `InteractionManager`. Drawer `7.14.2` / `react-native-drawer-layout` 4.2.x на RN ≥ 0.82 сами не дергают handle, но shim [interactionManagerCompat.ts](../src/shared/lib/interactionManagerCompat.ts) оставляем: жест меню на устройстве без shim не снимали. Navigation 8 — alpha, не берём.
+    Отложенные dev-предупреждения RN `0.87`: `DrawerLayoutAndroid` ранее приходил из внутреннего legacy-экспорта `react-native-gesture-handler@3.2.1`; повторяющийся Reanimated `dependencies should only be used in web implementation` — из overlay `react-native-drawer-layout@4.2.10`; `ImageBackground` — из регистрации компонентов `react-native-css-interop` / NativeWind 4, а не из кода приложения. После обновления Gesture Handler до `3.3.0` и NativeWind до `4.2.7` предупреждения нужно перепроверить вручную; патчи добавлять только при подтверждённой проблеме.
 3b. **Firebase 26** — modular JS уже был (`getApp` / `getMessaging`). Native iOS: не SPM (статическая линковка), `$RNFirebaseDisableSPM = true`. Откат — парой `app`+`messaging`.
 4. **`react-native-reanimated-table`** в графике и статистике. Если сломается на Reanimated 4 — точечный фикс.
 5. **`@react-spring/native`** в [CustomAlert.tsx](../src/shared/ui/CustomAlert.tsx). Менять только при регрессии.
@@ -262,8 +276,9 @@ MiniCodePush в этом проекте нет.
 **Ещё нет или не стабильно**
 
 - `react-native` `0.88` — не выпущен; текущий stable в проекте = `0.87.1`. Strict TS opt-out `react-native-legacy-deep-imports` в tsconfig живёт до будущего 0.88.
-- `@react-navigation/*` 8 (`@next`) — alpha. Последний stable drawer — семёрка (`^7.13.10`). Shim `InteractionManager` оставляем.
-- `nativewind` 5 — npm `preview` (`5.0.0-preview.4`). Stable = `4.2.6`.
+- `@react-navigation/*` 8 (`@next`) — alpha. Последний stable drawer — семёрка (`^7.14.2`). Shim `InteractionManager` оставляем.
+- `nativewind` 5 — npm `preview` (`5.0.0-preview.4`). Проект остаётся на
+  стабильной линейке NativeWind 4, текущая версия — `4.2.7`.
 
 **Ломает текущий стек**
 
@@ -295,9 +310,12 @@ UI выполняется в ветке `new_architecture`, но отдельн�
 - `ScreenLayout` переведён с deprecated `SafeAreaView` React Native на `react-native-safe-area-context`; `SafeAreaProvider` поднят в `AppProviders`, drawer-layout использует края без `top`, а `Auth` / `ResetPwd` / `Greeting` сохраняют верхний inset
 - Status Bar централизован через route-aware `SystemBars` для Android и iOS: красные Greeting/drawer-шапка получают светлые иконки, светлые Auth/ResetPwd — тёмные
 - карта растянута до нижнего края, а её панель и лимиты используют фактический bottom inset; обычные drawer-экраны и нижние шторки также защищены от iOS home indicator и Android navigation bar
-- настройки, блок «Карта»: чекбоксы (тёмная тема / ползунок масштаба / центрировать при взятии-отмене) после включения не отжимаются. Не задумано; было до этой миграции (`CheckboxGroup` с одним значением с апреля 2025). Бэкенд `0/1` уже умеет. Фикс: обычный `Checkbox` `isChecked` + `onChange(boolean)`, после save писать флаги в settings store. Тот же шаблон — «Уведомить о решении» в фидбеке.
+- настройки карты используют обычные управляемые checkbox. Тема интерфейса
+  вынесена из старого `night_map` в отдельный выбор `system | light | dark`, а
+  карта следует фактической теме приложения. Тот же управляемый шаблон сохранён
+  для «Уведомить о решении» в фидбеке.
 
-RNGH `3.2.1`, screens `4.27.0`, yamap-plus `6.11.0`, safe-area `5.9.1`, AppMetrica `4.2.0`, async-storage `3.1.1`, datetimepicker `9.2.1`, netinfo `12.0.1`, device-info `15.0.2`, Sentry `8.25.0` и Firebase `26.4.0` в этой волне подняты. Для iOS/Fabric `yamap-plus` пропатчен: нативная geometry маркера инициализируется до mount/recycle, а JS-слой не монтирует маркеры с нечисловыми или выходящими за диапазон координатами. Native release smoke выполнен на Android/Samsung и iOS Simulator; после patch-обновлений от 8 сентября Android release и iOS Simulator debug также собраны успешно. Реальный iPhone остаётся финальной внешней проверкой. Fontawesome RN `1.0.0` и lucide `1.41.0` — JS-обёртки над `react-native-svg`, native-сборку не требуют.
+RNGH `3.3.0`, screens `4.28.0`, yamap-plus `6.11.0`, safe-area `5.10.0`, AppMetrica `4.2.0`, async-storage `3.1.1`, datetimepicker `9.2.1`, netinfo `12.0.1`, device-info `15.0.2`, Sentry `8.27.0` и Firebase `26.4.0` входят в текущий стек. Для iOS/Fabric `yamap-plus` пропатчен: нативная geometry маркера инициализируется до mount/recycle, а JS-слой не монтирует маркеры с нечисловыми или выходящими за диапазон координатами. Предыдущий native release smoke выполнен на Android/Samsung и iOS Simulator; нативные обновления от 21 сентября требуют нового ручного smoke. Реальный iPhone остаётся финальной внешней проверкой. Fontawesome RN `1.0.0` и lucide `1.47.0` — JS-обёртки над `react-native-svg`, native-сборку не требуют.
 
 ### Отдельная задача, не этот переезд
 
@@ -319,7 +337,7 @@ RNGH `3.2.1`, screens `4.27.0`, yamap-plus `6.11.0`, safe-area `5.9.1`, AppMetri
 
 На 04.09.2026 техническая миграция RN/Fabric выполнена. За её пределами остаются:
 production-настройка Laravel CAPTCHA/SSO ответственным за сервер, реальный iPhone,
-решение по QR-оплате, тема после появления эталона на сайте и отдельный аудит
+решение по QR-оплате, ручной smoke тем Android/iOS и отдельный аудит
 транзитивных зависимостей.
 
 ## 10. Роли Cursor

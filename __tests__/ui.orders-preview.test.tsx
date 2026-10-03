@@ -127,4 +127,15 @@ describe('временный DEV-предпросмотр заказов', () =>
       expect.stringContaining('Обжалование ошибки по камере'),
     )
   })
+
+  it('показывает системное окно без действий с заказами', async () => {
+    await render(<OrdersUiPreviewScreen />)
+
+    await fireEvent.press(screen.getByTestId('preview-system-alert'))
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Проверка системного окна',
+      'Это тестовое сообщение. Никаких действий не выполнено.',
+      [{ text: 'Понятно' }],
+    )
+  })
 })

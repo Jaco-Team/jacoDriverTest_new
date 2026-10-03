@@ -16,15 +16,6 @@ jest.mock('@/components/ui/actionsheet', () => {
   }
 })
 
-jest.mock('lucide-react-native', () => {
-  const React = require('react')
-  const { View } = require('react-native')
-  const Phone = (props: any) =>
-    React.createElement(View, { ...props, testID: 'Phone' })
-
-  return { Phone }
-})
-
 jest.mock('@/analytics/AppMetricaService', () => ({
   Analytics: { log: jest.fn() },
   AnalyticsEvent: {
@@ -69,7 +60,13 @@ describe('телефоны в комментарии заказа', () => {
       'Позвонить +7 (999) 111-22-33 перед доставкой',
     )
 
-    expect(screen.getByTestId('Phone')).toBeTruthy()
+    const callButton = screen.getByTestId('order-card-comment-call')
+    expect(callButton).toHaveProp('accessibilityRole', 'button')
+    expect(callButton).toHaveProp('accessibilityLabel', 'Позвонить 8 (999) 111-22-33')
+    expect(callButton).toHaveStyle({
+      borderWidth: 1,
+      borderColor: 'rgba(66, 98, 125, 0.16)',
+    })
     expect(screen.queryByTestId('order-card-comment-phones-drawer')).toBeNull()
 
     await fireEvent.press(screen.getByTestId('order-card-comment-call'))
@@ -97,6 +94,10 @@ describe('телефоны в комментарии заказа', () => {
     )
 
     expect(screen.getByTestId('order-card-comment-call')).toHaveTextContent('2')
+    expect(screen.getByTestId('order-card-comment-call')).toHaveStyle({
+      borderWidth: 1,
+      borderColor: 'rgba(66, 98, 125, 0.16)',
+    })
     expect(screen.queryByTestId('order-card-comment-phones-drawer')).toBeNull()
 
     await fireEvent.press(screen.getByTestId('order-card-comment-call'))
@@ -104,6 +105,12 @@ describe('телефоны в комментарии заказа', () => {
     expect(screen.getByTestId('order-card-comment-phones-drawer')).toBeTruthy()
     expect(screen.getByText('8 (999) 111-22-33')).toBeTruthy()
     expect(screen.getByText('8 (999) 444-55-66')).toBeTruthy()
+    expect(
+      screen.getByTestId('order-card-comment-phone-79991112233'),
+    ).toHaveStyle({
+      borderWidth: 1,
+      borderColor: 'rgba(66, 98, 125, 0.16)',
+    })
     expect(Analytics.log).toHaveBeenCalledWith(
       'OrderCommentPhonesOpen',
       'Открытие номеров из комментария',

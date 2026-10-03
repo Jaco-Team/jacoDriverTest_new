@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import { toOrderInt } from '@/entities/CardOrder/model/normalizeOrderValue'
 import { getOrderNeedTime } from '@/entities/CardOrder/model/getOrderNeedTime'
 import { CardOrderProps } from '@/entities/CardOrder/model/types'
-import { appPalette } from '@/shared/styles/appPalette'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 import { CardTagPopover } from './CardTagPopover'
 import { CardTag } from './CardTag'
@@ -23,12 +23,13 @@ export const CardOrderComponent: React.FC<CardOrderProps> = ({
   actionButtonOrder,
   setActiveConfirm,
 }) => {
+  const { colors } = useAppTheme()
   const isDeleted = toOrderInt(item.is_delete) === 1
   const statusOrder = toOrderInt(item.status_order)
   const onlinePay = toOrderInt(item.online_pay)
   const needTime = getOrderNeedTime(item)
-  const textColor = appPalette.text
-  const mutedColor = appPalette.textMuted
+  const textColor = colors.text
+  const mutedColor = colors.textMuted
   const bodyTextStyle = {
     color: textColor,
     fontSize: globalFontSize,
@@ -41,7 +42,11 @@ export const CardOrderComponent: React.FC<CardOrderProps> = ({
     <View
       style={[
         styles.card,
-        { backgroundColor: isDeleted ? ORDER_CARD_DELETED_BG : '#FFFFFF' },
+        {
+          backgroundColor: isDeleted ? ORDER_CARD_DELETED_BG : colors.surfaceRaised,
+          borderColor: colors.border,
+          shadowColor: colors.shadowStrong,
+        },
       ]}
       testID="order-card"
     >
@@ -211,6 +216,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
     padding: 16,
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'transparent',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,

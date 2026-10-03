@@ -24,6 +24,7 @@ import {
   ActionsheetScrollView,
 } from '@/components/ui/actionsheet'
 import { appPalette } from '@/shared/styles/appPalette'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 type FeedbackSheetProps = {
   isOpen: boolean
@@ -41,6 +42,7 @@ export function FeedbackSheet({
   onClose,
 }: FeedbackSheetProps): React.JSX.Element {
   const { bottom } = useSafeAreaInsets()
+  const { colors } = useAppTheme()
   const iosSheetRef = React.useRef<BottomSheetModal>(null)
   const iosPresentedRef = React.useRef(false)
   const iosDismissingRef = React.useRef(false)
@@ -140,11 +142,11 @@ export function FeedbackSheet({
       <BottomSheetModal
         ref={iosSheetRef}
         backdropComponent={renderIosBackdrop}
-        backgroundStyle={styles.iosSheetBackground}
+        backgroundStyle={[styles.iosSheetBackground, { backgroundColor: colors.surfaceRaised }]}
         enableBlurKeyboardOnGesture
         enableDynamicSizing
         enablePanDownToClose={!busy}
-        handleIndicatorStyle={styles.handle}
+        handleIndicatorStyle={[styles.handle, { backgroundColor: colors.border }]}
         handleStyle={styles.handleArea}
         keyboardBehavior="interactive"
         keyboardBlurBehavior="restore"
@@ -173,10 +175,13 @@ export function FeedbackSheet({
         pointerEvents="box-none"
         style={styles.keyboardAvoiding}
       >
-        <ActionsheetContent style={styles.androidSheet} testID={testID}>
+        <ActionsheetContent
+          style={[styles.androidSheet, { borderColor: colors.border, backgroundColor: colors.surfaceRaised }]}
+          testID={testID}
+        >
           <ActionsheetDragIndicatorWrapper>
             <ActionsheetDragIndicator style={styles.handleArea}>
-              <View style={styles.handle} />
+              <View style={[styles.handle, { backgroundColor: colors.border }]} />
             </ActionsheetDragIndicator>
           </ActionsheetDragIndicatorWrapper>
           <ActionsheetScrollView

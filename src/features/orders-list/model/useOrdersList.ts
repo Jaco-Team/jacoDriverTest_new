@@ -1,12 +1,9 @@
-import React, { useEffect } from 'react'
-
 import { useStatStore, useGlobalStore, useOrdersStore, useSettingsStore } from '@/shared/store/store';
 import { useShallow } from 'zustand/react/shallow'
 
-import { useFocusEffect } from '@react-navigation/native';
-
 export function useOrdersList() {
   const [ FormatPrice ] = useStatStore(useShallow( state => [ state.FormatPrice ]));
+  const getSettings = useSettingsStore(state => state.getSettings);
   const [globalFontSize, showAlertText, isGlobalLoading] = useGlobalStore(
     useShallow(state => [
       state.globalFontSize,
@@ -21,6 +18,7 @@ export function useOrdersList() {
     actionButtonOrder,
     setActiveConfirm,
     isChecking,
+    hasCachedOrders,
   ] = useOrdersStore(useShallow(state => [
     state.getOrders,
     state.orders,
@@ -28,25 +26,19 @@ export function useOrdersList() {
     state.actionButtonOrder,
     state.setActiveConfirm,
     state.is_check,
+    Object.prototype.hasOwnProperty.call(
+      state.ordersCache,
+      state.ordersContextKey,
+    ),
   ]));
-  const [getSettings] = useSettingsStore(useShallow(state => [state.getSettings]));
-
-  useFocusEffect(
-    React.useCallback(() => {
-      getSettings();
-    }, [getSettings])
-  );
-
-  useEffect(() => {
-    getSettings();
-  }, [getSettings]);
-
   return {
     FormatPrice,
     globalFontSize,
     showAlertText,
     getOrders, 
+    getSettings,
     orders, 
+    hasCachedOrders,
     isChecking,
     isGlobalLoading,
     update_interval, 

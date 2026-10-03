@@ -22,7 +22,7 @@ Baseline нужен, чтобы перед заливкой и при прове
 
 - [.github/workflows/ci-baseline.yml](../.github/workflows/ci-baseline.yml)
 
-## Текущий статус на 2026-09-07
+## Текущий статус на 2026-10-01
 
 ### `lint`
 
@@ -80,10 +80,15 @@ npm run test:unit
 
 Текущий результат:
 
-- `91` test suites passed;
-- `357` tests passed;
+- `103` test suites passed;
+- `424` tests passed;
 - `0` snapshots;
 - команда использует `--runInBand --watchman=false`.
+
+Результат 29.09.2026 — 100 наборов / 408 тестов — сохранён в
+[журнале тестирования](./testing/testing-progress.md) как историческая проверка.
+
+В этот baseline входят unit/component-тесты, включая синхронизацию офлайн-регионов MapKit. Detox и запуск эмуляторов в него не входят; нативные сборки и ручные проверки ведутся отдельно.
 
 Причина `--watchman=false`:
 

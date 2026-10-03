@@ -10,6 +10,7 @@ jest.mock('@/analytics/AppMetricaService', () => ({
 }));
 
 import { useGlobalStore, useOrdersStore, useSettingsStore } from '@/shared/store/store';
+import {setAppOffline} from '@/shared/lib/connectivityState';
 
 const originalGetOrders = useOrdersStore.getState().getOrders;
 
@@ -17,6 +18,7 @@ describe('orders-map filters and getOrders', () => {
   beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    setAppOffline(false);
     useGlobalStore.setState({
       tokenAuth: 'test-token',
       loadSpinner: false,
@@ -50,11 +52,12 @@ describe('orders-map filters and getOrders', () => {
   });
 
   afterEach(async () => {
-    jest.runOnlyPendingTimers();
+    setAppOffline(false);
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
-  it('setTypeDop: пустой выбор сбрасывает фильтр на все типы и запускает reload', async () => {
+  it('setTypeDop: пустой выбор сбрасывает фильтр на все типы и обновляет без полного спиннера', async () => {
     const getOrders = jest.fn();
     useOrdersStore.setState({
       type_dop: ['1'],
@@ -64,7 +67,7 @@ describe('orders-map filters and getOrders', () => {
     useOrdersStore.getState().setTypeDop([]);
 
     expect(useOrdersStore.getState().type_dop).toEqual(['1', '2', '3']);
-    expect(getOrders).toHaveBeenCalledWith(true);
+    expect(getOrders).toHaveBeenCalledWith(false);
   });
 
   it('filterOrdersByTypes фильтрует активные заказы по статусам доп-типов', async () => {
@@ -153,12 +156,78 @@ describe('orders-map filters and getOrders', () => {
     expect(mockApi).not.toHaveBeenCalled();
   });
 
-  it('getOrders: пока предыдущая загрузка активна, повторный запрос игнорируется', async () => {
-    useOrdersStore.setState({ is_check: true } as any);
+  it('getOrders: пока предыдущая загрузка активна, повторный запрос ставится в очередь', async () => {
+    let finishFirst!: (value: any) => void;
+    let signalFirstStarted!: () => void;
+    const firstStarted = new Promise<void>(resolve => {
+      signalFirstStarted = resolve;
+    });
+    mockApi.mockImplementationOnce(() => {
+      signalFirstStarted();
+      return new Promise(resolve => {
+        finishFirst = resolve;
+      });
+    }).mockResolvedValueOnce({st: true, text: '', data: {orders: []}});
+
+    const firstRequest = useOrdersStore.getState().getOrders(false);
+    await firstStarted;
 
     await useOrdersStore.getState().getOrders(true);
 
-    expect(mockApi).not.toHaveBeenCalled();
+    expect(mockApi).toHaveBeenCalledTimes(1);
+    expect(useOrdersStore.getState().ordersRefreshPending).toBe(true);
+
+    finishFirst({st: true, text: '', data: {orders: []}});
+    await firstRequest;
+    await jest.advanceTimersByTimeAsync(300);
+
+    expect(mockApi).toHaveBeenCalledTimes(2);
+    expect(useOrdersStore.getState().ordersRefreshPending).toBe(false);
+    await jest.advanceTimersByTimeAsync(300);
+  });
+
+  it('getOrders: после смены кафе загружает новую точку сразу, не показывая старый ответ', async () => {
+    let finishFirst!: (value: any) => void;
+    let signalFirstStarted!: () => void;
+    const firstStarted = new Promise<void>(resolve => {
+      signalFirstStarted = resolve;
+    });
+    const firstResponse = new Promise(resolve => {
+      finishFirst = resolve;
+    });
+    const response = (id: number) => ({
+      st: true,
+      text: '',
+      data: { orders: [{ id, status: 'В очереди' }] },
+    });
+
+    mockApi
+      .mockImplementationOnce(() => {
+        signalFirstStarted();
+        return firstResponse;
+      })
+      .mockResolvedValueOnce(response(20));
+
+    useSettingsStore.setState({ point_id: 1 });
+    const firstRequest = useOrdersStore.getState().getOrders(false);
+    await firstStarted;
+
+    useSettingsStore.setState({ point_id: 2 });
+    await useOrdersStore.getState().getOrders(true);
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([20]);
+    expect(useOrdersStore.getState().ordersRefreshPending).toBe(false);
+
+    finishFirst(response(10));
+    await firstRequest;
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([20]);
+
+    await jest.advanceTimersByTimeAsync(300);
+
+    expect(mockApi).toHaveBeenCalledTimes(2);
+    expect(mockApi.mock.calls[0][1].point_id).toBe(1);
+    expect(mockApi.mock.calls[1][1].point_id).toBe(2);
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([20]);
+    expect(useOrdersStore.getState().ordersRefreshPending).toBe(false);
   });
 
   it('getOrders: без сети сохраняет заказы и позволяет открыть их с карты', async () => {
@@ -190,15 +259,15 @@ describe('orders-map filters and getOrders', () => {
           driver_need_gps: 1,
           home,
         },
-      })
-      .mockResolvedValueOnce({ st: false, text: 'Не удалось подключиться к серверу.' });
+      });
 
     await useOrdersStore.getState().getOrders(false);
-    jest.advanceTimersByTime(300);
+    await jest.advanceTimersByTimeAsync(300);
 
+    setAppOffline(true);
     await useOrdersStore.getState().getOrders(false);
 
-    expect(mockApi).toHaveBeenCalledTimes(2);
+    expect(mockApi).toHaveBeenCalledTimes(1);
     expect(useOrdersStore.getState().orders).toBe(orders);
     expect(useOrdersStore.getState().home).toBe(home);
     expect(useOrdersStore.getState().limit_summ).toBe('5000');
@@ -210,7 +279,7 @@ describe('orders-map filters and getOrders', () => {
 
     useOrdersStore.getState().showOrdersMap(10);
 
-    expect(mockApi).toHaveBeenCalledTimes(2);
+    expect(mockApi).toHaveBeenCalledTimes(1);
     expect(useOrdersStore.getState().isOpenOrderMap).toBe(true);
     expect(useOrdersStore.getState().showOrders).toEqual(orders);
   });
@@ -307,13 +376,13 @@ describe('orders-map filters and getOrders', () => {
 
     await useOrdersStore.getState().prefetchOrders(true);
 
-    expect(mockApi.mock.calls.map(([, data]) => data.type_orders)).toEqual([3, 2, 5, 6]);
+    expect(mockApi.mock.calls.map(([, data]) => data.type_orders)).toEqual([2, 5, 3, 6]);
     expect(useOrdersStore.getState().orders).toBe(activeOrders);
     expect(
       Object.values(useOrdersStore.getState().ordersCache)
         .flat()
         .map(order => order.id),
-    ).toEqual([30, 20, 50, 60]);
+    ).toEqual([20, 50, 30, 60]);
     expect(useOrdersStore.getState().ordersWarmupKey).not.toBe('');
     expect(useOrdersStore.getState().is_prefetching).toBe(false);
   });
@@ -328,7 +397,7 @@ describe('orders-map filters and getOrders', () => {
     await useOrdersStore.getState().prefetchOrders(false);
     await useOrdersStore.getState().prefetchOrders(false);
 
-    expect(mockApi.mock.calls.map(([, data]) => data.type_orders)).toEqual([3, 2]);
+    expect(mockApi.mock.calls.map(([, data]) => data.type_orders)).toEqual([2, 5]);
     expect(useOrdersStore.getState().ordersPrefetchCursor).toBe(2);
   });
 
@@ -343,7 +412,7 @@ describe('orders-map filters and getOrders', () => {
     expect(useOrdersStore.getState().is_prefetching).toBe(false);
   });
 
-  it('prefetchOrders: не запускает обычное обновление параллельно фоновому', async () => {
+  it('prefetchOrders: не задерживает открытый раздел из-за фонового запроса и не затирает его', async () => {
     let finishBackground!: (value: any) => void;
     let markForegroundStarted!: () => void;
     const backgroundResponse = new Promise(resolve => {
@@ -371,8 +440,9 @@ describe('orders-map filters and getOrders', () => {
 
     await useOrdersStore.getState().getOrders(false);
 
-    expect(mockApi).toHaveBeenCalledTimes(1);
-    expect(useOrdersStore.getState().ordersRefreshPending).toBe(true);
+    expect(mockApi).toHaveBeenCalledTimes(2);
+    expect(useOrdersStore.getState().ordersRefreshPending).toBe(false);
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([10]);
 
     finishBackground({
       st: true,
@@ -384,7 +454,9 @@ describe('orders-map filters and getOrders', () => {
 
     expect(mockApi).toHaveBeenCalledTimes(2);
     expect(mockApi.mock.calls[1][1].type_orders).toBe(1);
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([10]);
     expect(useOrdersStore.getState().ordersRefreshPending).toBe(false);
+    await jest.advanceTimersByTimeAsync(300);
   });
 
   it('getOrders: повторяет цикл онлайн — офлайн — онлайн — офлайн без потери последних заказов', async () => {
@@ -421,22 +493,24 @@ describe('orders-map filters and getOrders', () => {
       .mockResolvedValueOnce({ st: false, text: 'Не удалось подключиться к серверу.' });
 
     await useOrdersStore.getState().getOrders(false);
-    jest.advanceTimersByTime(300);
+    await jest.advanceTimersByTimeAsync(300);
     expect(useOrdersStore.getState().orders).toBe(firstOrders);
     expect(useOrdersStore.getState().is_check).toBe(false);
 
     await useOrdersStore.getState().getOrders(false);
     expect(useOrdersStore.getState().orders).toBe(firstOrders);
+    await jest.advanceTimersByTimeAsync(300);
     expect(useOrdersStore.getState().is_check).toBe(false);
 
     await useOrdersStore.getState().getOrders(false);
-    jest.advanceTimersByTime(300);
+    await jest.advanceTimersByTimeAsync(300);
     expect(useOrdersStore.getState().orders).toBe(refreshedOrders);
     expect(useOrdersStore.getState().limit_summ).toBe('6000');
     expect(useOrdersStore.getState().limit_count).toBe('8');
     expect(useOrdersStore.getState().is_check).toBe(false);
 
     await useOrdersStore.getState().getOrders(false);
+    await jest.advanceTimersByTimeAsync(300);
     expect(mockApi).toHaveBeenCalledTimes(4);
     expect(useOrdersStore.getState().orders).toBe(refreshedOrders);
     expect(useOrdersStore.getState().limit_summ).toBe('6000');

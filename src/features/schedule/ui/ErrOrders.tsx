@@ -2,19 +2,28 @@ import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { ReceiptText } from 'lucide-react-native'
 
-import { appPalette } from '@/shared/styles/appPalette'
 import { useErrorOrders } from '../model/useError'
 import { ModalErrOrder } from './ModalErrOrder'
-import { graphStyles } from './graphStyles'
+import { useGraphStyles } from './graphStyles'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
 
 export function ErrOrders(): React.JSX.Element {
+  const { colors } = useAppTheme()
+  const graphStyles = useGraphStyles()
+  const isOffline = useIsOffline()
   const { globalFontSize, err_orders, showModalErrOrder } = useErrorOrders()
+  const visibleErrors = isOffline ? [] : err_orders
+
+  React.useEffect(() => {
+    if (isOffline) showModalErrOrder(false)
+  }, [isOffline, showModalErrOrder])
 
   return (
     <View style={graphStyles.card} testID="graph-order-errors-card">
       <View style={graphStyles.cardHeader}>
         <View style={graphStyles.cardIcon}>
-          <ReceiptText color={appPalette.primary} size={23} />
+          <ReceiptText color={colors.primary} size={23} />
         </View>
         <Text style={graphStyles.cardTitle}>Ошибки по заказам</Text>
       </View>
@@ -41,20 +50,22 @@ export function ErrOrders(): React.JSX.Element {
             </View>
           </View>
 
-          {err_orders.length === 0 ? (
+          {visibleErrors.length === 0 ? (
             <View style={graphStyles.empty}>
               <Text style={[graphStyles.emptyText, { fontSize: globalFontSize }]}>
                 Ошибок по заказам за выбранный период нет.
               </Text>
             </View>
           ) : (
-            err_orders.map((item, index) => {
-              const lastRow = index === err_orders.length - 1
+            visibleErrors.map((item, index) => {
+              const lastRow = index === visibleErrors.length - 1
 
               return (
                 <Pressable
                   accessibilityLabel={`Открыть ошибку по заказу ${item.order_id}`}
                   accessibilityRole="button"
+                  accessibilityState={{ disabled: isOffline }}
+                  disabled={isOffline}
                   key={`${item.err_id}-${item.row_id}-${index}`}
                   style={graphStyles.tableRow}
                   testID={`graph-order-error-${index}`}

@@ -48,7 +48,10 @@ test('закрытый заказ: все action-кнопки скрыты, те
   );
 
   // Телефонная кнопка доступна по стабильному testID
-  expect(screen.getByTestId(`order-${item.id}-phone`)).toBeTruthy();
+  expect(screen.getByTestId(`order-${item.id}-phone`)).toHaveStyle({
+    borderWidth: 1,
+    borderColor: 'rgba(66, 98, 125, 0.16)',
+  });
 
   // Экшены скрыты
   expect(screen.queryByTestId(`order-${item.id}-cancel`)).toBeNull();

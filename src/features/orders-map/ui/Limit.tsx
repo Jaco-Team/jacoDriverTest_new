@@ -2,11 +2,13 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useLimitLogic } from "../model/useLimitLogic"
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 export function TypeLimit() {
   const insets = useSafeAreaInsets()
-  const { limit_summ, limit_count, selectType, type, globalFontSize, night_map } = useLimitLogic()
-  const limitColor = night_map == 1 ? '#FFFFFF' : '#1F2B36'
+  const { colors } = useAppTheme()
+  const { limit_summ, limit_count, selectType, type, globalFontSize } = useLimitLogic()
+  const limitColor = colors.text
 
   return (
     <>

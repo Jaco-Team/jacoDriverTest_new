@@ -7,16 +7,20 @@ import { ChooseMonth } from './ChooseMonth'
 import { ErrCamera } from './ErrCamera'
 import { ErrOrders } from './ErrOrders'
 import { GraphTable } from './GraphTable'
-import { graphStyles } from './graphStyles'
+import { useGraphStyles } from './graphStyles'
+import { useScrollToTopOnFocus } from '@/shared/lib/useScrollToTopOnFocus'
 
 export function GraphScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets()
+  const graphStyles = useGraphStyles()
+  const scrollRef = useScrollToTopOnFocus<ScrollView>()
 
   useGraphLogic()
 
   return (
     <View style={graphStyles.screen} testID="graph-screen">
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           graphStyles.content,
           { paddingBottom: insets.bottom + 48 },

@@ -1,7 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 
-import { graphStyles } from './graphStyles'
+import { useGraphStyles } from './graphStyles'
 
 interface GraphDate {
   date?: string
@@ -43,9 +43,11 @@ export function GraphTableView({
   thisDay,
   globalFontSize,
 }: GraphTableViewProps): React.JSX.Element {
-  const tableWidth = EMPLOYEE_WIDTH + Math.max(dates.length, 1) * DAY_WIDTH
+  const graphStyles = useGraphStyles()
+  const hasDates = dates.length > 0
+  const tableWidth = EMPLOYEE_WIDTH + dates.length * DAY_WIDTH
 
-  const renderHeaderRow = (label: string, values: string[], isDow: boolean) => (
+  const renderHeaderRow = (label: string, values: string[], isDow: boolean) => hasDates ? (
     <View style={[graphStyles.tableRow, { width: tableWidth }]}>
       <View style={[graphStyles.tableCell, graphStyles.headCell, styles.employeeCell]}>
         <Text style={[graphStyles.headText, { fontSize: globalFontSize }]}>
@@ -84,15 +86,33 @@ export function GraphTableView({
         )
       })}
     </View>
+  ) : (
+    <View style={[graphStyles.tableRow, styles.fullWidthRow]}>
+      <View
+        style={[
+          graphStyles.tableCell,
+          graphStyles.headCell,
+          graphStyles.lastColumn,
+          styles.fullWidthCell,
+        ]}
+      >
+        <Text style={[graphStyles.headText, { fontSize: globalFontSize }]}>
+          {label}
+        </Text>
+      </View>
+    </View>
   )
 
   return (
-    <View style={{ minWidth: tableWidth }} testID="graph-schedule-table">
+    <View
+      style={hasDates ? { minWidth: tableWidth } : styles.fullWidthTable}
+      testID="graph-schedule-table"
+    >
       {renderHeaderRow('Дата', headerDay, false)}
       {renderHeaderRow('Сотрудник', headerDow, true)}
 
       {users.length === 0 ? (
-        <View style={[graphStyles.empty, { width: tableWidth }]}>
+        <View style={[graphStyles.empty, hasDates ? { width: tableWidth } : styles.fullWidthEmpty]}>
           <Text style={[graphStyles.emptyText, { fontSize: globalFontSize }]}>
             За выбранный месяц пока нет данных по графику.
           </Text>
@@ -153,6 +173,19 @@ export function GraphTableView({
 }
 
 const styles = StyleSheet.create({
+  fullWidthTable: {
+    width: '100%',
+  },
+  fullWidthRow: {
+    width: '100%',
+  },
+  fullWidthCell: {
+    width: '100%',
+    alignItems: 'flex-start',
+  },
+  fullWidthEmpty: {
+    width: '100%',
+  },
   employeeCell: {
     width: EMPLOYEE_WIDTH,
     alignItems: 'flex-start',

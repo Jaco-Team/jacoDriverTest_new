@@ -11,6 +11,7 @@ type setActiveConfirmProps = (
 
 export interface OrdersListProps {
   orders: Array<Order>,
+  hasCachedOrders: boolean,
   isChecking: boolean,
   isGlobalLoading: boolean,
   getOrders: (is_reload?: boolean) => Promise<void>,

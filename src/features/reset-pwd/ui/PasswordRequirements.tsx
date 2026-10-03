@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 
 import { getPasswordRequirements } from '@/shared/lib/passwordRequirements'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 function RequirementCheckIcon(): React.JSX.Element {
   return (
@@ -26,23 +27,29 @@ interface PasswordRequirementsProps {
 export function PasswordRequirements({
   password,
 }: PasswordRequirementsProps): React.JSX.Element {
+  const { colors } = useAppTheme()
   const requirements = getPasswordRequirements(password)
 
   return (
     <View style={styles.container} testID="reset-password-requirements">
-      <Text style={styles.title}>Пароль должен содержать:</Text>
+      <Text style={[styles.title, { color: colors.textMuted }]}>Пароль должен содержать:</Text>
 
       <View style={styles.list}>
         {requirements.map((requirement) => (
           <View key={requirement.label} style={styles.item}>
             <View
-              style={[styles.mark, requirement.met && styles.markCompleted]}
+              style={[
+                styles.mark,
+                { borderColor: colors.border, backgroundColor: colors.surfaceRaised },
+                requirement.met && styles.markCompleted,
+              ]}
             >
               {requirement.met ? <RequirementCheckIcon /> : null}
             </View>
             <Text
               style={[
                 styles.label,
+                { color: colors.textMuted },
                 requirement.met && styles.labelCompleted,
               ]}
             >

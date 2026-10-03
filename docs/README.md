@@ -2,11 +2,15 @@
 
 Эта папка нужна как единое место для рабочей документации по `jacoDriverTest`.
 
-Актуальный статус на 08.09.2026: RN `0.87.1` / Fabric, UI и мобильный переход
-на Laravel API реализованы; локальный baseline — 91 suites / 357 tests. Android
-release проверен на реальном Samsung, iOS — на Simulator. Открыты production-
-развёртывание mobile CAPTCHA/SSO ответственным за сервер, реальный iPhone, решение
-по QR-оплате и тема после появления готового эталона на сайте.
+Статус на 01.10.2026: RN `0.87.1` / Fabric, переход на Laravel API и
+светлая, тёмная и системная темы реализованы. Локально прошли `npm run lint`,
+`npm run typecheck` и `npm run test:unit` (103 набора / 424 теста).
+Это проверка JS/TS, а не новая нативная сборка: Android release ранее проверен
+на Samsung, iOS — на Simulator. Перед выпуском остаются проверка актуальной
+сборки и офлайн-карты MapKit на устройствах, release на реальном iPhone,
+production-проверка CAPTCHA/SSO и решение по QR-оплате.
+Текущие открытые задачи сайта, приложения и Laravel API собраны в
+[чек-листе унификации](./site-mobile-design-unification-checklist.md).
 
 Сюда входят:
 
@@ -81,6 +85,20 @@ release проверен на реальном Samsung, iOS — на Simulator. 
 - Bearer auth, secure storage, SSO и CAPTCHA;
 - фейковое удаление тестового аккаунта.
 
+[docs/site-mobile-design-unification-checklist.md](./site-mobile-design-unification-checklist.md)
+
+Общий план и чек-лист унификации курьерского сайта и мобильного приложения:
+
+- единая модель светлой, тёмной и системной тем;
+- синхронизация через Laravel API;
+- общие дизайн-токены и состояния компонентов;
+- адаптивность сайта и офлайн-состояния;
+- итоговая проверка web, Android и iOS.
+
+[docs/theme-sync-decision.md](./theme-sync-decision.md)
+
+Зафиксированный контракт темы для сайта, приложения и API.
+
 ### Раздел тестирования
 
 [docs/testing/README.md](./testing/README.md)
@@ -107,6 +125,8 @@ release проверен на реальном Samsung, iOS — на Simulator. 
 8. Для переезда на New Architecture смотреть [docs/new-architecture-migration-plan.md](./new-architecture-migration-plan.md).
 9. Для переноса UI курьерского сайта смотреть [docs/driver-site-ui-migration-plan.md](./driver-site-ui-migration-plan.md).
 10. Для подключения приложения к Laravel API смотреть [docs/laravel-api-mobile-migration-plan.md](./laravel-api-mobile-migration-plan.md).
+11. Для унификации сайта и приложения смотреть [docs/site-mobile-design-unification-checklist.md](./site-mobile-design-unification-checklist.md).
+12. Для контракта темы смотреть [docs/theme-sync-decision.md](./theme-sync-decision.md).
 
 ## Правило оформления ссылок
 

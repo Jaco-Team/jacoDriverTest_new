@@ -72,7 +72,7 @@ describe('useSettingsLogic: локальное состояние и сохра�
     expect(api!.globalFontSize).toBe(18);
     expect(api!.typeShowDel).toBe('full');
     expect(api!.centeredMap).toBe(true);
-    expect(api!.nightMap).toBe(false);
+    expect(api!.appThemePreference).toBe('system');
     expect(api!.showMapScale).toBe(true);
     expect(api!.fontSize).toBe(16);
     expect(api!.mapScale).toBe(1.25);
@@ -94,7 +94,7 @@ describe('useSettingsLogic: локальное состояние и сохра�
       api!.setMapScale(1.75);
       api!.setMapDataType('full');
       api!.setMarkerTheme('black');
-      api!.setNightMap(true);
+      api!.setAppThemePreference('dark');
       api!.setShowMapScale(false);
     });
 
@@ -114,6 +114,7 @@ describe('useSettingsLogic: локальное состояние и сохра�
       'black',
       ['is_night'],
       [],
+      'dark',
     );
   });
 

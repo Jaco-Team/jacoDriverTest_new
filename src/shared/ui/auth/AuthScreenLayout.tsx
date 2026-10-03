@@ -16,11 +16,16 @@ import Svg, {
   Stop,
 } from 'react-native-svg'
 
+import { ConnectivityLocationIndicator } from '@/shared/ui/ConnectivityLocationIndicator'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+
 interface AuthScreenLayoutProps {
   children: React.ReactNode
 }
 
 function AuthBackground(): React.JSX.Element {
+  const { colors, isDark } = useAppTheme()
+
   return (
     <Svg
       pointerEvents="none"
@@ -31,9 +36,9 @@ function AuthBackground(): React.JSX.Element {
     >
       <Defs>
         <LinearGradient id="auth-base" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#F4F7FA" />
-          <Stop offset="0.46" stopColor="#FFFFFF" />
-          <Stop offset="1" stopColor="#F7F9FB" />
+          <Stop offset="0" stopColor={colors.surface} />
+          <Stop offset="0.46" stopColor={isDark ? colors.surfaceAlt : colors.surfaceRaised} />
+          <Stop offset="1" stopColor={colors.surface} />
         </LinearGradient>
         <RadialGradient id="auth-top-glow" cx="0" cy="0" rx="1" ry="1">
           <Stop offset="0" stopColor="#315C7A" stopOpacity="0.14" />
@@ -53,11 +58,14 @@ function AuthBackground(): React.JSX.Element {
 }
 
 export function AuthScreenLayout({ children }: AuthScreenLayoutProps): React.JSX.Element {
+  const { colors } = useAppTheme()
+
   return (
-    <View style={styles.root} testID="auth-screen-layout">
+    <View style={[styles.root, { backgroundColor: colors.surface }]} testID="auth-screen-layout">
       <AuthBackground />
 
       <SafeAreaView style={styles.safeArea} edges={['top', 'right', 'bottom', 'left']}>
+        <ConnectivityLocationIndicator />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
@@ -68,7 +76,17 @@ export function AuthScreenLayout({ children }: AuthScreenLayoutProps): React.JSX
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.card} testID="auth-card">
+            <View
+              style={[
+                styles.card,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surfaceRaised,
+                  shadowColor: colors.shadowStrong,
+                },
+              ]}
+              testID="auth-card"
+            >
               {children}
             </View>
           </ScrollView>

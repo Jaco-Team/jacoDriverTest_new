@@ -5,6 +5,10 @@ import { useShallow } from 'zustand/react/shallow'
 import { appPalette } from '@/shared/styles/appPalette'
 import { useFeedbackStore } from '@/shared/store/store'
 import type { FeedbackResponse } from '@/shared/store/FeedbackStoreType'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
+import { useOnlineScreenRefresh } from '@/shared/lib/useOnlineScreenRefresh'
+import { useScrollToTopOnFocus } from '@/shared/lib/useScrollToTopOnFocus'
 
 import FeedbackItem from './FeedbackItem'
 
@@ -19,16 +23,22 @@ const FeedbackList: React.FC<FeedbackListProps> = ({
   globalFontSize,
   onDismissKeyboard,
 }) => {
-  const [fetchFeedbacks, fetchFeedbackById] = useFeedbackStore(
-    useShallow(state => [state.fetchFeedbacks, state.fetchFeedbackById]),
+  const { colors } = useAppTheme()
+  const isOffline = useIsOffline()
+  const scrollRef = useScrollToTopOnFocus<FlatList<FeedbackResponse>>()
+  const [fetchFeedbacks, fetchFeedbackById, error] = useFeedbackStore(
+    useShallow(state => [
+      state.fetchFeedbacks,
+      state.fetchFeedbackById,
+      state.error,
+    ]),
   )
 
-  React.useEffect(() => {
-    void fetchFeedbacks()
-  }, [fetchFeedbacks])
+  useOnlineScreenRefresh(isOffline, fetchFeedbacks)
 
   return (
     <FlatList
+      ref={scrollRef}
       contentContainerStyle={[
         styles.content,
         feedbacks.length === 0 && styles.emptyContent,
@@ -36,14 +46,16 @@ const FeedbackList: React.FC<FeedbackListProps> = ({
       data={feedbacks}
       keyExtractor={item => String(item.id)}
       ListEmptyComponent={
-        <View style={styles.emptyCard}>
-          <Text style={[styles.emptyTitle, { fontSize: Math.min(28, globalFontSize + 3) }]}>Ничего не найдено</Text>
-          <Text style={[styles.emptyText, { fontSize: Math.max(14, globalFontSize) }]}>
-            Попробуйте изменить фильтр или текст поиска
+        <View style={[styles.emptyCard, { borderColor: colors.border, backgroundColor: colors.surfaceRaised }]}>
+          <Text style={[styles.emptyTitle, { color: colors.text, fontSize: Math.min(28, globalFontSize + 3) }]}>
+            {!isOffline && error ? 'Не удалось загрузить данные' : 'Ничего не найдено'}
+          </Text>
+          <Text style={[styles.emptyText, { color: colors.textMuted, fontSize: Math.max(14, globalFontSize) }]}>
+            {!isOffline && error ? error : 'Попробуйте изменить фильтр или текст поиска'}
           </Text>
         </View>
       }
-      onRefresh={() => void fetchFeedbacks()}
+      onRefresh={isOffline ? undefined : () => void fetchFeedbacks()}
       onScrollBeginDrag={onDismissKeyboard}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="never"

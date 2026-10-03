@@ -6,13 +6,19 @@ import { appPalette } from '@/shared/styles/appPalette'
 import { usePriceScreen } from '../model/usePriceScreen'
 import { PriceDatePickerSheet } from './PriceDatePickerSheet'
 import { TextDescription } from './TextDescription'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import { useScrollToTopOnFocus } from '@/shared/lib/useScrollToTopOnFocus'
 
 export function PriceScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets()
+  const { colors } = useAppTheme()
+  const scrollRef = useScrollToTopOnFocus<ScrollView>()
   const {
     activePicker,
     closePicker,
     globalFontSize,
+    hasPriceData,
+    isOffline,
     openEndPicker,
     openStartPicker,
     pickerMaxDate,
@@ -29,8 +35,9 @@ export function PriceScreen(): React.JSX.Element {
   } = usePriceScreen()
 
   return (
-    <View style={styles.screen} testID="price-screen">
+    <View style={[styles.screen, { backgroundColor: colors.surface }]} testID="price-screen">
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + 48 },
@@ -38,24 +45,26 @@ export function PriceScreen(): React.JSX.Element {
         showsVerticalScrollIndicator={false}
         testID="price-scroll"
       >
-        <View style={[styles.card, styles.hero]} testID="price-range-card">
-          <Text style={styles.title}>
+        <View style={[styles.card, styles.hero, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, shadowColor: colors.shadowStrong }]} testID="price-range-card">
+          <Text style={[styles.title, { color: colors.text }]}>
             Расчет
           </Text>
 
-          <View style={styles.rangeControl}>
+          <View style={[styles.rangeControl, { borderColor: colors.border, backgroundColor: colors.surfaceRaised }]}>
             <Pressable
               accessibilityLabel={`Дата от: ${showDateStart}`}
               accessibilityRole="button"
+              disabled={isOffline}
               style={styles.rangeButton}
               testID="price-start-date"
               onPress={openStartPicker}
             >
-              <Text style={styles.rangePrefix}>С</Text>
+              <Text style={[styles.rangePrefix, { color: colors.textMuted }]}>С</Text>
               <Text
                 numberOfLines={1}
                 style={[
                   styles.rangeValue,
+                  { color: colors.text },
                   {
                     fontSize: globalFontSize,
                     lineHeight: Math.round(globalFontSize * 1.25),
@@ -66,11 +75,12 @@ export function PriceScreen(): React.JSX.Element {
               </Text>
             </Pressable>
 
-            <Text style={styles.rangeDivider}>по</Text>
+            <Text style={[styles.rangeDivider, { color: colors.textMuted }]}>по</Text>
 
             <Pressable
               accessibilityLabel={`Дата до: ${showDateEnd}`}
               accessibilityRole="button"
+              disabled={isOffline}
               style={[styles.rangeButton, styles.rangeButtonEnd]}
               testID="price-end-date"
               onPress={openEndPicker}
@@ -80,6 +90,7 @@ export function PriceScreen(): React.JSX.Element {
                 style={[
                   styles.rangeValue,
                   styles.rangeValueEnd,
+                  { color: colors.text },
                   {
                     fontSize: globalFontSize,
                     lineHeight: Math.round(globalFontSize * 1.25),
@@ -92,13 +103,13 @@ export function PriceScreen(): React.JSX.Element {
           </View>
         </View>
 
-        <View style={[styles.card, styles.metricsCard]} testID="price-summary-card">
+        {!isOffline && hasPriceData ? <View style={[styles.card, styles.metricsCard, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, shadowColor: colors.shadowStrong }]} testID="price-summary-card">
           <Text
             adjustsFontSizeToFit
             numberOfLines={1}
             style={[
               styles.total,
-              { fontSize: totalPriceFontSize, lineHeight: totalPriceFontSize },
+              { color: colors.text, fontSize: totalPriceFontSize, lineHeight: totalPriceFontSize },
             ]}
             testID="price-total"
           >
@@ -118,10 +129,10 @@ export function PriceScreen(): React.JSX.Element {
               />
             ))}
           </View>
-        </View>
+        </View> : null}
 
-        <View
-          style={[styles.card, styles.metricsCard]}
+        {!isOffline && hasPriceData ? <View
+          style={[styles.card, styles.metricsCard, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, shadowColor: colors.shadowStrong }]}
           testID="price-settlement-card"
         >
           <View style={styles.metrics}>
@@ -136,7 +147,7 @@ export function PriceScreen(): React.JSX.Element {
               />
             ))}
           </View>
-        </View>
+        </View> : null}
       </ScrollView>
 
       <PriceDatePickerSheet

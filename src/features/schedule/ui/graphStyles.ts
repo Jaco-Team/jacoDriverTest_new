@@ -1,11 +1,14 @@
+import React from 'react'
 import { StyleSheet } from 'react-native'
 
-import { appPalette } from '@/shared/styles/appPalette'
+import { appPalettes, type AppPalette } from '@/shared/styles/appPalette'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
-export const graphStyles = StyleSheet.create({
+function createGraphStyles(colors: AppPalette) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: appPalette.surface,
+    backgroundColor: colors.surface,
   },
   content: {
     width: '100%',
@@ -18,9 +21,9 @@ export const graphStyles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(37, 18, 22, 0.08)',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#181114',
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
+    shadowColor: colors.shadowStrong,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 20,
@@ -32,7 +35,7 @@ export const graphStyles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   eyebrow: {
-    color: 'rgba(66, 98, 125, 0.82)',
+    color: colors.textMuted,
     fontFamily: 'Roboto-Bold',
     fontSize: 13,
     letterSpacing: 1.6,
@@ -50,9 +53,9 @@ export const graphStyles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: appPalette.border,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#181114',
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
+    shadowColor: colors.shadowStrong,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
@@ -61,7 +64,7 @@ export const graphStyles = StyleSheet.create({
   monthButtonText: {
     minWidth: 0,
     flexShrink: 1,
-    color: appPalette.primaryDark,
+    color: colors.text,
     fontFamily: 'Roboto-Bold',
     textAlign: 'center',
   },
@@ -81,12 +84,12 @@ export const graphStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 16,
-    backgroundColor: appPalette.soft,
+    backgroundColor: colors.soft,
   },
   cardTitle: {
     minWidth: 0,
     flex: 1,
-    color: '#1F1015',
+    color: colors.text,
     fontFamily: 'Roboto-Bold',
     fontSize: 23,
     lineHeight: 25,
@@ -99,8 +102,8 @@ export const graphStyles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#F0E9EC',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
   },
   tableRow: {
     flexDirection: 'row',
@@ -113,8 +116,8 @@ export const graphStyles = StyleSheet.create({
     paddingHorizontal: 14,
     borderBottomWidth: 1,
     borderRightWidth: 1,
-    borderColor: '#F0EBED',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
   },
   lastColumn: {
     borderRightWidth: 0,
@@ -123,46 +126,46 @@ export const graphStyles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   headCell: {
-    backgroundColor: appPalette.soft,
+    backgroundColor: colors.soft,
   },
   headText: {
-    color: 'rgba(68, 84, 97, 0.88)',
+    color: colors.textMuted,
     fontFamily: 'Roboto-Bold',
     textAlign: 'center',
   },
   bodyText: {
-    color: '#312126',
+    color: colors.text,
     fontFamily: 'Roboto-Medium',
     textAlign: 'center',
   },
   weekendCell: {
-    backgroundColor: appPalette.surfaceAlt,
+    backgroundColor: colors.surfaceAlt,
   },
   weekendText: {
-    color: appPalette.brand,
+    color: colors.brand,
   },
   todayCell: {
-    backgroundColor: appPalette.softStrong,
-    borderBottomColor: appPalette.primary,
+    backgroundColor: colors.softStrong,
+    borderBottomColor: colors.primary,
     borderBottomWidth: 3,
   },
   currentUserCell: {
-    backgroundColor: appPalette.soft,
+    backgroundColor: colors.soft,
   },
   currentUserNameCell: {
-    backgroundColor: appPalette.softStrong,
+    backgroundColor: colors.softStrong,
     borderLeftWidth: 5,
-    borderLeftColor: appPalette.primary,
+    borderLeftColor: colors.primary,
   },
   currentUserText: {
-    color: appPalette.primaryDeep,
+    color: colors.text,
     fontFamily: 'Roboto-Bold',
   },
   currentTodayCell: {
     backgroundColor: 'rgba(66, 98, 125, 0.22)',
   },
   filledHoursCell: {
-    backgroundColor: appPalette.soft,
+    backgroundColor: colors.soft,
   },
   empty: {
     minHeight: 76,
@@ -170,12 +173,20 @@ export const graphStyles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 24,
     paddingHorizontal: 16,
-    backgroundColor: '#FFFAFB',
+    backgroundColor: colors.surfaceAlt,
   },
   emptyText: {
-    color: 'rgba(84, 67, 73, 0.68)',
+    color: colors.textMuted,
     fontFamily: 'Roboto-Medium',
     lineHeight: 22,
     textAlign: 'center',
   },
-})
+  })
+}
+
+export const graphStyles = createGraphStyles(appPalettes.light)
+
+export function useGraphStyles() {
+  const { colors } = useAppTheme()
+  return React.useMemo(() => createGraphStyles(colors), [colors])
+}

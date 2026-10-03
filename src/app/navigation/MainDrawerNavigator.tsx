@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Platform, TouchableOpacity } from 'react-native';
+import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useGlobalStore, useOrdersStore, useGEOStore } from '@/shared/store/store';
@@ -37,7 +37,8 @@ import { useSettingsUpdater } from '@/shared/lib/useSettingsUpdater'
 import { useUserLocationUpdater } from '@/shared/lib/useUserLocationUpdater'
 import { useOrdersBackgroundUpdater } from '@/shared/lib/useOrdersBackgroundUpdater'
 import { initializeNotifications, requestNotificationPermission } from '@/shared/lib/notifications'
-import { appPalette } from '@/shared/styles/appPalette'
+import { ConnectivityLocationIndicator } from '@/shared/ui/ConnectivityLocationIndicator'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 const Drawer = createDrawerNavigator();
 
@@ -58,6 +59,7 @@ function EdgeToEdgeDrawerContent(
 
 export function MainDrawerNavigator() {
   const insets = useSafeAreaInsets()
+  const { colors } = useAppTheme()
   const [ globalFontSize, is_need_avg_time, is_need_page_stat, setNotifToken ] = useGlobalStore(useShallow( state => [ state.globalFontSize, state.is_need_avg_time, state.is_need_page_stat, state.setNotifToken ]));
   
   const [
@@ -130,12 +132,12 @@ export function MainDrawerNavigator() {
       backBehavior="history"
       screenOptions={({ navigation }) => {
         return {
-          drawerActiveTintColor: appPalette.primary,
-          drawerInactiveTintColor: appPalette.text,
+          drawerActiveTintColor: colors.primary,
+          drawerInactiveTintColor: colors.text,
           drawerStyle: {
             width: '86%',
             maxWidth: 340,
-            backgroundColor: '#F6F9FC',
+            backgroundColor: colors.surface,
           },
           drawerType: 'front',
           ...(Platform.OS === 'ios'
@@ -145,10 +147,10 @@ export function MainDrawerNavigator() {
               }
             : {}),
           overlayStyle: {
-            backgroundColor: 'rgba(17, 27, 36, 0.42)',
+            backgroundColor: colors.overlay,
           },
           headerStyle: {
-            backgroundColor: '#c03',
+            backgroundColor: colors.brandHeader,
             ...(Platform.OS === 'ios' ? { height: insets.top + 56 } : {}),
           },
           ...(Platform.OS === 'ios'
@@ -160,6 +162,47 @@ export function MainDrawerNavigator() {
             color: '#fff',
             fontSize: globalFontSize,
           },
+          header: ({ options, route }) => (
+            <View>
+              <View
+                style={{
+                  minHeight: insets.top + 56,
+                  paddingTop: insets.top,
+                  backgroundColor: colors.brandHeader,
+                }}
+                testID="main-drawer-header"
+              >
+                <View
+                  style={{
+                    height: 56,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                  }}
+                >
+                  {options.headerLeft?.({
+                    canGoBack: false,
+                    tintColor: '#fff',
+                  })}
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      flex: 1,
+                      color: '#fff',
+                      fontSize: globalFontSize,
+                      fontWeight: '600',
+                    }}
+                  >
+                    {options.title ?? route.name}
+                  </Text>
+                  {options.headerRight?.({
+                    canGoBack: false,
+                    tintColor: '#fff',
+                  })}
+                </View>
+              </View>
+              <ConnectivityLocationIndicator />
+            </View>
+          ),
           headerLeft: () => (
             <TouchableOpacity
               accessibilityLabel="Открыть меню"
@@ -249,7 +292,7 @@ export function MainDrawerNavigator() {
           title: 'Список заказов',
           headerShown: true,
           swipeEnabled: true,
-          drawerItemStyle: {backgroundColor: '#fff'},
+          drawerItemStyle: {backgroundColor: colors.surfaceRaised},
           drawerLabelStyle: { fontSize: globalFontSize },
           
         }}
@@ -264,7 +307,7 @@ export function MainDrawerNavigator() {
           headerShown: true,
           swipeEnabled: true,
           freezeOnBlur: false,
-          drawerItemStyle: {backgroundColor: '#fff'},
+          drawerItemStyle: {backgroundColor: colors.surfaceRaised},
           drawerLabelStyle: { fontSize: globalFontSize },
         }}
       />
@@ -280,7 +323,7 @@ export function MainDrawerNavigator() {
           drawerLabel: 'Расчет',
           title: 'Расчет',
           headerShown: true,
-          drawerItemStyle: {backgroundColor: '#fff'},
+          drawerItemStyle: {backgroundColor: colors.surfaceRaised},
           swipeEnabled: true,
           drawerLabelStyle: { fontSize: globalFontSize },
           headerRight: () => null,
@@ -294,7 +337,7 @@ export function MainDrawerNavigator() {
           title: 'График работы',
           headerShown: true,
           swipeEnabled: true,
-          drawerItemStyle: {backgroundColor: '#fff'},
+          drawerItemStyle: {backgroundColor: colors.surfaceRaised},
           drawerLabelStyle: { fontSize: globalFontSize },
           headerRight: () => null,
         }}
@@ -303,13 +346,13 @@ export function MainDrawerNavigator() {
         name="Statistics"
         component={StatisticsTableScreen}
         options={{
-          drawerLabel: 'Статистика времени',
-          title: 'Статистика времени',
+          drawerLabel: 'Статистика',
+          title: 'Статистика',
           headerShown: true,
           swipeEnabled: true,
           drawerItemStyle: is_need_page_stat
-            ? {backgroundColor: '#fff'}
-            : {backgroundColor: '#fff', height: 0},
+            ? {backgroundColor: colors.surfaceRaised}
+            : {backgroundColor: colors.surfaceRaised, height: 0},
           drawerLabelStyle: { fontSize: globalFontSize },
           headerRight: () => null,
         }}
@@ -322,7 +365,7 @@ export function MainDrawerNavigator() {
           title: 'Настройки',
           headerShown: true,
           swipeEnabled: true,
-          drawerItemStyle: {backgroundColor: '#fff'},
+          drawerItemStyle: {backgroundColor: colors.surfaceRaised},
           drawerLabelStyle: { fontSize: globalFontSize },
           headerRight: () => null,
         }}
@@ -335,7 +378,7 @@ export function MainDrawerNavigator() {
           title: 'Предложения',
           headerShown: true,
           swipeEnabled: true,
-          drawerItemStyle: {backgroundColor: '#fff'},
+          drawerItemStyle: {backgroundColor: colors.surfaceRaised},
           drawerLabelStyle: { fontSize: globalFontSize },
           headerRight: () => null,
         }}
@@ -349,7 +392,7 @@ export function MainDrawerNavigator() {
             title: 'UI заказов (DEV)',
             headerShown: true,
             swipeEnabled: true,
-            drawerItemStyle: { backgroundColor: '#fff' },
+            drawerItemStyle: { backgroundColor: colors.surfaceRaised },
             drawerLabelStyle: { fontSize: globalFontSize },
             headerRight: () => null,
           }}

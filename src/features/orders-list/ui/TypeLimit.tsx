@@ -5,12 +5,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import { OrdersTypeList } from './OrdersTypeList';
 import { useTypeLimit } from '../model/useTypeLimit';
 import { appPalette } from '@/shared/styles/appPalette';
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 export function TypeLimit(): React.JSX.Element {
+  const { colors } = useAppTheme()
   const { limit_summ, limit_count, globalFontSize } = useTypeLimit()
 
   return (
-    <View style={styles.summary} testID="orders-list-summary">
+    <View style={[styles.summary, { backgroundColor: colors.surface }]} testID="orders-list-summary">
       <View style={styles.statusColumn}>
         <OrdersTypeList />
       </View>
@@ -18,7 +20,7 @@ export function TypeLimit(): React.JSX.Element {
       {limit_count.length > 0 ? (
         <Text
           numberOfLines={1}
-          style={[styles.statText, styles.countText, { fontSize: globalFontSize }]}
+          style={[styles.statText, styles.countText, { color: colors.text, fontSize: globalFontSize }]}
           testID="orders-list-limit-count"
         >
           {limit_count}
@@ -28,7 +30,7 @@ export function TypeLimit(): React.JSX.Element {
       <View style={styles.limitColumn}>
         <Text
           numberOfLines={1}
-          style={[styles.statText, styles.limitText, { fontSize: globalFontSize }]}
+          style={[styles.statText, styles.limitText, { color: colors.text, fontSize: globalFontSize }]}
           testID="orders-list-limit-sum"
         >
           {limit_summ}

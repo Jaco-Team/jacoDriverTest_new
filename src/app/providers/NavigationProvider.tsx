@@ -18,6 +18,7 @@ import { SystemBars } from 'react-native-edge-to-edge';
 import { Analytics, AnalyticsEvent } from '@/analytics/AppMetricaService';
 import { RU_SCREEN_NAMES } from '@/app/navigation/types';
 import { useGlobalStore } from '@/shared/store/store'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 import { createNavigationContainerRef } from '@react-navigation/native';
 export const navigationRef = createNavigationContainerRef<ParamListBase>();
@@ -39,23 +40,28 @@ function getActiveRouteName(state?: NavigationState): string {
   return route?.name ?? 'Greeting'
 }
 
-function getNavigationBackground(routeName: string): string {
-  return AUTH_ROUTES.has(routeName) ? '#F4F7FA' : '#CC0033'
-}
-
 export function NavigationProvider({ children }: { children: ReactNode }) {
-  const [backgroundColor, setBackgroundColor] = useState('#CC0033')
   const [activeRouteName, setActiveRouteName] = useState('Greeting')
   const loadSpinner = useGlobalStore((state) => state.loadSpinner)
+  const { colors, isDark } = useAppTheme()
+  const backgroundColor = AUTH_ROUTES.has(activeRouteName)
+    ? colors.surface
+    : colors.brandHeader
   const navigationTheme = useMemo(
     () => ({
       ...DefaultTheme,
+      dark: isDark,
       colors: {
         ...DefaultTheme.colors,
         background: backgroundColor,
+        card: colors.surfaceRaised,
+        text: colors.text,
+        border: colors.border,
+        primary: colors.brand,
+        notification: colors.brand,
       },
     }),
-    [backgroundColor],
+    [backgroundColor, colors, isDark],
   )
 
   useEffect(() => {
@@ -80,8 +86,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
           statusBar:
             loadSpinner || !AUTH_ROUTES.has(activeRouteName)
               ? 'light'
-              : 'dark',
-          navigationBar: 'dark',
+              : isDark ? 'light' : 'dark',
+          navigationBar: isDark ? 'light' : 'dark',
         }}
       />
 
@@ -92,7 +98,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
           onReady={() => {
             const route = navigationRef.getCurrentRoute();
             const name = route?.name ?? 'Unknown';
-            setBackgroundColor(getNavigationBackground(name))
             setActiveRouteName(name)
             const screen = RU_SCREEN_NAMES[name] ?? name;
             Analytics.setErrorContext?.('screen', screen);
@@ -101,7 +106,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
           onStateChange={(state?: NavigationState) => {
             if (!state) return;
             const name = getActiveRouteName(state)
-            setBackgroundColor(getNavigationBackground(name))
             setActiveRouteName(name)
             const screen = RU_SCREEN_NAMES[name] ?? name;
             Analytics.setErrorContext?.('screen', screen);

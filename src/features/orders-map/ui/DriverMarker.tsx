@@ -6,6 +6,7 @@ import { faTruckFast } from '@fortawesome/free-solid-svg-icons'
 import { Marker } from 'react-native-yamap-plus'
 
 import type { Theme } from '@/shared/types/globalTypes'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 import { useDriverMarkerLogic } from '../model/useDriverMarkerLogic'
 import { isValidMapPoint } from '../model/mapPoint'
@@ -80,23 +81,20 @@ function getMarkerSignature(
   timeText: string,
   globalFontSize: number,
   theme: Theme,
+  isDark: boolean,
 ): string {
-  return `${lat}:${lon}:${timeText}:${globalFontSize}:${theme}`
+  return `${lat}:${lon}:${timeText}:${globalFontSize}:${theme}:${isDark ? 'dark' : 'light'}`
 }
 
-function getMarkerPalette(theme: Theme): {
+export function getMarkerPalette(theme: Theme, isDark: boolean): {
   background: string
   border: string
   borderWidth: number
   text: string
   opacity: number
 } {
-  if (theme === 'transparent') {
-    return { background: 'transparent', border: 'transparent', borderWidth: 0, text: '#000000', opacity: 1 }
-  }
-
-  if (theme === 'transparent_white') {
-    return { background: 'transparent', border: 'transparent', borderWidth: 0, text: '#FFFFFF', opacity: 1 }
+  if (theme === 'transparent' || theme === 'transparent_white') {
+    return { background: 'transparent', border: 'transparent', borderWidth: 0, text: isDark ? '#FFFFFF' : '#000000', opacity: 1 }
   }
 
   if (theme === 'black') {
@@ -116,6 +114,7 @@ function getMarkerPalette(theme: Theme): {
 
 export const DriverMarkerImage = memo(function DriverMarkerImage({ onImage }: DriverMarkerImageProps) {
   const { location_driver, location_driver_time_text, globalFontSize, theme } = useDriverMarkerLogic()
+  const { isDark } = useAppTheme()
   const svgRef = useRef<React.ElementRef<typeof Svg>>(null)
   const capturedSignatureRef = useRef<string | null>(null)
   const hasValidLocation = isValidMapPoint(location_driver)
@@ -129,9 +128,10 @@ export const DriverMarkerImage = memo(function DriverMarkerImage({ onImage }: Dr
         location_driver_time_text,
         globalFontSize,
         theme,
+        isDark,
       )
     : ''
-  const palette = useMemo(() => getMarkerPalette(theme), [theme])
+  const palette = useMemo(() => getMarkerPalette(theme, isDark), [isDark, theme])
 
   const captureMarker = useCallback(() => {
     if (!signature || capturedSignatureRef.current === signature) return
@@ -210,6 +210,7 @@ export const DriverMarkerImage = memo(function DriverMarkerImage({ onImage }: Dr
 
 export const DriverMarker = memo(function DriverMarker({ image }: DriverMarkerProps) {
   const { location_driver, location_driver_time_text, globalFontSize, mapScale, theme } = useDriverMarkerLogic()
+  const { isDark } = useAppTheme()
   const lastVisibleMarkerRef = useRef<{
     point: NonNullable<typeof location_driver>
     timeText: string
@@ -233,6 +234,7 @@ export const DriverMarker = memo(function DriverMarker({ image }: DriverMarkerPr
         markerState.timeText,
         globalFontSize,
         theme,
+        isDark,
       )
     : ''
 

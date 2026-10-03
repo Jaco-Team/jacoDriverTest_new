@@ -16,6 +16,7 @@ import {
   useOrdersStore,
   useSettingsStore,
 } from '@/shared/store/store';
+import {useAppThemeStore} from '@/shared/theme/AppThemeProvider';
 
 describe('useSettingsStore.getSettings', () => {
   beforeEach(async () => {
@@ -61,6 +62,7 @@ describe('useSettingsStore.getSettings', () => {
           driver_avg_time: 0,
           driver_page_stat_time: 1,
           night_map: 1,
+          app_theme: 'light',
           is_scaleMap: 1,
           point_id: 15,
           all_points: [{ id: 15, name: 'Самара, Металлургов 76А' }],
@@ -76,7 +78,8 @@ describe('useSettingsStore.getSettings', () => {
             phone_upr: '+72222222222',
           },
         },
-      });
+      })
+      .mockResolvedValueOnce({st: true, text: '', data: {orders: []}});
 
     await useSettingsStore.getState().getSettings();
 
@@ -96,6 +99,7 @@ describe('useSettingsStore.getSettings', () => {
     expect(useGlobalStore.getState().is_need_avg_time).toBe(false);
     expect(useGlobalStore.getState().is_need_page_stat).toBe(true);
     expect(useOrdersStore.getState().update_interval).toBe(45);
+    expect(useAppThemeStore.getState().preference).toBe('light');
     expect(useSettingsStore.getState().point_id).toBe(15);
     expect(useSettingsStore.getState().points).toEqual([
       { id: 15, name: 'Самара, Металлургов 76А' },
@@ -106,6 +110,37 @@ describe('useSettingsStore.getSettings', () => {
         phone_man: '+71111111111',
         phone_upr: '+72222222222',
       });
+      expect(mockApi).toHaveBeenCalledWith(
+        'orders',
+        expect.objectContaining({type: 'get_orders', point_id: 15}),
+      );
     });
+  });
+
+  it('не применяет ответ старой сессии после выхода', async () => {
+    let completeRequest!: (value: unknown) => void;
+    mockApi.mockImplementationOnce(() => new Promise(resolve => {
+      completeRequest = resolve;
+    }));
+    useAppThemeStore.setState({preference: 'system'});
+
+    const request = useSettingsStore.getState().getSettings(true);
+    await waitFor(() => expect(mockApi).toHaveBeenCalledTimes(1));
+    useGlobalStore.setState({tokenAuth: ''});
+    completeRequest({st: true, data: {app_theme: 'dark'}});
+    await request;
+
+    expect(useAppThemeStore.getState().preference).toBe('system');
+    expect(useGlobalStore.getState().loadSpinner).toBe(false);
+  });
+
+  it('при ошибке фонового обновления оставляет сохранённую тему', async () => {
+    useAppThemeStore.setState({preference: 'dark'});
+    mockApi.mockResolvedValueOnce({st: false, text: 'Нет сети'});
+
+    await useSettingsStore.getState().getSettings(true);
+
+    expect(useAppThemeStore.getState().preference).toBe('dark');
+    expect(useGlobalStore.getState().loadSpinner).toBe(false);
   });
 });

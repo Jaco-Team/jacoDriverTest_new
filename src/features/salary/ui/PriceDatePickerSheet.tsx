@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/actionsheet'
 import { appPalette } from '@/shared/styles/appPalette'
 import type { PriceDatePickerSheetProps } from '../model/types'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const
 const CALENDAR_CELLS = 42
@@ -49,6 +50,7 @@ export function PriceDatePickerSheet({
   onSelect,
 }: PriceDatePickerSheetProps): React.JSX.Element {
   const insets = useSafeAreaInsets()
+  const { colors } = useAppTheme()
   const [visibleMonth, setVisibleMonth] = useState(() => dayjs(value).startOf('month'))
 
   useEffect(() => {
@@ -90,16 +92,16 @@ export function PriceDatePickerSheet({
     >
       <ActionsheetBackdrop testID="price-date-picker-backdrop" />
       <ActionsheetContent
-        style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
+        style={[styles.sheet, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, paddingBottom: insets.bottom + 12 }]}
         testID="price-date-picker-sheet"
       >
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator style={styles.handleArea}>
-            <View style={styles.handle} />
+            <View style={[styles.handle, { backgroundColor: colors.border }]} />
           </ActionsheetDragIndicator>
         </ActionsheetDragIndicatorWrapper>
 
-        <Text style={styles.title} testID="price-date-picker-title">
+        <Text style={[styles.title, { color: colors.text }]} testID="price-date-picker-title">
           {title}
         </Text>
 
@@ -112,10 +114,10 @@ export function PriceDatePickerSheet({
             testID="price-date-picker-previous-month"
             onPress={() => setVisibleMonth((month) => month.subtract(1, 'month'))}
           >
-            <ChevronLeft color={appPalette.text} size={24} />
+            <ChevronLeft color={colors.text} size={24} />
           </Pressable>
 
-          <Text style={styles.monthLabel}>
+          <Text style={[styles.monthLabel, { color: colors.text }]}>
             {monthLabel}
           </Text>
 
@@ -127,13 +129,13 @@ export function PriceDatePickerSheet({
             testID="price-date-picker-next-month"
             onPress={() => setVisibleMonth((month) => month.add(1, 'month'))}
           >
-            <ChevronRight color={appPalette.text} size={24} />
+            <ChevronRight color={colors.text} size={24} />
           </Pressable>
         </View>
 
         <View style={styles.weekRow}>
           {WEEKDAYS.map((weekday) => (
-            <Text key={weekday} style={styles.weekday}>
+            <Text key={weekday} style={[styles.weekday, { color: colors.textMuted }]}>
               {weekday}
             </Text>
           ))}
@@ -174,8 +176,8 @@ export function PriceDatePickerSheet({
                       disabled={disabled}
                       style={[
                         styles.dayButton,
-                        today && styles.todayButton,
-                        selected && styles.selectedDayButton,
+                        today && [styles.todayButton, { borderColor: colors.brand }],
+                        selected && [styles.selectedDayButton, { borderColor: colors.brand, backgroundColor: colors.brand }],
                       ]}
                       testID={`price-date-${dateKey}`}
                       onPress={() => onSelect(dateKey)}
@@ -183,6 +185,7 @@ export function PriceDatePickerSheet({
                       <Text
                         style={[
                           styles.dayText,
+                          { color: colors.text },
                           disabled && styles.disabledDayText,
                           selected && styles.selectedDayText,
                         ]}

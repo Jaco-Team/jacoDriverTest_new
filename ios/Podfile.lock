@@ -1579,7 +1579,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context (5.9.1):
+  - react-native-safe-area-context (5.10.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1592,8 +1592,8 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-safe-area-context/common (= 5.9.1)
-    - react-native-safe-area-context/fabric (= 5.9.1)
+    - react-native-safe-area-context/common (= 5.10.0)
+    - react-native-safe-area-context/fabric (= 5.10.0)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -1603,7 +1603,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/common (5.9.1):
+  - react-native-safe-area-context/common (5.10.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1625,7 +1625,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/fabric (5.9.1):
+  - react-native-safe-area-context/fabric (5.10.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2122,7 +2122,7 @@ PODS:
     - ReactNativeDependencies
     - RNFBApp
     - Yoga
-  - RNGestureHandler (3.2.1):
+  - RNGestureHandler (3.3.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2174,7 +2174,7 @@ PODS:
     - RNNotifee/NotifeeCore (= 9.1.8)
   - RNNotifee/NotifeeCore (9.1.8):
     - React-Core
-  - RNPermissions (5.6.1):
+  - RNPermissions (5.6.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2295,7 +2295,7 @@ PODS:
     - ReactNativeDependencies
     - RNWorklets
     - Yoga
-  - RNScreens (4.27.0):
+  - RNScreens (4.28.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2317,9 +2317,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNScreens/common (= 4.27.0)
+    - RNScreens/common (= 4.28.0)
     - Yoga
-  - RNScreens/common (4.27.0):
+  - RNScreens/common (4.28.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2342,7 +2342,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSentry (8.25.0):
+  - RNSentry (8.27.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2998,7 +2998,7 @@ SPEC CHECKSUMS:
   react-native-geolocation: 4df18d46fa149833c615b98082a9598c2f0521a1
   react-native-image-picker: 870b31525256975a2d4b6b20a54db9b380cd725d
   react-native-netinfo: 58601963060e4df0c1b6b6980d4f24ce2751e64c
-  react-native-safe-area-context: f17f4ec987ecdd130820a4a850498b874fb70388
+  react-native-safe-area-context: b3e507b0dbfb44dfadb29f7a31e884ac13789723
   react-native-webview: f189adab64d5d71cec3b9e9ec3261355376ec7a2
   React-NativeModulesApple: adb1dd8361dff80e9f6652fb3fdbf033cfbe2a89
   React-networking: c00b437c4408f0640ba0d4158357133488521eca
@@ -3041,14 +3041,14 @@ SPEC CHECKSUMS:
   RNDeviceInfo: 4c852998208b60dc192ae3529e5867817719ad1e
   RNFBApp: 69c6f1b07704482ea6379bf8c6756db08168bf5e
   RNFBMessaging: 8a0ac2adc8004c8d52c0964749f0fe557e4c79d1
-  RNGestureHandler: ec5fccd94cfa3ef0014ca794e4acd9807e497939
+  RNGestureHandler: eb4c031b22e791851742d29384ddcad30f3ee49d
   RNInAppBrowser: 904d24dc75e8e6c6c98a3160329192608946f9df
   RNKeychain: 551d42b0ef53426f82551a0cc961cfa10ad33afa
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
-  RNPermissions: dfb6d452fca3ca8faf8adadd871392227268ec6a
+  RNPermissions: 030c8b97e5d08eb6a1d3ccee9793ec8e1ef2313d
   RNReanimated: a40a23cfa56063c9b0c7af8794c847c0ddf8a99c
-  RNScreens: 0135deb65b65d207ee6294d0baf06681e1071d93
-  RNSentry: dc655af1c6cc66783d8c9d4b31b5c3b817bb8953
+  RNScreens: 038dc998fe1ab34778d9e8f4a33318a6c7a5bde8
+  RNSentry: 0dedcb1fc90c37e03d9de23846d6954f196dd7dd
   RNSVG: 6c9bcbf53822153be6f6c1484f6b0b57c0040d21
   RNVectorIcons: 4f353aed7dde2ecfc77da4130afce046d147ae8a
   RNWorklets: e00d9fe0f91ef81e6056248566c84501506ad539
@@ -3057,6 +3057,6 @@ SPEC CHECKSUMS:
   YandexMapsMobile: 4a8373e97ea85fecde5d04bfde2d05bb365e7ee2
   Yoga: d1c536142c5ff8ec8cd856ab2a7c227a1d875c8e
 
-PODFILE CHECKSUM: f20ffaf1abb823b6ae2078c6ae919512ef29ae73
+PODFILE CHECKSUM: 3d320c7ac543f306983e1d6bb4fa139fd9a1901e
 
 COCOAPODS: 1.16.2

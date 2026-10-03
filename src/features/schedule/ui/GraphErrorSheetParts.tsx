@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/actionsheet';
 import {Textarea, TextareaInput} from '@/components/ui/textarea';
 import {appPalette} from '@/shared/styles/appPalette';
+import {useAppTheme} from '@/shared/theme/AppThemeProvider';
 
 export function getGraphErrorContentBottomPadding({
   bottomInset,
@@ -64,6 +65,7 @@ export function GraphErrorSheetContainer({
   onClose: () => void;
   onScrollRef: (instance: GraphErrorScrollHandle | null) => void;
 }): React.JSX.Element {
+  const {colors} = useAppTheme();
   const iosMaxHeight = Dimensions.get('screen').height * 0.88;
   const iosSheetRef = React.useRef<BottomSheetModal>(null);
   const iosPresentedRef = React.useRef(false);
@@ -173,11 +175,17 @@ export function GraphErrorSheetContainer({
       <BottomSheetModal
         ref={iosSheetRef}
         backdropComponent={renderIosBackdrop}
-        backgroundStyle={graphErrorSheetStyles.iosSheetBackground}
+        backgroundStyle={StyleSheet.flatten([
+          graphErrorSheetStyles.iosSheetBackground,
+          {backgroundColor: colors.surfaceRaised},
+        ])}
         enableBlurKeyboardOnGesture
         enableDynamicSizing
         enablePanDownToClose={!busy}
-        handleIndicatorStyle={graphErrorSheetStyles.handle}
+        handleIndicatorStyle={[
+          graphErrorSheetStyles.handle,
+          {backgroundColor: colors.border},
+        ]}
         handleStyle={graphErrorSheetStyles.handleArea}
         keyboardBehavior="interactive"
         keyboardBlurBehavior="restore"
@@ -206,11 +214,19 @@ export function GraphErrorSheetContainer({
         style={graphErrorSheetStyles.keyboardAvoiding}
         testID={`${testPrefix}-keyboard`}>
         <ActionsheetContent
-          style={graphErrorSheetStyles.sheet}
+          style={[
+            graphErrorSheetStyles.sheet,
+            {borderColor: colors.border, backgroundColor: colors.surfaceRaised},
+          ]}
           testID={`${testPrefix}-sheet`}>
           <ActionsheetDragIndicatorWrapper>
             <ActionsheetDragIndicator style={graphErrorSheetStyles.handleArea}>
-              <View style={graphErrorSheetStyles.handle} />
+              <View
+                style={[
+                  graphErrorSheetStyles.handle,
+                  {backgroundColor: colors.border},
+                ]}
+              />
             </ActionsheetDragIndicator>
           </ActionsheetDragIndicatorWrapper>
           <ActionsheetScrollView
@@ -236,11 +252,13 @@ export function GraphErrorField({
   value?: React.ReactNode;
   fontSize: number;
 }): React.JSX.Element {
+  const {colors} = useAppTheme();
+
   return (
     <View style={styles.field}>
-      <Text style={[styles.fieldLabel, {fontSize}]}>{label}</Text>
+      <Text style={[styles.fieldLabel, {color: colors.text, fontSize}]}>{label}</Text>
       {value === '' || value === undefined ? null : (
-        <Text style={[styles.fieldValue, {fontSize}]}>{` ${value}`}</Text>
+        <Text style={[styles.fieldValue, {color: colors.text, fontSize}]}>{` ${value}`}</Text>
       )}
     </View>
   );
@@ -265,6 +283,8 @@ export function GraphAppealBlock({
   onInputFocus?: () => void;
   onSubmit: () => void;
 }): React.JSX.Element | null {
+  const {colors} = useAppTheme();
+
   if (text) {
     return (
       <GraphErrorField
@@ -279,21 +299,24 @@ export function GraphAppealBlock({
 
   return (
     <View style={styles.appeal}>
-      <Text style={[styles.fieldLabel, {fontSize}]}>Причина обжалования:</Text>
+      <Text style={[styles.fieldLabel, {color: colors.text, fontSize}]}>Причина обжалования:</Text>
       {Platform.OS === 'ios' ? (
         <BottomSheetTextInput
           editable={!busy}
           multiline
-          style={[styles.bottomSheetTextareaInput, {fontSize}]}
+          style={[
+            styles.bottomSheetTextareaInput,
+            {borderColor: colors.border, color: colors.text, fontSize},
+          ]}
           testID="graph-error-input"
           value={value}
           onChangeText={onChange}
           onFocus={onInputFocus}
         />
       ) : (
-        <Textarea isDisabled={busy} style={styles.textarea}>
+        <Textarea isDisabled={busy} style={[styles.textarea, {borderColor: colors.border}]}>
           <TextareaInput
-            style={[styles.textareaInput, {fontSize}]}
+            style={[styles.textareaInput, {color: colors.text, fontSize}]}
             testID="graph-error-input"
             value={value}
             onChangeText={onChange}
@@ -304,7 +327,11 @@ export function GraphAppealBlock({
       <Pressable
         accessibilityRole="button"
         disabled={busy}
-        style={[styles.submit, busy && styles.submitDisabled]}
+        style={[
+          styles.submit,
+          {backgroundColor: colors.brand},
+          busy && styles.submitDisabled,
+        ]}
         testID="graph-error-submit"
         onPress={onSubmit}>
         {busy ? (

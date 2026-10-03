@@ -6,6 +6,7 @@ import {
 } from 'react-native-webview'
 
 import { laravelApiConfig } from '@/shared/api/laravel/config'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 type CaptchaMessage = {
   message?: string
@@ -40,6 +41,7 @@ export function AuthSmartCaptcha({
   resetKey,
   testID,
 }: AuthSmartCaptchaProps): React.JSX.Element {
+  const { colors } = useAppTheme()
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
@@ -122,17 +124,17 @@ export function AuthSmartCaptcha({
 
       {isLoading ? (
         <View pointerEvents="none" style={styles.statusOverlay} testID={`${testID}-loading`}>
-          <ActivityIndicator color="#42627d" size="small" />
-          <Text style={styles.statusText}>Загружаем проверку…</Text>
+          <ActivityIndicator color={colors.primary} size="small" />
+          <Text style={[styles.statusText, { color: colors.textMuted }]}>Загружаем проверку…</Text>
         </View>
       ) : null}
 
       {loadError ? (
-        <View style={styles.errorOverlay}>
-          <Text style={styles.errorText}>{loadError}</Text>
+        <View style={[styles.errorOverlay, { backgroundColor: colors.dangerSurface }]}>
+          <Text style={[styles.errorText, { color: colors.dangerText }]}>{loadError}</Text>
           <Pressable
             accessibilityRole="button"
-            style={styles.retryButton}
+            style={[styles.retryButton, { backgroundColor: colors.primary }]}
             testID={`${testID}-retry`}
             onPress={retry}
           >

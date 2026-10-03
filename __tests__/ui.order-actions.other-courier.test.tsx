@@ -38,11 +38,16 @@ test('у другого курьера: имя/логин видны; клик �
   expect(screen.getByTestId(`order-${item.id}-other-name`)).toHaveStyle({
     height: 44,
     borderRadius: 8,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#E9EEF3',
+    flexDirection: 'row',
   });
-  expect(screen.getByText('Водитель: Иван Петров')).toBeTruthy();
+  expect(screen.getByText('Водитель:')).toBeTruthy();
+  expect(screen.getByText('Иван Петров')).toHaveStyle({fontFamily: 'Roboto-Medium'});
   const loginBtn = screen.getByTestId(`order-${item.id}-other-login`);
-  expect(loginBtn).toBeTruthy();
+  expect(loginBtn).toHaveStyle({
+    borderWidth: 1,
+    borderColor: 'rgba(66, 98, 125, 0.16)',
+  });
 
   // Клик по логину вызывает звонок
   await fireEvent.press(loginBtn);

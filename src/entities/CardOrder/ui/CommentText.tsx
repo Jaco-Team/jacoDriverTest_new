@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { Phone } from 'lucide-react-native'
+import Svg, { Path } from 'react-native-svg'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import {
@@ -17,9 +17,21 @@ import {
   extractPhonesFromText,
   type ExtractedPhone,
 } from '@/shared/lib/extractPhonesFromText'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 function clampFontSize(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
+}
+
+function FilledPhoneIcon({ color }: { color: string }): React.JSX.Element {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" accessibilityElementsHidden>
+      <Path
+        fill={color}
+        d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02z"
+      />
+    </Svg>
+  )
 }
 
 export const CommentText: React.FC<CommentTextProps> = ({
@@ -29,6 +41,7 @@ export const CommentText: React.FC<CommentTextProps> = ({
   textColor = appPalette.text,
 }) => {
   const insets = useSafeAreaInsets()
+  const { colors } = useAppTheme()
   const phones = useMemo(() => extractPhonesFromText(comment), [comment])
   const [phonesOpen, setPhonesOpen] = useState(false)
   const titleFontSize = clampFontSize(globalFontSize + 4, 18, 24)
@@ -102,13 +115,19 @@ export const CommentText: React.FC<CommentTextProps> = ({
             }
             accessibilityRole="button"
             hitSlop={8}
-            style={styles.phoneButton}
+            style={[
+              styles.phoneButton,
+              {
+                backgroundColor: colors.soft,
+                borderColor: colors.border,
+              },
+            ]}
             testID="order-card-comment-call"
             onPress={handlePhoneControl}
           >
-            <Phone color={appPalette.primary} size={24} strokeWidth={2} />
+            <FilledPhoneIcon color={colors.primary} />
             {phones.length > 1 ? (
-              <View style={styles.badge}>
+              <View style={[styles.badge, { backgroundColor: colors.brand }]}>
                 <Text style={styles.badgeText}>{phones.length}</Text>
               </View>
             ) : null}
@@ -125,7 +144,7 @@ export const CommentText: React.FC<CommentTextProps> = ({
           <ActionsheetContent
             style={[
               styles.sheet,
-              { paddingBottom: insets.bottom + 28 },
+              { borderColor: colors.border, backgroundColor: colors.surfaceRaised, paddingBottom: insets.bottom + 28 },
             ]}
             testID="order-card-comment-phones-drawer"
           >
@@ -137,7 +156,7 @@ export const CommentText: React.FC<CommentTextProps> = ({
                   style={styles.handlePressable}
                   onPress={() => setPhonesOpen(false)}
                 >
-                  <View style={styles.handle} />
+                  <View style={[styles.handle, { backgroundColor: colors.border }]} />
                 </Pressable>
               </ActionsheetDragIndicator>
             </ActionsheetDragIndicatorWrapper>
@@ -146,6 +165,7 @@ export const CommentText: React.FC<CommentTextProps> = ({
               style={[
                 styles.sheetTitle,
                 {
+                  color: colors.text,
                   fontSize: titleFontSize,
                   lineHeight: Math.round(titleFontSize * 1.2),
                 },
@@ -160,7 +180,13 @@ export const CommentText: React.FC<CommentTextProps> = ({
                   accessibilityLabel={`Позвонить ${phone.display}`}
                   accessibilityRole="button"
                   key={phone.digits}
-                  style={styles.phoneOption}
+                  style={[
+                    styles.phoneOption,
+                    {
+                      backgroundColor: colors.surfaceAlt,
+                      borderColor: colors.border,
+                    },
+                  ]}
                   testID={`order-card-comment-phone-${phone.digits}`}
                   onPress={() => {
                     callPhone(phone)
@@ -170,7 +196,7 @@ export const CommentText: React.FC<CommentTextProps> = ({
                   <Text
                     style={[
                       styles.phoneOptionText,
-                      { fontSize: actionFontSize },
+                      { color: colors.text, fontSize: actionFontSize },
                     ]}
                   >
                     {phone.display}
@@ -209,6 +235,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
     borderRadius: 22,
     backgroundColor: appPalette.soft,
   },
@@ -273,6 +300,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
     borderRadius: 12,
     backgroundColor: '#E0E0E0',
   },

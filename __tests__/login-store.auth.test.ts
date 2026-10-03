@@ -320,6 +320,35 @@ describe('useLoginStore auth flow', () => {
     expect(mockGetSettings).toHaveBeenCalledTimes(1);
   });
 
+  it('check_token: ждёт настройки кафе перед открытием списка заказов', async () => {
+    mockGetLaravelAuthToken.mockResolvedValueOnce('laravel-token');
+
+    let finishSettings!: () => void;
+    mockGetSettings.mockImplementationOnce(
+      () => new Promise<void>(resolve => {
+        finishSettings = resolve;
+      }),
+    );
+
+    let startupFinished = false;
+    const startup = useLoginStore.getState().check_token().then(result => {
+      startupFinished = true;
+      return result;
+    });
+
+    for (let tick = 0; tick < 10 && mockGetSettings.mock.calls.length === 0; tick += 1) {
+      await Promise.resolve();
+    }
+
+    expect(mockGetSettings).toHaveBeenCalledTimes(1);
+    expect(startupFinished).toBe(false);
+
+    finishSettings();
+
+    await expect(startup).resolves.toBe(true);
+    expect(startupFinished).toBe(true);
+  });
+
   it('check_token: при Laravel 401 очищает token', async () => {
     mockGetLaravelAuthToken.mockResolvedValueOnce('expired-laravel-token');
     mockFetchLaravelMe.mockRejectedValueOnce({

@@ -17,8 +17,10 @@ import { RecoveryStepper } from './RecoveryStepper'
 import { AuthSmartCaptcha } from '@/shared/ui/auth/AuthSmartCaptcha'
 import { AuthScreenLayout } from '@/shared/ui/auth/AuthScreenLayout'
 import { AuthTextField } from '@/shared/ui/auth/AuthTextField'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 export function ResetPwdScreen(): React.JSX.Element {
+  const { colors } = useAppTheme()
   const passwordRef = useRef<React.ElementRef<typeof TextInput>>(null)
   const returnLinkTextWidth = useRef(0)
   const returnLinkUnderlineWidth = useRef(new Animated.Value(0)).current
@@ -78,7 +80,7 @@ export function ResetPwdScreen(): React.JSX.Element {
 
   return (
     <AuthScreenLayout>
-      <View style={styles.logoBadge}>
+      <View style={[styles.logoBadge, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, shadowColor: colors.shadowStrong }]}>
         <Image
           accessibilityLabel="Логотип Жако"
           resizeMode="contain"
@@ -88,15 +90,15 @@ export function ResetPwdScreen(): React.JSX.Element {
         />
       </View>
 
-      <Text style={styles.eyebrow}>ВОССТАНОВЛЕНИЕ ПАРОЛЯ</Text>
+      <Text style={[styles.eyebrow, { color: colors.textMuted }]}>ВОССТАНОВЛЕНИЕ ПАРОЛЯ</Text>
       <Text
         accessibilityRole="header"
-        style={styles.title}
+        style={[styles.title, { color: colors.text }]}
         testID="reset-title"
       >
         {panelTitle}
       </Text>
-      <Text style={styles.description}>{panelText}</Text>
+      <Text style={[styles.description, { color: colors.textMuted }]}>{panelText}</Text>
 
       <RecoveryStepper activeStep={activeStep} />
 
@@ -174,14 +176,14 @@ export function ResetPwdScreen(): React.JSX.Element {
       )}
 
       {errorText ? (
-        <View style={[styles.message, styles.errorMessage]} testID="reset-error">
-          <Text accessibilityLiveRegion="polite" style={styles.errorText}>
+        <View style={[styles.message, styles.errorMessage, { borderColor: colors.brandSoftStrong, backgroundColor: colors.dangerSurface }]} testID="reset-error">
+          <Text accessibilityLiveRegion="polite" style={[styles.errorText, { color: colors.dangerText }]}>
             {errorText}
           </Text>
         </View>
       ) : (
-        <View style={[styles.message, styles.hintMessage]} testID="reset-hint">
-          <Text style={styles.hintText}>{helperText}</Text>
+        <View style={[styles.message, styles.hintMessage, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]} testID="reset-hint">
+          <Text style={[styles.hintText, { color: colors.textMuted }]}>{helperText}</Text>
         </View>
       )}
 
@@ -204,6 +206,7 @@ export function ResetPwdScreen(): React.JSX.Element {
           pointerEvents="none"
           style={[
             styles.primaryButtonSurface,
+            { backgroundColor: colors.brand },
             !canSubmit && styles.primaryButtonSurfaceDisabled,
           ]}
         >
@@ -223,7 +226,7 @@ export function ResetPwdScreen(): React.JSX.Element {
       </Pressable>
 
       <View style={styles.linkRow}>
-        <Text style={styles.linkCaption}>Вспомнили пароль?</Text>
+        <Text style={[styles.linkCaption, { color: colors.textMuted }]}>Вспомнили пароль?</Text>
         <Pressable
           accessibilityRole="link"
           accessibilityLabel="Вернуться к авторизации"
@@ -235,7 +238,7 @@ export function ResetPwdScreen(): React.JSX.Element {
           onPress={goToAuth}
         >
           <Text
-            style={styles.returnLinkText}
+            style={[styles.returnLinkText, { color: colors.brand }]}
             onLayout={(event) => {
               const textWidth = event.nativeEvent.layout.width
               returnLinkTextWidth.current = textWidth
@@ -248,6 +251,7 @@ export function ResetPwdScreen(): React.JSX.Element {
             style={[
               styles.returnLinkUnderline,
               {
+                backgroundColor: colors.brand,
                 width: returnLinkUnderlineWidth,
                 opacity: returnLinkUnderlineOpacity,
               },

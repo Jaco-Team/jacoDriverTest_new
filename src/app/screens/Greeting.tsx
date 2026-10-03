@@ -9,18 +9,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useGreetingLogic } from '@/processes/auth/model/useGreetingLogic'
-
-const GREETING_BACKGROUND = '#CC0033'
+import { ConnectivityLocationIndicator } from '@/shared/ui/ConnectivityLocationIndicator'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 export function Greeting(): React.JSX.Element {
+  const { colors } = useAppTheme()
   useGreetingLogic()
 
   return (
-    <View style={styles.root} testID="greeting-screen">
+    <View style={[styles.root, { backgroundColor: colors.brandHeader }]} testID="greeting-screen">
       <SafeAreaView
         edges={['top', 'right', 'bottom', 'left']}
         style={styles.safeArea}
       >
+        <ConnectivityLocationIndicator />
         <View style={styles.content}>
           <Image
             accessibilityLabel="Логотип Жако"
@@ -49,7 +51,6 @@ export function Greeting(): React.JSX.Element {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: GREETING_BACKGROUND,
   },
   safeArea: {
     flex: 1,

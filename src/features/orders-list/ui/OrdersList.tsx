@@ -14,9 +14,12 @@ import { CardOrder } from '@/entities/CardOrder/ui/CardOrder';
 import { TypeLimit } from './TypeLimit';
 import { OrdersListProps } from '@/features/orders-list/model/types';
 import { appPalette } from '@/shared/styles/appPalette';
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import { useScrollToTopOnFocus } from '@/shared/lib/useScrollToTopOnFocus'
 
 export function OrdersList({
   orders,
+  hasCachedOrders,
   isChecking,
   isGlobalLoading,
   getOrders,
@@ -27,6 +30,8 @@ export function OrdersList({
   actionButtonOrder,
   setActiveConfirm,
 }: OrdersListProps) {
+  const { colors } = useAppTheme()
+  const scrollRef = useScrollToTopOnFocus<FlatList<OrdersListProps['orders'][number]>>()
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isCheckingRef = useRef(isChecking)
   const refreshRequestResolvedRef = useRef(false)
@@ -61,15 +66,15 @@ export function OrdersList({
     }
   }, [getOrders, isRefreshing])
 
-  const showListLoading = isChecking && !isGlobalLoading && !isRefreshing
+  const showListLoading = isChecking && !hasCachedOrders && !isGlobalLoading && !isRefreshing
 
   const emptyState = showListLoading ? (
     <View style={styles.loadingState} testID="orders-list-loading">
-      <ActivityIndicator color={appPalette.brand} size="large" />
+      <ActivityIndicator color={colors.brand} size="large" />
     </View>
   ) : (
     <View style={styles.emptyState} testID="orders-list-empty">
-      <Text style={[styles.emptyText, { fontSize: globalFontSize }]}>
+      <Text style={[styles.emptyText, { color: colors.textMuted, fontSize: globalFontSize }]}>
         Нет заказов для отображения
       </Text>
     </View>
@@ -77,15 +82,16 @@ export function OrdersList({
 
   return (
     <FlatList
+      ref={scrollRef}
       testID="orders-list"
       refreshing={isRefreshing}
       onRefresh={handleRefresh}
       refreshControl={(
         <RefreshControl
-          colors={[appPalette.brand]}
-          progressBackgroundColor="#FFFFFF"
+          colors={[colors.brand]}
+          progressBackgroundColor={colors.surfaceRaised}
           refreshing={isRefreshing}
-          tintColor={appPalette.brand}
+          tintColor={colors.brand}
           onRefresh={handleRefresh}
         />
       )}
@@ -103,7 +109,7 @@ export function OrdersList({
         />
       )}
       keyExtractor={item => item.id_text}
-      style={styles.list}
+      style={[styles.list, { backgroundColor: colors.surface }]}
       contentContainerStyle={styles.content}
       showsHorizontalScrollIndicator={false}
       showsVerticalScrollIndicator={false}

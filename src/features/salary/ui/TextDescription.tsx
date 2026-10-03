@@ -5,6 +5,7 @@ import { TextPopover } from './TextPopover'
 
 import { TextDescriptionProps } from '../model/types'
 import { appPalette } from '@/shared/styles/appPalette'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 export function TextDescription({
   text,
@@ -14,16 +15,18 @@ export function TextDescription({
   hideDivider = false,
   globalFontSize,
 }: TextDescriptionProps): React.JSX.Element {
+  const { colors } = useAppTheme()
   const label = (
     <View style={styles.labelContent}>
       <Text
         style={[
           styles.label,
+          { color: colors.text },
           {
             fontSize: globalFontSize,
             lineHeight: Math.round(globalFontSize * 1.3),
           },
-          emphasize && styles.emphasizedText,
+          emphasize && [styles.emphasizedText, { color: colors.text }],
         ]}
       >
         {text}
@@ -31,7 +34,7 @@ export function TextDescription({
       {title ? (
         <Icon
           as={InfoIcon}
-          color={appPalette.textMuted}
+          color={colors.textMuted}
           style={{ width: 24, height: 24 }}
         />
       ) : null}
@@ -40,7 +43,7 @@ export function TextDescription({
 
   return (
     <View
-      style={[styles.row, hideDivider && styles.lastRow]}
+      style={[styles.row, { borderBottomColor: colors.border }, hideDivider && styles.lastRow]}
       testID={`price-metric-${text}`}
     >
       <View style={styles.labelColumn}>
@@ -56,11 +59,12 @@ export function TextDescription({
       <Text
         style={[
           styles.value,
+          { color: colors.text },
           {
             fontSize: globalFontSize,
             lineHeight: Math.round(globalFontSize * 1.3),
           },
-          emphasize && styles.emphasizedText,
+          emphasize && [styles.emphasizedText, { color: colors.text }],
         ]}
       >
         {value}

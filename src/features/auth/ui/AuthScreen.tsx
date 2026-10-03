@@ -15,8 +15,10 @@ import { useAuthLogic } from '../model/useAuthLogic'
 import { AuthSmartCaptcha } from '@/shared/ui/auth/AuthSmartCaptcha'
 import { AuthScreenLayout } from '@/shared/ui/auth/AuthScreenLayout'
 import { AuthTextField } from '@/shared/ui/auth/AuthTextField'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 export function AuthScreen(): React.JSX.Element {
+  const { colors } = useAppTheme()
   const passwordRef = useRef<React.ElementRef<typeof TextInput>>(null)
   const resetLinkTextWidth = useRef(0)
   const resetLinkUnderlineWidth = useRef(new Animated.Value(0)).current
@@ -58,7 +60,7 @@ export function AuthScreen(): React.JSX.Element {
 
   return (
     <AuthScreenLayout>
-      <View style={styles.logoBadge}>
+      <View style={[styles.logoBadge, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, shadowColor: colors.shadowStrong }]}>
         <Image
           accessibilityLabel="Логотип Жако"
           resizeMode="contain"
@@ -68,11 +70,11 @@ export function AuthScreen(): React.JSX.Element {
         />
       </View>
 
-      <Text style={styles.eyebrow}>АВТОРИЗАЦИЯ</Text>
-      <Text accessibilityRole="header" style={styles.title} testID="auth-title">
+      <Text style={[styles.eyebrow, { color: colors.textMuted }]}>АВТОРИЗАЦИЯ</Text>
+      <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]} testID="auth-title">
         Вход в аккаунт
       </Text>
-      <Text style={styles.description}>
+      <Text style={[styles.description, { color: colors.textMuted }]}>
         Введите номер телефона и пароль, чтобы продолжить работу в приложении.
       </Text>
 
@@ -119,14 +121,14 @@ export function AuthScreen(): React.JSX.Element {
       ) : null}
 
       {loginError ? (
-        <View style={[styles.message, styles.errorMessage]} testID="auth-error">
-          <Text accessibilityLiveRegion="polite" style={styles.errorText}>
+        <View style={[styles.message, styles.errorMessage, { borderColor: colors.brandSoftStrong, backgroundColor: colors.dangerSurface }]} testID="auth-error">
+          <Text accessibilityLiveRegion="polite" style={[styles.errorText, { color: colors.dangerText }]}>
             {loginError}
           </Text>
         </View>
       ) : (
-        <View style={[styles.message, styles.hintMessage]} testID="auth-hint">
-          <Text style={styles.hintText}>
+        <View style={[styles.message, styles.hintMessage, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]} testID="auth-hint">
+          <Text style={[styles.hintText, { color: colors.textMuted }]}>
             Используйте номер телефона, указанный в вашем рабочем аккаунте.
           </Text>
         </View>
@@ -144,7 +146,7 @@ export function AuthScreen(): React.JSX.Element {
         testID="auth-submit"
         onPress={() => void LogIn(myLogin, myPWD)}
       >
-        <View pointerEvents="none" style={styles.primaryButtonSurface}>
+        <View pointerEvents="none" style={[styles.primaryButtonSurface, { backgroundColor: colors.brand }]}>
           <Text style={styles.primaryButtonText}>Войти</Text>
         </View>
       </Pressable>
@@ -155,15 +157,19 @@ export function AuthScreen(): React.JSX.Element {
         accessibilityHint="Открывает защищённый вход через SSO"
         accessibilityState={{ busy: isLoading, disabled: isLoading }}
         disabled={isLoading}
-        style={[styles.secondaryButton, isLoading && styles.primaryButtonDisabled]}
+        style={[
+          styles.secondaryButton,
+          { borderColor: colors.border, backgroundColor: colors.surfaceAlt },
+          isLoading && styles.primaryButtonDisabled,
+        ]}
         testID="auth-sso"
         onPress={() => void LoginWithSSO()}
       >
-        <Text style={styles.secondaryButtonText}>Продолжить через SSO</Text>
+        <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Продолжить через SSO</Text>
       </Pressable>
 
       <View style={styles.linkRow}>
-        <Text style={styles.linkCaption}>Не получается войти?</Text>
+        <Text style={[styles.linkCaption, { color: colors.textMuted }]}>Не получается войти?</Text>
         <Pressable
           accessibilityRole="link"
           accessibilityLabel="Восстановить пароль"
@@ -175,7 +181,7 @@ export function AuthScreen(): React.JSX.Element {
           onPress={GoToResetPWD}
         >
           <Text
-            style={styles.resetLinkText}
+            style={[styles.resetLinkText, { color: colors.brand }]}
             onLayout={(event) => {
               const textWidth = event.nativeEvent.layout.width
               resetLinkTextWidth.current = textWidth
@@ -188,6 +194,7 @@ export function AuthScreen(): React.JSX.Element {
             style={[
               styles.resetLinkUnderline,
               {
+                backgroundColor: colors.brand,
                 width: resetLinkUnderlineWidth,
                 opacity: resetLinkUnderlineOpacity,
               },

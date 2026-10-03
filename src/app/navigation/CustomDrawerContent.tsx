@@ -28,8 +28,10 @@ import { useShallow } from 'zustand/react/shallow'
 import { Analytics, AnalyticsEvent } from '@/analytics/AppMetricaService'
 import { RU_SCREEN_NAMES } from '@/app/navigation/types'
 import { useDialCall } from '@/shared/lib/useDialCall'
-import { appPalette } from '@/shared/styles/appPalette'
+import type { AppPalette } from '@/shared/styles/appPalette'
 import { useGlobalStore, useLoginStore } from '@/shared/store/store'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
 
 type DrawerRouteName =
   | 'List_orders'
@@ -105,6 +107,9 @@ function DrawerNavigationCard({
   selected,
   onPress,
 }: DrawerNavigationCardProps): React.JSX.Element {
+  const { colors } = useAppTheme()
+  const styles = useDrawerStyles()
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -118,7 +123,7 @@ function DrawerNavigationCard({
     >
       <View style={styles.navigationIcon}>
         <FontAwesomeIcon
-          color={selected ? appPalette.primary : appPalette.textMuted}
+          color={selected ? colors.primary : colors.textMuted}
           icon={item.icon}
           size={22}
         />
@@ -152,6 +157,9 @@ function DrawerContactCard({
   phoneFontSize,
   onPress,
 }: DrawerContactCardProps): React.JSX.Element {
+  const { colors } = useAppTheme()
+  const styles = useDrawerStyles()
+
   return (
     <Pressable
       accessibilityLabel={`${item.label}: ${formatPhoneNumber(item.phone)}`}
@@ -161,7 +169,7 @@ function DrawerContactCard({
       onPress={onPress}
     >
       <View style={styles.contactIcon}>
-        <FontAwesomeIcon color={appPalette.primary} icon={item.icon} size={25} />
+        <FontAwesomeIcon color={colors.primary} icon={item.icon} size={25} />
       </View>
       <View style={styles.contactText}>
         <Text style={[styles.contactLabel, { fontSize: labelFontSize }]}>
@@ -178,6 +186,9 @@ function DrawerContactCard({
 export const CustomDrawerContent = memo(function CustomDrawerContent(
   props: DrawerContentComponentProps,
 ): React.JSX.Element {
+  const { colors } = useAppTheme()
+  const isOffline = useIsOffline()
+  const styles = useDrawerStyles()
   const [
     globalFontSize,
     phones,
@@ -243,6 +254,8 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
   }
 
   async function logOut(): Promise<void> {
+    if (isOffline) return
+
     const title = RU_SCREEN_NAMES.Auth ?? 'Авторизация'
     Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${title}`)
 
@@ -269,7 +282,7 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
       >
         <View style={styles.averageCard} testID="drawer-average-time">
           <View style={styles.averageIcon}>
-            <Clock3 color={appPalette.primary} size={25} strokeWidth={2} />
+            <Clock3 color={colors.primary} size={25} strokeWidth={2} />
           </View>
           <View style={styles.averageText}>
             <Text style={styles.averageLabel}>СРЕДНЕЕ ВРЕМЯ</Text>
@@ -312,16 +325,25 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
         <View style={styles.logoutSection}>
           <Pressable
             accessibilityRole="button"
-            style={styles.logoutButton}
+            accessibilityState={{ disabled: isOffline }}
+            disabled={isOffline}
+            style={[styles.logoutButton, isOffline && styles.logoutButtonDisabled]}
             testID="drawer-logout"
             onPress={() => void logOut()}
           >
             <FontAwesomeIcon
-              color={appPalette.brand}
+              color={isOffline ? colors.disabledText : colors.brand}
               icon={faRightFromBracket}
               size={22}
             />
-            <Text style={[styles.logoutText, { fontSize: globalFontSize }]}>Выйти</Text>
+            <Text
+              style={[
+                styles.logoutText,
+                { fontSize: globalFontSize },
+                isOffline && styles.logoutTextDisabled,
+              ]}>
+              Выйти
+            </Text>
           </Pressable>
         </View>
 
@@ -331,13 +353,14 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
   )
 })
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppPalette) {
+  return StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: appPalette.brand,
+    backgroundColor: colors.brandHeader,
   },
   brandSafeArea: {
-    backgroundColor: appPalette.brand,
+    backgroundColor: colors.brandHeader,
   },
   brandHeader: {
     position: 'relative',
@@ -346,11 +369,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 16,
-    backgroundColor: appPalette.brand,
+    backgroundColor: colors.brandHeader,
   },
   drawerBody: {
     flex: 1,
-    backgroundColor: '#F6F9FC',
+    backgroundColor: colors.surface,
   },
   brandEyebrow: {
     marginBottom: 8,
@@ -381,12 +404,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: appPalette.softStrong,
-    borderRadius: 16,
+    borderColor: colors.softStrong,
+    borderRadius: 24,
     // Android по-разному композитит полупрозрачный фон рядом с elevation и
     // вложенными View. Непрозрачный эквивалент сохраняет цвет сайта цельным.
-    backgroundColor: appPalette.surfaceAlt,
-    shadowColor: appPalette.primaryDeep,
+    backgroundColor: colors.surfaceAlt,
+    shadowColor: colors.primaryDeep,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -398,7 +421,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceRaised,
   },
   averageText: {
     flex: 1,
@@ -406,14 +429,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   averageLabel: {
-    color: appPalette.textMuted,
+    color: colors.textMuted,
     fontFamily: 'Roboto-Bold',
     fontSize: 12,
     lineHeight: 15,
     letterSpacing: 0.9,
   },
   averageValue: {
-    color: appPalette.text,
+    color: colors.text,
     fontFamily: 'Roboto-Black',
     fontSize: 22,
     lineHeight: 25,
@@ -424,11 +447,11 @@ const styles = StyleSheet.create({
   contactsSection: {
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: appPalette.border,
+    borderTopColor: colors.border,
   },
   sectionTitle: {
     paddingHorizontal: 8,
-    color: appPalette.textMuted,
+    color: colors.textMuted,
     fontFamily: 'Roboto-Bold',
     fontSize: 13,
     lineHeight: 16,
@@ -444,18 +467,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#DCE2E7',
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    shadowColor: appPalette.primaryDeep,
+    borderColor: colors.border,
+    borderRadius: 24,
+    backgroundColor: colors.surfaceRaised,
+    shadowColor: colors.primaryDeep,
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.04,
     shadowRadius: 11,
     elevation: 1,
   },
   navigationCardSelected: {
-    borderColor: appPalette.primary,
-    backgroundColor: appPalette.surfaceAlt,
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceAlt,
     shadowOpacity: 0.08,
     elevation: 2,
   },
@@ -475,7 +498,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   navigationLabel: {
-    color: appPalette.text,
+    color: colors.text,
     fontFamily: 'Roboto-Medium',
     lineHeight: 21,
     textAlign: 'center',
@@ -491,10 +514,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#DCE2E7',
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    shadowColor: appPalette.primaryDeep,
+    borderColor: colors.border,
+    borderRadius: 24,
+    backgroundColor: colors.surfaceRaised,
+    shadowColor: colors.primaryDeep,
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.04,
     shadowRadius: 11,
@@ -514,13 +537,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   contactLabel: {
-    color: appPalette.text,
+    color: colors.text,
     fontFamily: 'Roboto-Bold',
     lineHeight: 20,
     textAlign: 'center',
   },
   contactPhone: {
-    color: appPalette.textMuted,
+    color: colors.textMuted,
     fontFamily: 'Roboto-Regular',
     lineHeight: 18,
     textAlign: 'center',
@@ -536,18 +559,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 11,
     borderWidth: 1,
-    borderColor: appPalette.brandSoftStrong,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    shadowColor: appPalette.primaryDeep,
+    borderColor: colors.brandSoftStrong,
+    borderRadius: 24,
+    backgroundColor: colors.surfaceRaised,
+    shadowColor: colors.primaryDeep,
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.04,
     shadowRadius: 11,
     elevation: 1,
   },
   logoutText: {
-    color: appPalette.brand,
+    color: colors.brand,
     fontFamily: 'Roboto-Bold',
     lineHeight: 22,
   },
-})
+  logoutButtonDisabled: {
+    backgroundColor: colors.disabledSurface,
+    borderColor: colors.disabledBorder,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  logoutTextDisabled: {
+    color: colors.disabledText,
+  },
+  })
+}
+
+function useDrawerStyles() {
+  const { colors } = useAppTheme()
+  return React.useMemo(() => createStyles(colors), [colors])
+}

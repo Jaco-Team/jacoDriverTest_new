@@ -16,8 +16,10 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { TypeOrder } from '@/shared/store/OrdersStoreType';
 import { appPalette } from '@/shared/styles/appPalette';
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 export const OrdersTypeList: React.FC = () => {
+  const { colors } = useAppTheme()
   const [isActionSheetVisible, setActionSheetVisible] = useState(false);
   const insets = useSafeAreaInsets()
 
@@ -45,7 +47,7 @@ export const OrdersTypeList: React.FC = () => {
       >
         <Text
           numberOfLines={1}
-          style={[styles.triggerText, { fontSize: globalFontSize }]}
+          style={[styles.triggerText, { color: colors.brand, fontSize: globalFontSize }]}
         >
           {(type ? type.text : 'Заказы').toUpperCase()}
         </Text>
@@ -57,18 +59,18 @@ export const OrdersTypeList: React.FC = () => {
       >
         <ActionsheetBackdrop />
         <ActionsheetContent
-          style={styles.sheetContent}
+          style={[styles.sheetContent, { borderColor: colors.border, backgroundColor: colors.surfaceRaised }]}
           testID="orders-status-sheet"
         >
           <ActionsheetDragIndicatorWrapper>
             <ActionsheetDragIndicator style={styles.dragIndicatorArea}>
-              <View style={styles.dragIndicator} />
+              <View style={[styles.dragIndicator, { backgroundColor: colors.border }]} />
             </ActionsheetDragIndicator>
           </ActionsheetDragIndicatorWrapper>
 
           <View style={styles.sheetHeader}>
             <View style={styles.headerSide} />
-            <Text style={[styles.sheetTitle, { fontSize: globalFontSize + 2 }]}>
+            <Text style={[styles.sheetTitle, { color: colors.text, fontSize: globalFontSize + 2 }]}>
               Список заказов
             </Text>
             <Pressable
@@ -79,11 +81,11 @@ export const OrdersTypeList: React.FC = () => {
               testID="orders-status-close"
               onPress={() => setActionSheetVisible(false)}
             >
-              <X color={appPalette.textMuted} size={23} strokeWidth={2} />
+              <X color={colors.textMuted} size={23} strokeWidth={2} />
             </Pressable>
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.options}>
             {types.map((item) => {
@@ -95,7 +97,15 @@ export const OrdersTypeList: React.FC = () => {
                   key={item.id}
                   style={[
                     styles.option,
-                    isSelected && styles.optionSelected,
+                    {
+                      backgroundColor: isSelected
+                        ? colors.surfaceAlt
+                        : colors.surfaceRaised,
+                      borderColor: isSelected
+                        ? colors.primary
+                        : colors.border,
+                      shadowColor: colors.shadowStrong,
+                    },
                   ]}
                   testID={`orders-status-option-${item.id}`}
                   onPress={() => handleSelect(item)}
@@ -103,7 +113,7 @@ export const OrdersTypeList: React.FC = () => {
                   <Text
                     style={[
                       styles.optionText,
-                      { fontSize: globalFontSize },
+                      { color: colors.text, fontSize: globalFontSize },
                       isSelected && styles.optionTextSelected,
                     ]}
                   >
@@ -198,6 +208,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
+    borderWidth: 1,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
     shadowColor: '#000000',
@@ -217,7 +228,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   optionTextSelected: {
-    color: '#1976D2',
     fontFamily: 'Roboto-Medium',
   },
   selectedDot: {

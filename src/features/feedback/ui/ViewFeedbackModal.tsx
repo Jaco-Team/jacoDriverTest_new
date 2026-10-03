@@ -11,12 +11,14 @@ import { FeedbackSheet } from './FeedbackSheet'
 import { formatFeedbackDate } from './FeedbackItem'
 import { StatusBadge } from './StatusBadge'
 import { TypeBadge } from './TypeBadge'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
 
 const ViewFeedbackModal: React.FC = () => {
+  const { colors } = useAppTheme()
   const [modal, closeViewModal] = useFeedbackStore(
     useShallow(state => [state.modal, state.closeViewModal]),
   )
@@ -45,15 +47,15 @@ const ViewFeedbackModal: React.FC = () => {
     >
       {feedback ? (
         <>
-          <Text style={[styles.title, { fontSize: clamp(bodyFontSize + 6, 20, 30) }]}>
+          <Text style={[styles.title, { color: colors.text, fontSize: clamp(bodyFontSize + 6, 20, 30) }]}>
             {String(feedback.title ?? '').trim() || 'Без заголовка'}
           </Text>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.metaRow}>
             <View style={styles.dateRow}>
-              <Clock color={appPalette.textMuted} size={clamp(bodyFontSize - 1, 13, 18)} />
-              <Text style={[styles.date, { fontSize: clamp(bodyFontSize - 1, 13, 18) }]}>
+              <Clock color={colors.textMuted} size={clamp(bodyFontSize - 1, 13, 18)} />
+              <Text style={[styles.date, { color: colors.textMuted, fontSize: clamp(bodyFontSize - 1, 13, 18) }]}>
                 {formatFeedbackDate(feedback.date_time_create)}
               </Text>
             </View>
@@ -61,21 +63,21 @@ const ViewFeedbackModal: React.FC = () => {
             <TypeBadge type={feedback.type} globalFontSize={bodyFontSize} />
           </View>
 
-          <Text style={[styles.sectionTitle, { fontSize: sectionFontSize }]}>Описание</Text>
-          <Text style={[styles.body, { fontSize: bodyFontSize }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, fontSize: sectionFontSize }]}>Описание</Text>
+          <Text style={[styles.body, { color: colors.textMuted, fontSize: bodyFontSize }]}>
             {String(feedback.description ?? '').trim() || 'Нет описания'}
           </Text>
 
           {images.length > 0 ? (
             <>
-              <Text style={[styles.sectionTitle, { fontSize: sectionFontSize }]}>Изображение</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text, fontSize: sectionFontSize }]}>Изображение</Text>
               <View style={styles.images}>
                 {images.map((image, index) => (
                   <Pressable
                     accessibilityLabel="Открыть изображение"
                     key={`${image.uri}-${index}`}
                     onPress={() => { setCurrentImageIndex(index); setIsImageViewerOpen(true) }}
-                    style={styles.imageButton}
+                    style={[styles.imageButton, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
                   >
                     <Image resizeMode="contain" source={image} style={styles.image} />
                   </Pressable>
@@ -84,9 +86,9 @@ const ViewFeedbackModal: React.FC = () => {
             </>
           ) : null}
 
-          <Text style={[styles.sectionTitle, styles.answerTitle, { fontSize: sectionFontSize }]}>Ответ</Text>
-          <View style={styles.answer}>
-            <Text style={[styles.answerText, { fontSize: bodyFontSize }]}>
+          <Text style={[styles.sectionTitle, styles.answerTitle, { color: colors.text, fontSize: sectionFontSize }]}>Ответ</Text>
+          <View style={[styles.answer, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+            <Text style={[styles.answerText, { color: colors.textMuted, fontSize: bodyFontSize }]}>
               {String(feedback.answer ?? '').trim() || 'Нет ответа'}
             </Text>
           </View>

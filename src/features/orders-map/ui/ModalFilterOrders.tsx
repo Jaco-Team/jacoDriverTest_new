@@ -13,6 +13,7 @@ import {
 import { appPalette } from '@/shared/styles/appPalette'
 
 import { useModalFilterOrdersLogic } from '../model/useModalOrderLogic'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 function clampFontSize(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
@@ -20,6 +21,7 @@ function clampFontSize(value: number, min: number, max: number): number {
 
 export const ModalFilterOrders = (): React.JSX.Element => {
   const insets = useSafeAreaInsets()
+  const { colors } = useAppTheme()
   const {
     globalFontSize,
     types_dop: typesDop,
@@ -50,7 +52,7 @@ export const ModalFilterOrders = (): React.JSX.Element => {
       <ActionsheetContent
         style={[
           styles.sheet,
-          { paddingBottom: insets.bottom + 28 },
+          { borderColor: colors.border, backgroundColor: colors.surfaceRaised, paddingBottom: insets.bottom + 28 },
         ]}
         testID="orders-filter-sheet"
       >
@@ -63,7 +65,7 @@ export const ModalFilterOrders = (): React.JSX.Element => {
               testID="orders-filter-sheet-handle"
               onPress={close}
             >
-              <View style={styles.handle} />
+              <View style={[styles.handle, { backgroundColor: colors.border }]} />
             </Pressable>
           </ActionsheetDragIndicator>
         </ActionsheetDragIndicatorWrapper>
@@ -72,6 +74,7 @@ export const ModalFilterOrders = (): React.JSX.Element => {
           style={[
             styles.title,
             {
+              color: colors.text,
               fontSize: titleFontSize,
               lineHeight: Math.round(titleFontSize * 1.2),
             },
@@ -83,6 +86,7 @@ export const ModalFilterOrders = (): React.JSX.Element => {
           style={[
             styles.helper,
             {
+              color: colors.textMuted,
               fontSize: helperFontSize,
               lineHeight: Math.round(helperFontSize * 1.4),
             },
@@ -103,7 +107,11 @@ export const ModalFilterOrders = (): React.JSX.Element => {
                 key={item.id}
                 style={[
                   styles.option,
-                  selected ? styles.optionSelected : styles.optionIdle,
+                  {
+                    backgroundColor: selected
+                      ? colors.brand
+                      : colors.surfaceAlt,
+                  },
                 ]}
                 testID={`orders-filter-option-${item.id}`}
                 onPress={() => toggle(value)}
@@ -112,7 +120,7 @@ export const ModalFilterOrders = (): React.JSX.Element => {
                   style={[
                     styles.optionText,
                     {
-                      color: selected ? '#FFFFFF' : appPalette.text,
+                      color: selected ? '#FFFFFF' : colors.text,
                       fontSize: actionFontSize,
                     },
                   ]}

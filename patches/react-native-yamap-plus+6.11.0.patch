@@ -1,15 +1,333 @@
+diff --git a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/module/YamapModule.kt b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/module/YamapModule.kt
+index 02de75e..386278d 100644
+--- a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/module/YamapModule.kt
++++ b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/module/YamapModule.kt
+@@ -4,10 +4,46 @@ import com.facebook.react.bridge.Promise
+ import com.facebook.react.bridge.ReactApplicationContext
+ import com.facebook.react.bridge.UiThreadUtil
+ import com.yandex.mapkit.MapKitFactory
++import com.yandex.mapkit.geometry.Point
++import com.yandex.mapkit.offline_cache.OfflineCacheManager
++import com.yandex.mapkit.offline_cache.RegionListUpdatesListener
++import com.yandex.mapkit.offline_cache.RegionsAtPointListener
+ import com.yandex.runtime.i18n.I18nManagerFactory
++import java.lang.ref.WeakReference
++import org.json.JSONArray
++import org.json.JSONObject
+ import ru.yamap.NativeYamapModuleSpec
+ 
+ class YamapModule(reactContext: ReactApplicationContext) : NativeYamapModuleSpec(reactContext) {
++    private var offlineListListener: RegionListUpdatesListener? = null
++    private var offlineErrorListener: OfflineCacheManager.ErrorListener? = null
++    private var offlineCatalogUpdated = false
++    private var offlineCatalogError: String? = null
++
++    private fun watchOfflineCatalog(manager: OfflineCacheManager) {
++        if (offlineListListener == null) {
++            val listener = object : RegionListUpdatesListener {
++                override fun onListUpdated() {
++                    offlineCatalogUpdated = true
++                }
++            }
++            offlineListListener = listener
++            manager.addRegionListUpdatesListener(WeakReference(listener))
++        }
++        if (offlineErrorListener == null) {
++            val listener = object : OfflineCacheManager.ErrorListener {
++                override fun onError(error: com.yandex.runtime.Error) {
++                    offlineCatalogError = error.toString()
++                }
++
++                override fun onRegionError(error: com.yandex.runtime.Error, regionId: Int) {
++                    offlineCatalogError = "Регион $regionId: $error"
++                }
++            }
++            offlineErrorListener = listener
++            manager.addErrorListener(WeakReference(listener))
++        }
++    }
+ 
+     override fun getName() = NAME
+ 
+@@ -70,6 +106,86 @@ class YamapModule(reactContext: ReactApplicationContext) : NativeYamapModuleSpec
+         })
+     }
+ 
++    override fun getOfflineRegionsAtPoint(latitude: Double, longitude: Double, promise: Promise) {
++        UiThreadUtil.runOnUiThread {
++            try {
++                val manager = MapKitFactory.getInstance().offlineCacheManager
++                watchOfflineCatalog(manager)
++                manager.requestRegionsAtPoint(Point(latitude, longitude), object : RegionsAtPointListener {
++                    override fun onRegions(regionIds: MutableList<Int>) {
++                        try {
++                            val known = manager.regions().associateBy { it.id }
++                            val result = JSONArray()
++                            regionIds.forEach { id ->
++                                result.put(JSONObject().apply {
++                                    put("id", id)
++                                    put("name", known[id]?.name ?: "Регион $id")
++                                    put("catalogCount", known.size)
++                                    put("catalogUpdated", offlineCatalogUpdated)
++                                    offlineCatalogError?.let { put("catalogError", it) }
++                                    known[id]?.let { put("sizeBytes", it.size.value) }
++                                })
++                            }
++                            promise.resolve(result.toString())
++                        } catch (error: Throwable) {
++                            promise.reject("YANDEX_OFFLINE_REGIONS", error)
++                        }
++                    }
++
++                    override fun onError(error: com.yandex.runtime.Error) {
++                        promise.reject("YANDEX_OFFLINE_REGIONS", error.toString())
++                    }
++                })
++            } catch (error: Throwable) {
++                promise.reject("YANDEX_OFFLINE_REGIONS", error)
++            }
++        }
++    }
++
++    override fun getOfflineRegionStatus(regionId: Double, promise: Promise) {
++        UiThreadUtil.runOnUiThread {
++            try {
++                val manager = MapKitFactory.getInstance().offlineCacheManager
++                val id = regionId.toInt()
++                promise.resolve(JSONObject().apply {
++                    put("id", id)
++                    put("state", manager.getState(id).name.lowercase())
++                    put("progress", manager.getProgress(id).toDouble())
++                }.toString())
++            } catch (error: Throwable) {
++                promise.reject("YANDEX_OFFLINE_STATUS", error)
++            }
++        }
++    }
++
++    override fun startOfflineRegionDownload(regionId: Double, promise: Promise) {
++        UiThreadUtil.runOnUiThread {
++            try {
++                val manager = MapKitFactory.getInstance().offlineCacheManager
++                val id = regionId.toInt()
++                if (manager.mayBeOutOfAvailableSpace(id)) {
++                    promise.reject("YANDEX_OFFLINE_SPACE", "Недостаточно свободного места")
++                    return@runOnUiThread
++                }
++                manager.startDownload(id)
++                promise.resolve(null)
++            } catch (error: Throwable) {
++                promise.reject("YANDEX_OFFLINE_DOWNLOAD", error)
++            }
++        }
++    }
++
++    override fun pauseOfflineRegionDownload(regionId: Double, promise: Promise) {
++        UiThreadUtil.runOnUiThread {
++            try {
++                MapKitFactory.getInstance().offlineCacheManager.pauseDownload(regionId.toInt())
++                promise.resolve(null)
++            } catch (error: Throwable) {
++                promise.reject("YANDEX_OFFLINE_PAUSE", error)
++            }
++        }
++    }
++
+     companion object {
+         const val NAME = "RTNYamapModule"
+     }
+diff --git a/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm b/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm
+index b8e9491..47ca918 100644
+--- a/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm
++++ b/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm
+@@ -1,10 +1,49 @@
+ #import "RTNYamapModule.h"
+ 
+ #import <YandexMapsMobile/YMKMapKitFactory.h>
++#import <YandexMapsMobile/YMKOfflineCacheManager.h>
++#import <YandexMapsMobile/YMKOfflineCacheRegion.h>
++#import <YandexMapsMobile/YMKPoint.h>
+ #import <YandexMapsMobile/YRTI18nManager.h>
+ 
++static NSString *offlineRegionStateName(YMKOfflineCacheRegionState state) {
++    switch (state) {
++        case YMKOfflineCacheRegionStateAvailable: return @"available";
++        case YMKOfflineCacheRegionStateDownloading: return @"downloading";
++        case YMKOfflineCacheRegionStatePaused: return @"paused";
++        case YMKOfflineCacheRegionStateCompleted: return @"completed";
++        case YMKOfflineCacheRegionStateOutdated: return @"outdated";
++        case YMKOfflineCacheRegionStateUnsupported: return @"unsupported";
++        case YMKOfflineCacheRegionStateNeedUpdate: return @"need_update";
++    }
++    return @"unknown";
++}
++
++static NSString *offlineJSON(id object) {
++    NSData *data = [NSJSONSerialization dataWithJSONObject:object options:0 error:nil];
++    return data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"[]";
++}
++
++@interface RTNYamapModule () <YMKOfflineMapRegionListUpdatesListener, YMKOfflineCacheManagerErrorListener>
++@property (nonatomic, assign) BOOL offlineListenersAdded;
++@property (nonatomic, assign) BOOL offlineCatalogUpdated;
++@property (nonatomic, copy) NSString *offlineCatalogError;
++@end
++
+ @implementation RTNYamapModule
+ 
++- (void)onListUpdated {
++    self.offlineCatalogUpdated = YES;
++}
++
++- (void)onErrorWithError:(NSError *)error {
++    self.offlineCatalogError = error.localizedDescription;
++}
++
++- (void)onRegionErrorWithError:(NSError *)error regionId:(NSUInteger)regionId {
++    self.offlineCatalogError = [NSString stringWithFormat:@"Регион %lu: %@", (unsigned long)regionId, error.localizedDescription];
++}
++
+ - (dispatch_queue_t)methodQueue {
+     return dispatch_get_main_queue();
+ }
+@@ -53,6 +92,89 @@ - (void)getLocale:(nonnull RCTPromiseResolveBlock)resolve reject:(nonnull RCTPro
+     [self getLocaleImpl:resolve];
+ }
+ 
++- (void)getOfflineRegionsAtPoint:(double)latitude longitude:(double)longitude resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
++    @try {
++        YMKOfflineCacheManager *manager = [YMKMapKit sharedInstance].offlineCacheManager;
++        if (!self.offlineListenersAdded) {
++            [manager addRegionListUpdatesListenerWithRegionListUpdatesListener:self];
++            [manager addErrorListenerWithErrorListener:self];
++            self.offlineListenersAdded = YES;
++        }
++        YMKPoint *point = [YMKPoint pointWithLatitude:latitude longitude:longitude];
++        [manager requestRegionsAtPointWithPoint:point regionsAtPointCallback:^(NSArray<NSNumber *> *regions, NSError *error) {
++            if (error) {
++                reject(@"YANDEX_OFFLINE_REGIONS", error.localizedDescription, error);
++                return;
++            }
++            @try {
++                NSMutableDictionary<NSNumber *, YMKOfflineCacheRegion *> *known = [NSMutableDictionary dictionary];
++                for (YMKOfflineCacheRegion *region in [manager regions]) {
++                    known[@(region.id)] = region;
++                }
++                NSMutableArray *result = [NSMutableArray array];
++                for (NSNumber *regionId in regions ?: @[]) {
++                    NSMutableDictionary *item = [@{
++                        @"id": regionId,
++                        @"name": known[regionId].name ?: [NSString stringWithFormat:@"Регион %@", regionId],
++                        @"catalogCount": @(known.count),
++                        @"catalogUpdated": @(self.offlineCatalogUpdated)
++                    } mutableCopy];
++                    if (self.offlineCatalogError) {
++                        item[@"catalogError"] = self.offlineCatalogError;
++                    }
++                    if (known[regionId]) {
++                        item[@"sizeBytes"] = @(known[regionId].size.value);
++                    }
++                    [result addObject:item];
++                }
++                resolve(offlineJSON(result));
++            } @catch (NSException *exception) {
++                reject(@"YANDEX_OFFLINE_REGIONS", exception.reason, nil);
++            }
++        }];
++    } @catch (NSException *exception) {
++        reject(@"YANDEX_OFFLINE_REGIONS", exception.reason, nil);
++    }
++}
++
++- (void)getOfflineRegionStatus:(double)regionId resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
++    @try {
++        YMKOfflineCacheManager *manager = [YMKMapKit sharedInstance].offlineCacheManager;
++        NSUInteger value = (NSUInteger)regionId;
++        resolve(offlineJSON(@{
++            @"id": @(value),
++            @"state": offlineRegionStateName([manager getStateWithRegionId:value]),
++            @"progress": @([manager getProgressWithRegionId:value])
++        }));
++    } @catch (NSException *exception) {
++        reject(@"YANDEX_OFFLINE_STATUS", exception.reason, nil);
++    }
++}
++
++- (void)startOfflineRegionDownload:(double)regionId resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
++    @try {
++        YMKOfflineCacheManager *manager = [YMKMapKit sharedInstance].offlineCacheManager;
++        NSUInteger value = (NSUInteger)regionId;
++        if ([manager mayBeOutOfAvailableSpaceWithRegionId:value]) {
++            reject(@"YANDEX_OFFLINE_SPACE", @"Недостаточно свободного места", nil);
++            return;
++        }
++        [manager startDownloadWithRegionId:value];
++        resolve(nil);
++    } @catch (NSException *exception) {
++        reject(@"YANDEX_OFFLINE_DOWNLOAD", exception.reason, nil);
++    }
++}
++
++- (void)pauseOfflineRegionDownload:(double)regionId resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
++    @try {
++        [[YMKMapKit sharedInstance].offlineCacheManager pauseDownloadWithRegionId:(NSUInteger)regionId];
++        resolve(nil);
++    } @catch (NSException *exception) {
++        reject(@"YANDEX_OFFLINE_PAUSE", exception.reason, nil);
++    }
++}
++
+ RCT_EXPORT_MODULE()
+ 
+ @end
+diff --git a/node_modules/react-native-yamap-plus/ios/View/YamapView.mm b/node_modules/react-native-yamap-plus/ios/View/YamapView.mm
+--- a/node_modules/react-native-yamap-plus/ios/View/YamapView.mm
++++ b/node_modules/react-native-yamap-plus/ios/View/YamapView.mm
+@@ -63,6 +63,7 @@
+     NSMutableArray<YMKPlacemarkMapObject *> *clusterPlacemarks;
+     YMKClusterizedPlacemarkCollection *clusterCollection;
+     BOOL mapLoaded;
++    BOOL nightModeConfigured;
+     BOOL hasImperativePlacemarks;
+     NSMutableDictionary<NSValue *, NSNumber *> *imperativeIndexMap;
+     NSInteger imperativePlacemarkCounter;
+@@ -129,9 +130,12 @@
+     if (oldViewProps.mapType != newViewProps.mapType) {
+         mapView.mapWindow.map.mapType = [self mapTypeWithJsEnum:newViewProps.mapType];
+     }
+ 
+-    if (oldViewProps.nightMode != newViewProps.nightMode) {
++    // The first React prop can be false while MapKit is already in night mode.
++    // Apply that initial value explicitly, including after Fabric view reuse.
++    if (!nightModeConfigured || oldViewProps.nightMode != newViewProps.nightMode) {
+         [self setNightMode:newViewProps.nightMode];
++        nightModeConfigured = YES;
+     }
+ 
+     if (oldViewProps.showUserPosition != newViewProps.showUserPosition) {
+@@ -422,8 +426,9 @@
+ - (void)prepareForRecycle
+ {
+     [super prepareForRecycle];
+ 
++    nightModeConfigured = NO;
+     [self removeAllSections];
+     [clusterPlacemarks removeAllObjects];
+     [imperativeIndexMap removeAllObjects];
+     imperativePlacemarkCounter = 0;
 diff --git a/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm b/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
-index 2f4fdb1..8c8601d 100644
+index 8e07f96..b6a4967 100644
 --- a/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
 +++ b/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
-@@ -44,5 +44,6 @@ @implementation MarkerView {
+@@ -43,6 +43,7 @@ - (instancetype)init {
+     if (self = [super init]) {
          static const auto defaultProps = std::make_shared<const MarkerViewProps>();
          _props = defaultProps;
 +        _point = [YMKPoint pointWithLatitude:0 longitude:0];
  
          zIndex = 1;
          scale = [NSNumber numberWithInt:1];
-@@ -112,6 +113,7 @@ @implementation MarkerView {
+@@ -112,6 +113,7 @@ - (void)handleCommand:(const NSString *)commandName args:(const NSArray *)args {
  - (void)prepareForRecycle
  {
      [super prepareForRecycle];
@@ -17,3 +335,31 @@ index 2f4fdb1..8c8601d 100644
      zIndex = 1;
      scale = [NSNumber numberWithInt:1];
      rotated = NO;
+diff --git a/node_modules/react-native-yamap-plus/src/modules/YamapInstance.ts b/node_modules/react-native-yamap-plus/src/modules/YamapInstance.ts
+index e5b76a8..4b974d9 100644
+--- a/node_modules/react-native-yamap-plus/src/modules/YamapInstance.ts
++++ b/node_modules/react-native-yamap-plus/src/modules/YamapInstance.ts
+@@ -5,4 +5,8 @@ export const YamapInstance = {
+   setLocale: NativeYamapModule.setLocale,
+   getLocale: NativeYamapModule.getLocale,
+   resetLocale: NativeYamapModule.resetLocale,
++  getOfflineRegionsAtPoint: NativeYamapModule.getOfflineRegionsAtPoint,
++  getOfflineRegionStatus: NativeYamapModule.getOfflineRegionStatus,
++  startOfflineRegionDownload: NativeYamapModule.startOfflineRegionDownload,
++  pauseOfflineRegionDownload: NativeYamapModule.pauseOfflineRegionDownload,
+ };
+diff --git a/node_modules/react-native-yamap-plus/src/spec/NativeYamapModule.ts b/node_modules/react-native-yamap-plus/src/spec/NativeYamapModule.ts
+index 5d408ca..2c579e3 100644
+--- a/node_modules/react-native-yamap-plus/src/spec/NativeYamapModule.ts
++++ b/node_modules/react-native-yamap-plus/src/spec/NativeYamapModule.ts
+@@ -5,6 +5,10 @@ interface Spec extends TurboModule {
+   setLocale(locale: string): Promise<void>
+   getLocale(): Promise<string>
+   resetLocale(): Promise<void>
++  getOfflineRegionsAtPoint(latitude: number, longitude: number): Promise<string>
++  getOfflineRegionStatus(regionId: number): Promise<string>
++  startOfflineRegionDownload(regionId: number): Promise<void>
++  pauseOfflineRegionDownload(regionId: number): Promise<void>
+ }
+ 
+ export default TurboModuleRegistry.getEnforcing<Spec>('RTNYamapModule');

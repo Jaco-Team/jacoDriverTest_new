@@ -2,19 +2,28 @@ import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { Video } from 'lucide-react-native'
 
-import { appPalette } from '@/shared/styles/appPalette'
 import { useErrorCamera } from '../model/useError'
 import { ModalErrCam } from './ModalErrCam'
-import { graphStyles } from './graphStyles'
+import { useGraphStyles } from './graphStyles'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
 
 export function ErrCamera(): React.JSX.Element {
+  const { colors } = useAppTheme()
+  const graphStyles = useGraphStyles()
+  const isOffline = useIsOffline()
   const { globalFontSize, err_cam, showModalErrCam } = useErrorCamera()
+  const visibleErrors = isOffline ? [] : err_cam
+
+  React.useEffect(() => {
+    if (isOffline) showModalErrCam(false)
+  }, [isOffline, showModalErrCam])
 
   return (
     <View style={graphStyles.card} testID="graph-camera-errors-card">
       <View style={graphStyles.cardHeader}>
         <View style={graphStyles.cardIcon}>
-          <Video color={appPalette.primary} size={23} />
+          <Video color={colors.primary} size={23} />
         </View>
         <Text style={graphStyles.cardTitle}>Ошибки по камерам</Text>
       </View>
@@ -41,20 +50,22 @@ export function ErrCamera(): React.JSX.Element {
             </View>
           </View>
 
-          {err_cam.length === 0 ? (
+          {visibleErrors.length === 0 ? (
             <View style={graphStyles.empty}>
               <Text style={[graphStyles.emptyText, { fontSize: globalFontSize }]}>
                 Ошибок по камерам за выбранный период нет.
               </Text>
             </View>
           ) : (
-            err_cam.map((item, index) => {
-              const lastRow = index === err_cam.length - 1
+            visibleErrors.map((item, index) => {
+              const lastRow = index === visibleErrors.length - 1
 
               return (
                 <Pressable
                   accessibilityLabel={`Открыть ошибку ${item.id}`}
                   accessibilityRole="button"
+                  accessibilityState={{ disabled: isOffline }}
+                  disabled={isOffline}
                   key={`${item.id}-${index}`}
                   style={graphStyles.tableRow}
                   testID={`graph-camera-error-${index}`}

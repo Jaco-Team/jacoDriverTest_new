@@ -1,182 +1,139 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, StatusBar, PanResponder, TouchableOpacity } from 'react-native';
-import NetInfo from '@react-native-community/netinfo';
-import DeviceInfo from 'react-native-device-info';
+import React, {useEffect, useRef, useState} from 'react';
+import {StyleSheet, Text, View} from 'react-native';
+import NetInfo, {type NetInfoState} from '@react-native-community/netinfo';
 
-import { VStack } from "@/components/ui/vstack"
-import { Icon, CloseIcon } from "@/components/ui/icon"
+import {appPalette} from '@/shared/styles/appPalette';
+import {
+  ConnectivityContext,
+  useIsOffline,
+} from '@/shared/lib/connectivityContext';
+import {setAppOffline} from '@/shared/lib/connectivityState';
+import {useGlobalStore, useOrdersStore} from '@/shared/store/store';
 
-import { useGlobalStore } from '@/shared/store/store';
-import { useShallow } from 'zustand/react/shallow'
+export {useIsOffline} from '@/shared/lib/connectivityContext';
 
-import { animated, useSpring } from '@react-spring/native';
+export const CONNECTIVITY_REFRESH_INTERVAL_MS = 15_000;
 
-const AnimatedView = animated(View);
+export function isOfflineNetworkState(
+  state: Pick<NetInfoState, 'isConnected' | 'isInternetReachable'>,
+): boolean {
+  return state.isConnected === false || state.isInternetReachable === false;
+}
 
-export const ConnectivityLocationIndicator: React.FC = () => {
-
-  const [ globalFontSize ] = useGlobalStore(useShallow( state => [ state.globalFontSize ]));
-
-  const [ is_show, setIsShow ] = useState<boolean>(false);
-
-  // Состояние геолокации
-  const [isLocationEnabled, setIsLocationEnabled] = useState<boolean>(true);
-  // Состояние интернет соединения
-  const [isInternetConnected, setIsInternetConnected] = useState<boolean>(true);
-  // Плохое качество соединения (например, 2G)
-  const [isPoorConnection, setIsPoorConnection] = useState<boolean>(false);
-  // Информация о качестве соединения (например, '2G', 'WiFi')
-  const [connectionQuality, setConnectionQuality] = useState<string | null>(null);
+export function ConnectivityProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.JSX.Element {
+  const [isOffline, setIsOffline] = useState(false);
+  const previousOfflineRef = useRef(false);
+  const recoveryPendingRef = useRef(false);
 
   useEffect(() => {
-    // Проверка состояния геолокации
-    const checkLocationEnabled = async () => {
-      try {
+    let isMounted = true;
 
-        const enabled = await DeviceInfo.isLocationEnabled();
-        setIsLocationEnabled(enabled);
-      } catch (error) {
-        // В случае ошибки можно считать, что геолокация включена,
-        // либо установить значение по умолчанию false
-        setIsLocationEnabled(true);
+    const applyNetworkState = (state: NetInfoState) => {
+      if (isMounted) {
+        const networkIsOffline = isOfflineNetworkState(state);
+
+        if (networkIsOffline) {
+          recoveryPendingRef.current = true;
+        }
+
+        const isConfirmedOnline =
+          state.isConnected === true && state.isInternetReachable === true;
+        const nextIsOffline =
+          networkIsOffline ||
+          (recoveryPendingRef.current && !isConfirmedOnline);
+        const wasOffline = previousOfflineRef.current;
+        previousOfflineRef.current = nextIsOffline;
+        setAppOffline(nextIsOffline);
+        setIsOffline(nextIsOffline);
+
+        if (nextIsOffline) {
+          useGlobalStore.getState().setSpinner(false);
+          useGlobalStore.getState().setSpinnerHidden(false);
+          useOrdersStore.setState({
+            is_check: false,
+            ordersRefreshPending: false,
+          });
+        } else if (wasOffline && isConfirmedOnline) {
+          recoveryPendingRef.current = false;
+          // Данные восстанавливает только открытый экран. Если запускать здесь
+          // getOrders и снимать паузу фонового прогрева, то одновременно с
+          // focus-обновлением стартует несколько запросов, а уже посещённые
+          // экраны также начинают загружаться все разом.
+        }
       }
     };
 
-    checkLocationEnabled();
-
-    // Подписка на изменения состояния сети
-    const unsubscribe = NetInfo.addEventListener(state => {
-      const connected = state.isConnected ?? false;
-      setIsInternetConnected(connected);
-
-      // Если интернет отсутствует, сбрасываем проверку качества
-      if (!connected) {
-        setIsPoorConnection(false);
-        setConnectionQuality(null);
-        return;
+    const refreshNetworkState = async () => {
+      try {
+        applyNetworkState(await NetInfo.refresh());
+      } catch {
+        // Сохраняем последнее известное состояние: ошибка самой проверки
+        // ещё не означает, что интернет действительно отсутствует.
       }
+    };
 
-      // Если устройство подключено, проверяем тип соединения
-      if (state.type === 'cellular') {
-        const generation = state.details?.cellularGeneration;
-        if (generation === '2g') {
-          setIsPoorConnection(true);
-          setConnectionQuality('2G');
-        } else {
-          setIsPoorConnection(false);
-          setConnectionQuality(generation ? generation.toUpperCase() : null);
-        }
-      } else if (state.type === 'wifi') {
-        setIsPoorConnection(false);
-        setConnectionQuality('WiFi');
-      } else {
-        setIsPoorConnection(false);
-        setConnectionQuality(state.type);
-      }
-    });
+    const unsubscribe = NetInfo.addEventListener(applyNetworkState);
+    void refreshNetworkState();
+
+    const refreshTimer = setInterval(
+      refreshNetworkState,
+      CONNECTIVITY_REFRESH_INTERVAL_MS,
+    );
 
     return () => {
+      isMounted = false;
+      clearInterval(refreshTimer);
       unsubscribe();
     };
   }, []);
 
-  const styles = useSpring({
-    from: { translateY: -200, opacity: 0 },
-    to: { translateY: is_show ? 70 : -100, opacity: 1 },
-    config: { tension: 200, friction: 20 },
-  });
+  return (
+    <ConnectivityContext.Provider value={isOffline}>
+      {children}
+    </ConnectivityContext.Provider>
+  );
+}
 
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderMove: (_, gestureState) => {
-      if (gestureState.dy < -20) {
-        setIsShow(false)
-      }
-    },
-  });
+export const ConnectivityLocationIndicator: React.FC = () => {
+  const isOffline = useIsOffline();
 
-  // Если все условия удовлетворительные — ничего не отображаем
-  if (!isLocationEnabled || !isInternetConnected || isPoorConnection) {
+  if (!isOffline) {
     return null;
   }
 
-  if (isLocationEnabled && isInternetConnected && isPoorConnection) {
-    setIsShow(true)
-  }
-
   return (
-    <AnimatedView
-      {...panResponder.panHandlers}
-      style={[
-        {
-          transform: [{ translateY: styles.translateY }],
-          opacity: styles.opacity,
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          borderRadius: 4,
-          zIndex: 50
-        },
-      ]}
-    >
-      <VStack className="gap-4 flex-row justify-between pl-5 pr-5 pt-3 pb-3 rounded-lg flex-1 items-center w-auto mr-5 ml-5" style={{ backgroundColor: "#44944a" }}>
-        
-        { !isInternetConnected && (
-          <Text className="font-semibold text-white w-11/12" style={{ fontSize: globalFontSize }}>Нет интернет соединения</Text>
-        )}
-        { !isLocationEnabled && (
-          <Text className="font-semibold text-white w-11/12" style={{ fontSize: globalFontSize }}>Геолокация отключена</Text>
-        )}
-        { isPoorConnection && (
-          <Text className="font-semibold text-white w-11/12" style={{ fontSize: globalFontSize }}>
-            Плохое качество соединения {connectionQuality && `(${connectionQuality})`}
-          </Text>
-        )}
-
-        <TouchableOpacity onPress={() => { setIsShow(false) }} className="w-1/12">
-          <Icon color="white" as={CloseIcon} />
-        </TouchableOpacity>
-      </VStack>
-    </AnimatedView>
+    <View
+      accessibilityLiveRegion="assertive"
+      pointerEvents="none"
+      style={styles.container}
+      testID="offline-status-banner">
+      <Text accessibilityRole="alert" style={styles.text}>
+        Нет подключения к интернету
+      </Text>
+    </View>
   );
-
-
-
-
-  // return (
-  //   <View style={styles.container}>
-  //     <Text style={styles.text}>Нет интернет соединения</Text>
-  //     { !isInternetConnected && (
-  //       <Text style={styles.text}>Нет интернет соединения</Text>
-  //     )}
-  //     { !isLocationEnabled && (
-  //       <Text style={styles.text}>Геолокация отключена</Text>
-  //     )}
-  //     { isPoorConnection && (
-  //       <Text style={styles.text}>
-  //         Плохое качество соединения {connectionQuality && `(${connectionQuality})`}
-  //       </Text>
-  //     )}
-  //   </View>
-  // );
 };
 
-const styles11 = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'red',
-    padding: 5,
+    marginHorizontal: 8,
+    marginVertical: 6,
+    minHeight: 36,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'absolute',
-    top: StatusBar.currentHeight || 0,
-    left: 0,
-    right: 0,
-    zIndex: 9999,
+    borderRadius: 8,
+    backgroundColor: appPalette.brandDeep,
   },
   text: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });

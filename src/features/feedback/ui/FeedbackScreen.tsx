@@ -15,6 +15,8 @@ import { appPalette } from '@/shared/styles/appPalette'
 import { useFeedbackStore, useGlobalStore } from '@/shared/store/store'
 import type { FeedbackStatus } from '@/shared/store/FeedbackStoreType'
 import { ScreenLayout } from '@/shared/ui/ScreenLayout'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
 
 import CreateFeedbackModal from './CreateFeedbackModal'
 import FeedbackList from './FeedbackList'
@@ -33,6 +35,8 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 export const FeedbackScreen: React.FC = () => {
+  const { colors, isDark } = useAppTheme()
+  const isOffline = useIsOffline()
   const globalFontSize = useGlobalStore(state => state.globalFontSize)
   const [isSearchFocused, setIsSearchFocused] = React.useState(false)
   const searchInputRef = React.useRef<TextInput>(null)
@@ -40,6 +44,8 @@ export const FeedbackScreen: React.FC = () => {
     feedbacks,
     modal,
     openCreateModal,
+    closeCreateModal,
+    closeViewModal,
     chooseStatus,
     setStatus,
     searchQuery,
@@ -49,12 +55,19 @@ export const FeedbackScreen: React.FC = () => {
       state.feedbacks,
       state.modal,
       state.openCreateModal,
+      state.closeCreateModal,
+      state.closeViewModal,
       state.chooseStatus,
       state.setStatus,
       state.searchQuery,
       state.setSearchQuery,
     ]),
   )
+
+  React.useEffect(() => {
+    if (isOffline && modal.isCreateModalOpen) closeCreateModal()
+    if (isOffline && modal.isViewModalOpen) closeViewModal()
+  }, [closeCreateModal, closeViewModal, isOffline, modal.isCreateModalOpen, modal.isViewModalOpen])
 
   const normalizedFontSize = Number.isFinite(globalFontSize) && globalFontSize > 0
     ? globalFontSize
@@ -90,13 +103,13 @@ export const FeedbackScreen: React.FC = () => {
       <Pressable
         accessible={false}
         onPress={dismissSearch}
-        style={styles.screen}
+        style={[styles.screen, { backgroundColor: colors.surface }]}
         testID="feedback-screen"
       >
-        <View style={styles.filtersCard} testID="feedback-filters-card">
+        <View style={[styles.filtersCard, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, shadowColor: colors.shadowStrong }]} testID="feedback-filters-card">
           <View style={styles.filtersHeading}>
-            <Text style={[styles.sectionTitle, { fontSize: clamp(normalizedFontSize + 2, 16, 26) }]}>Статус</Text>
-            <Text style={[styles.selectedStatus, { fontSize: clamp(normalizedFontSize - 1, 12, 20) }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: clamp(normalizedFontSize + 2, 16, 26) }]}>Статус</Text>
+            <Text style={[styles.selectedStatus, { color: colors.textMuted, fontSize: clamp(normalizedFontSize - 1, 12, 20) }]}>
               Выбрано: {selectedStatusLabel}
             </Text>
           </View>
@@ -120,7 +133,10 @@ export const FeedbackScreen: React.FC = () => {
                   }}
                   style={[
                     styles.statusChip,
-                    selected && styles.statusChipSelected,
+                    {
+                      borderColor: selected ? colors.brand : colors.border,
+                      backgroundColor: selected ? colors.brand : colors.surfaceRaised,
+                    },
                   ]}
                   testID={`feedback-status-${option.value || 'all'}`}
                 >
@@ -128,7 +144,7 @@ export const FeedbackScreen: React.FC = () => {
                     style={[
                       styles.statusChipText,
                       selected && styles.statusChipTextSelected,
-                      { fontSize: chipFontSize },
+                      { color: selected ? '#FFFFFF' : colors.text, fontSize: chipFontSize },
                     ]}
                   >
                     {option.label}
@@ -139,10 +155,15 @@ export const FeedbackScreen: React.FC = () => {
           </ScrollView>
 
           <View
-            style={[styles.searchBox, isSearchFocused && styles.searchBoxFocused]}
+            style={[
+              styles.searchBox,
+              { borderColor: colors.border, backgroundColor: colors.surfaceRaised },
+              isSearchFocused && styles.searchBoxFocused,
+              isSearchFocused && { borderColor: isDark ? colors.primary : '#3F5F7B' },
+            ]}
             testID="feedback-search-box"
           >
-            <Search color={appPalette.textMuted} size={22} strokeWidth={2} />
+            <Search color={colors.textMuted} size={22} strokeWidth={2} />
             <TextInput
               accessibilityLabel="Поиск отзывов"
               autoCorrect={false}
@@ -150,9 +171,9 @@ export const FeedbackScreen: React.FC = () => {
               onChangeText={setSearchQuery}
               onFocus={() => setIsSearchFocused(true)}
               placeholder="Поиск по заголовку и описанию"
-              placeholderTextColor={appPalette.textMuted}
+              placeholderTextColor={colors.textMuted}
               ref={searchInputRef}
-              style={[styles.searchInput, { fontSize: clamp(normalizedFontSize, 14, 22) }]}
+              style={[styles.searchInput, { color: colors.text, fontSize: clamp(normalizedFontSize, 14, 22) }]}
               testID="feedback-search-input"
               value={searchQuery}
             />
@@ -164,19 +185,19 @@ export const FeedbackScreen: React.FC = () => {
                 style={styles.clearSearch}
                 testID="feedback-search-clear"
               >
-                <X color={appPalette.textMuted} size={20} />
+                <X color={colors.textMuted} size={20} />
               </Pressable>
             ) : null}
           </View>
         </View>
 
         <View style={styles.listHeading}>
-          <Text style={[styles.listHeadingText, { fontSize: clamp(normalizedFontSize + 1, 14, 24) }]}>Лента предложений</Text>
-          <Text style={[styles.listCount, { fontSize: clamp(normalizedFontSize - 1, 12, 20) }]}>Всего: {filteredFeedbacks.length}</Text>
+          <Text style={[styles.listHeadingText, { color: colors.textMuted, fontSize: clamp(normalizedFontSize + 1, 14, 24) }]}>Лента предложений</Text>
+          <Text style={[styles.listCount, { color: colors.textMuted, fontSize: clamp(normalizedFontSize - 1, 12, 20) }]}>Всего: {isOffline ? 0 : filteredFeedbacks.length}</Text>
         </View>
 
         <FeedbackList
-          feedbacks={filteredFeedbacks}
+          feedbacks={isOffline ? [] : filteredFeedbacks}
           globalFontSize={normalizedFontSize}
           onDismissKeyboard={dismissSearch}
         />
@@ -184,7 +205,7 @@ export const FeedbackScreen: React.FC = () => {
         <ViewFeedbackModal />
         <CreateFeedbackModal />
 
-        {!isModalOpen ? (
+        {!isModalOpen && !isOffline ? (
           <Pressable
             accessibilityLabel="Создать предложение"
             accessibilityRole="button"
@@ -192,7 +213,7 @@ export const FeedbackScreen: React.FC = () => {
               dismissSearch()
               openCreateModal()
             }}
-            style={styles.fab}
+            style={[styles.fab, { backgroundColor: colors.brand, shadowColor: colors.brandDeep }]}
             testID="feedback-create-button"
           >
             <Plus color="#FFFFFF" size={38} strokeWidth={2.5} />

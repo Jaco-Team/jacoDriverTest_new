@@ -7,8 +7,8 @@ jest.mock('@/components/ui/actionsheet', () => {
   const { View } = require('react-native')
 
   return {
-    Actionsheet: ({ children, isOpen }: any) =>
-      isOpen ? React.createElement(View, null, children) : null,
+    // Контент остаётся смонтированным во время анимации закрытия.
+    Actionsheet: ({ children }: any) => React.createElement(View, null, children),
     ActionsheetBackdrop: View,
     ActionsheetContent: View,
     ActionsheetDragIndicator: View,
@@ -57,6 +57,33 @@ async function renderConfirm({
 }
 
 describe('подтверждение действия заказа', () => {
+  it.each([
+    ['cancel', 'Отменить заказ', 'Заказ #910002 вернётся в общую очередь.'],
+    ['finish', 'Завершить заказ', 'Заказ #910002 будет отмечен как доставленный.'],
+    ['fake', 'Клиент не вышел на связь', 'Подтвердите по заказу #910002.'],
+  ] as const)('сохраняет вариант %s во время закрытия', async (typeConfirm, title, message) => {
+    const onClose = jest.fn()
+    const onConfirm = jest.fn()
+    const { rerender } = await renderConfirm({ typeConfirm, onClose, onConfirm })
+
+    rerender(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <OrderConfirmModal
+          globalFontSize={16}
+          isOpen={false}
+          orderId={0}
+          typeConfirm=""
+          onClose={onClose}
+          onConfirm={onConfirm}
+        />
+      </SafeAreaProvider>,
+    )
+
+    expect(screen.getByTestId('order-confirm-title')).toHaveTextContent(title)
+    expect(screen.getByTestId('order-confirm-message')).toHaveTextContent(message)
+    expect(screen.queryByText('Подтверждение')).toBeNull()
+  })
+
   it('показывает нижнюю шторку завершения и вызывает действия', async () => {
     const onClose = jest.fn()
     const onConfirm = jest.fn()
@@ -90,6 +117,10 @@ describe('подтверждение действия заказа', () => {
       screen.getByTestId('order-confirm-icon-check-circle'),
     ).toBeTruthy()
     expect(screen.getByText('Нет')).toBeTruthy()
+    expect(screen.getByTestId('order-confirm-no')).toHaveStyle({
+      borderWidth: 1,
+      borderColor: 'rgba(66, 98, 125, 0.16)',
+    })
     expect(screen.getByText('Завершить')).toBeTruthy()
 
     await fireEvent.press(screen.getByTestId('order-confirm-no'))

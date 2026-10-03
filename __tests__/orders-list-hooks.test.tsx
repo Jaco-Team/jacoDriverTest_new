@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 
 const mockGetSettings = jest.fn();
 const mockGetOrders = jest.fn();
@@ -54,6 +54,8 @@ describe('orders-list hooks', () => {
       actionButtonOrder: mockActionButtonOrder,
       setActiveConfirm: mockSetActiveConfirm,
       is_check: true,
+      ordersCache: {current: [{id: 1, addr: 'Адрес'}]},
+      ordersContextKey: 'current',
       limit_summ: '10000',
       limit_count: '10',
     };
@@ -62,7 +64,7 @@ describe('orders-list hooks', () => {
     };
   });
 
-  it('useOrdersList: возвращает store handlers и вызывает getSettings на mount/focus', async () => {
+  it('useOrdersList: возвращает store handlers без запросов при чтении состояния', async () => {
     let api: ReturnType<typeof useOrdersList> | null = null;
 
     function Probe() {
@@ -72,13 +74,14 @@ describe('orders-list hooks', () => {
 
     await render(<Probe />);
 
-    await waitFor(() => expect(mockGetSettings).toHaveBeenCalled());
-    expect(mockGetSettings).toHaveBeenCalledTimes(2);
+    expect(mockGetSettings).not.toHaveBeenCalled();
     expect(api!.FormatPrice).toBe(mockFormatPrice);
     expect(api!.globalFontSize).toBe(18);
     expect(api!.showAlertText).toBe(mockShowAlertText);
     expect(api!.getOrders).toBe(mockGetOrders);
+    expect(api!.getSettings).toBe(mockGetSettings);
     expect(api!.orders).toEqual([{ id: 1, addr: 'Адрес' }]);
+    expect(api!.hasCachedOrders).toBe(true);
     expect(api!.isChecking).toBe(true);
     expect(api!.isGlobalLoading).toBe(true);
     expect(api!.update_interval).toBe(30);

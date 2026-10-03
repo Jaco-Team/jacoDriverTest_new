@@ -1,10 +1,11 @@
 import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { QrCode } from 'lucide-react-native'
+import { QrCode, UserRound } from 'lucide-react-native'
 
 import { toOrderInt } from '@/entities/CardOrder/model/normalizeOrderValue'
 import { OrderActionsProps } from '@/entities/CardOrder/model/types'
 import { appPalette } from '@/shared/styles/appPalette'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 const BUTTON_HEIGHT = 44
 const BUTTON_FONT_SIZE = 14
@@ -15,7 +16,9 @@ const PHONE_BUTTON_BACKGROUND = '#E0E0E0'
 
 interface ActionButtonProps {
   backgroundColor: string
+  borderColor?: string
   children: React.ReactNode
+  elevated?: boolean
   flex?: number
   minWidth?: number
   paddingHorizontal?: number
@@ -25,7 +28,9 @@ interface ActionButtonProps {
 
 function ActionButton({
   backgroundColor,
+  borderColor,
   children,
+  elevated = false,
   flex,
   minWidth = 100,
   paddingHorizontal = 16,
@@ -37,7 +42,12 @@ function ActionButton({
       accessibilityRole="button"
       style={[
         styles.button,
-        { backgroundColor },
+        elevated && styles.buttonElevated,
+        {
+          backgroundColor,
+          borderColor,
+          borderWidth: borderColor ? 1 : 0,
+        },
         flex === undefined ? null : { flex },
         { minWidth, paddingHorizontal },
       ]}
@@ -58,10 +68,11 @@ function ActionText({
   children,
   phone = false,
 }: ActionTextProps): React.JSX.Element {
+  const { colors } = useAppTheme()
   return (
     <Text
       numberOfLines={1}
-      style={phone ? styles.phoneText : styles.actionText}
+      style={phone ? [styles.phoneText, { color: colors.text }] : styles.actionText}
     >
       {children}
     </Text>
@@ -73,7 +84,10 @@ export function OrderActions({
   dialCall,
   setActiveConfirm,
   actionButtonOrder,
+  globalFontSize,
 }: OrderActionsProps): React.JSX.Element {
+  const { colors, isDark } = useAppTheme()
+  const phoneButtonBackground = isDark ? colors.surfaceAlt : PHONE_BUTTON_BACKGROUND
   const isGet = toOrderInt(item.is_get)
   const isMy = toOrderInt(item.is_my)
   const isDeleted = toOrderInt(item.is_delete) === 1
@@ -84,7 +98,8 @@ export function OrderActions({
     return (
       <View style={styles.actions}>
         <ActionButton
-          backgroundColor={PHONE_BUTTON_BACKGROUND}
+          backgroundColor={phoneButtonBackground}
+          borderColor={colors.border}
           testID={`order-${item.id}-phone`}
           onPress={() => dialCall(item.number)}
         >
@@ -109,6 +124,7 @@ export function OrderActions({
           {statusOrder === 6 ? null : (
             <ActionButton
               backgroundColor="#F44336"
+              elevated
               flex={1}
               testID={`order-${item.id}-cancel`}
               onPress={() =>
@@ -120,7 +136,8 @@ export function OrderActions({
           )}
 
           <ActionButton
-            backgroundColor={PHONE_BUTTON_BACKGROUND}
+            backgroundColor={phoneButtonBackground}
+            borderColor={colors.border}
             flex={1}
             testID={`order-${item.id}-phone`}
             onPress={() => dialCall(item.number)}
@@ -133,6 +150,7 @@ export function OrderActions({
           <View style={styles.row}>
             <ActionButton
               backgroundColor="#2196F3"
+              elevated
               flex={1}
               testID={`order-${item.id}-finish`}
               onPress={() =>
@@ -154,6 +172,7 @@ export function OrderActions({
         ) : (
           <ActionButton
             backgroundColor="#2196F3"
+            elevated
             testID={`order-${item.id}-finish`}
             onPress={() =>
               setActiveConfirm(true, item.id, 'finish', isDeleted)
@@ -166,6 +185,7 @@ export function OrderActions({
         {statusOrder === 6 ? null : (
           <ActionButton
             backgroundColor="#FF9800"
+            elevated
             testID={`order-${item.id}-fake`}
             onPress={() => setActiveConfirm(true, item.id, 'fake', isDeleted)}
           >
@@ -179,16 +199,47 @@ export function OrderActions({
   return (
     <View style={styles.actions}>
       <View
-        style={[styles.button, styles.driverInfo]}
+        accessibilityLabel={`Водитель: ${item.driver_name}`}
+        accessible
+        style={[
+          styles.button,
+          styles.driverInfo,
+          { backgroundColor: isDark ? colors.surfacePressed : colors.surfaceAlt },
+        ]}
         testID={`order-${item.id}-other-name`}
       >
-        <Text numberOfLines={1} style={styles.phoneText}>
-          Водитель: {item.driver_name}
-        </Text>
+        <UserRound color={colors.primary} size={19} strokeWidth={2} />
+        <View style={styles.driverInfoText}>
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.driverLabel,
+              {
+                color: colors.textMuted,
+                fontSize: Math.min(Math.max(globalFontSize - 4, 11), 13),
+              },
+            ]}
+          >
+            Водитель:
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.driverName,
+              {
+                color: colors.text,
+                fontSize: Math.min(Math.max(globalFontSize - 1, 13), 17),
+              },
+            ]}
+          >
+            {item.driver_name}
+          </Text>
+        </View>
       </View>
 
       <ActionButton
-        backgroundColor={PHONE_BUTTON_BACKGROUND}
+        backgroundColor={phoneButtonBackground}
+        borderColor={colors.border}
         testID={`order-${item.id}-other-login`}
         onPress={() => dialCall(item.driver_login ?? '')}
       >
@@ -217,6 +268,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
   },
+  buttonElevated: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    elevation: 2,
+  },
   actionText: {
     color: '#FFFFFF',
     fontFamily: 'Roboto-Bold',
@@ -231,6 +289,25 @@ const styles = StyleSheet.create({
   },
   driverInfo: {
     minWidth: 0,
-    backgroundColor: PHONE_BUTTON_BACKGROUND,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    gap: 10,
+    paddingHorizontal: 12,
+  },
+  driverInfoText: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  driverLabel: {
+    fontFamily: 'Roboto-Regular',
+    lineHeight: 18,
+  },
+  driverName: {
+    fontFamily: 'Roboto-Medium',
+    lineHeight: 18,
+    flexShrink: 1,
   },
 })

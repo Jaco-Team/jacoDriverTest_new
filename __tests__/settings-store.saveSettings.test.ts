@@ -14,6 +14,7 @@ jest.mock('@/analytics/AppMetricaService', () => ({
 }));
 
 import { useGlobalStore, useSettingsStore } from '@/shared/store/store';
+import { useAppThemeStore } from '@/shared/theme/AppThemeProvider';
 
 describe('useSettingsStore.saveSettings', () => {
   beforeEach(async () => {
@@ -32,6 +33,7 @@ describe('useSettingsStore.saveSettings', () => {
     useSettingsStore.setState({
       isClick: false,
     } as any);
+    useAppThemeStore.setState({preference: 'light', previewPreference: 'dark'});
   });
 
   afterEach(async () => {
@@ -53,6 +55,7 @@ describe('useSettingsStore.saveSettings', () => {
       'black',
       ['is_night'],
       [],
+      'dark',
     );
 
     expect(mockApi).toHaveBeenCalledWith('settings', {
@@ -64,6 +67,8 @@ describe('useSettingsStore.saveSettings', () => {
       type_data_map: 'full',
       action_centered_map: 1,
       night_map: 1,
+      dark_theme: 1,
+      app_theme: 'dark',
       is_scaleMap: 0,
       fontSize: 20,
       theme: 'black',
@@ -92,6 +97,8 @@ describe('useSettingsStore.saveSettings', () => {
     });
     expect(useSettingsStore.getState().isClick).toBe(true);
     expect(useGlobalStore.getState().loadSpinner).toBe(true);
+    expect(useAppThemeStore.getState().preference).toBe('dark');
+    expect(useAppThemeStore.getState().previewPreference).toBeNull();
 
     jest.advanceTimersByTime(300);
 
@@ -124,6 +131,8 @@ describe('useSettingsStore.saveSettings', () => {
     expect(useGlobalStore.getState().globalFontSize).toBe(16);
     expect(useGlobalStore.getState().theme).toBe('white');
     expect(useGlobalStore.getState().mapScale).toBe(1);
+    expect(useAppThemeStore.getState().preference).toBe('light');
+    expect(useAppThemeStore.getState().previewPreference).toBe('dark');
 
     jest.advanceTimersByTime(300);
 

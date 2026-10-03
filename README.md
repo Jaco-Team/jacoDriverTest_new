@@ -1,103 +1,43 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Курьерское приложение Jaco
 
-# Getting Started
+Мобильное приложение для курьеров на React Native 0.87.1 (Android и iOS). Рабочая документация и текущее состояние проекта — в [docs/README.md](./docs/README.md).
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Локальный запуск
 
-## Step 1: Start Metro
+Нужен Node.js `>=24 <25`, Android SDK или Xcode с настроенным окружением React Native. Установите зависимости из корня проекта:
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+```bash
+npm ci
+```
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+Для iOS после установки JS-зависимостей выполните `bundle install` в корне
+проекта и `bundle exec pod install` в каталоге `ios` (при первой установке
+или после обновления нативных зависимостей).
 
-```sh
-# Using npm
+Запустите Metro в отдельном терминале:
+
+```bash
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
+Затем запустите нужную платформу:
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
+```bash
 npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
+# или
 npm run ios
-
-# OR using Yarn
-yarn ios
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+По умолчанию приложение обращается к удалённому Laravel API. Скрипт `npm run start:local-api` переключает Metro на локальный API `http://localhost:8080`; для Android-эмулятора дополнительно требуется доступ к этому адресу, например через `adb reverse tcp:8080 tcp:8080`. После смены источника данных перезапустите Metro и приложение. Не проверяйте действия с реальными заказами на рабочем аккаунте.
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## Проверки
 
-# OPEN
-jacoDriverTest/node_modules/@react-native-aria/interactions/src/useKeyboardDismisssable.ts
-jacoDriverTest/node_modules/@gluestack-ui/hooks/src/use-keyboard-dismissable/index.ts
+```bash
+npm run lint
+npm run typecheck
+npm run test:unit
+```
 
-- replace
+`typecheck` — одно слово; команды `npm run type check` нет. Эти проверки не заменяют нативную сборку и ручную проверку Android/iOS. Статус и релизные сценарии — в [документации по тестированию](./docs/testing/README.md).
 
-if (enabled) {
-    BackHandler.addEventListener('hardwareBackPress', backHandler);
-} else {
-    BackHandler.removeEventListener('hardwareBackPress', backHandler);
-}
-return () =>
-    BackHandler.removeEventListener('hardwareBackPress', backHandler);
-
-- to
-if (enabled) {
-    const subscription = BackHandler.addEventListener(
-        'hardwareBackPress',
-        backHandler
-    );
-    
-    // Cleanup function
-    return () => {
-        subscription.remove(); // Correct way to remove
-    };
-}
-
-return undefined;
-
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Не редактируйте `node_modules` вручную: изменения исчезнут после установки зависимостей. Нативный патч MapKit применяется через `patch-package` при `npm ci`; если потребуется другой патч зависимости, добавьте его в репозиторий и проверьте повторную установку.

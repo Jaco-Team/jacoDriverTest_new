@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import {
   ActivityIndicator,
   Pressable,
@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/actionsheet'
 import { appPalette } from '@/shared/styles/appPalette'
 import { useGlobalStore, useOrdersStore } from '@/shared/store/store'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import type { AppPalette } from '@/shared/styles/appPalette'
 
 export type OrderConfirmType = '' | 'fake' | 'finish' | 'cancel'
 
@@ -48,6 +50,7 @@ function clampFontSize(value: number, min: number, max: number): number {
 function getConfig(
   typeConfirm: OrderConfirmType,
   orderId: number,
+  colors: AppPalette,
 ): ConfirmConfig {
   const orderLabel = orderId ? `#${orderId}` : ''
 
@@ -66,7 +69,7 @@ function getConfig(
         title: 'Отменить заказ',
         message: `Заказ ${orderLabel} вернётся в общую очередь.`,
         confirmText: 'Отменить',
-        confirmColor: appPalette.brand,
+        confirmColor: colors.brand,
         iconBackground: 'rgba(204, 0, 51, 0.10)',
         iconName: 'cancel',
       }
@@ -84,7 +87,7 @@ function getConfig(
         title: 'Подтверждение',
         message: `Подтвердите действие для заказа ${orderLabel}.`,
         confirmText: 'Подтвердить',
-        confirmColor: appPalette.primary,
+        confirmColor: colors.primary,
         iconBackground: 'rgba(66, 98, 125, 0.10)',
         iconName: 'warning',
       }
@@ -101,7 +104,13 @@ export function OrderConfirmModal({
   onConfirm,
 }: OrderConfirmModalProps): React.JSX.Element {
   const insets = useSafeAreaInsets()
-  const config = getConfig(typeConfirm, orderId)
+  const { colors } = useAppTheme()
+  const lastOpenConfig = useRef<ConfirmConfig | null>(null)
+  const currentConfig = getConfig(typeConfirm, orderId, colors)
+  useEffect(() => {
+    if (isOpen && typeConfirm) lastOpenConfig.current = getConfig(typeConfirm, orderId, colors)
+  }, [isOpen, typeConfirm, orderId, colors])
+  const config = isOpen ? currentConfig : (lastOpenConfig.current ?? currentConfig)
   const titleFontSize = clampFontSize(globalFontSize + 4, 18, 24)
   const bodyFontSize = clampFontSize(globalFontSize, 14, 18)
   const actionFontSize = clampFontSize(globalFontSize + 1, 14, 18)
@@ -118,7 +127,7 @@ export function OrderConfirmModal({
     <Actionsheet isOpen={isOpen} onClose={close}>
       <ActionsheetBackdrop testID="order-confirm-backdrop" />
       <ActionsheetContent
-        style={[styles.sheet, { paddingBottom: insets.bottom + 28 }]}
+        style={[styles.sheet, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, paddingBottom: insets.bottom + 28 }]}
         testID="order-confirm-sheet"
       >
         <ActionsheetDragIndicatorWrapper>
@@ -131,7 +140,7 @@ export function OrderConfirmModal({
               testID="order-confirm-handle"
               onPress={close}
             >
-              <View style={styles.handle} />
+              <View style={[styles.handle, { backgroundColor: colors.border }]} />
             </Pressable>
           </ActionsheetDragIndicator>
         </ActionsheetDragIndicatorWrapper>
@@ -154,6 +163,7 @@ export function OrderConfirmModal({
             style={[
               styles.title,
               {
+                color: colors.text,
                 fontSize: titleFontSize,
                 lineHeight: Math.round(titleFontSize * 1.2),
               },
@@ -168,6 +178,7 @@ export function OrderConfirmModal({
           style={[
             styles.message,
             {
+              color: colors.textMuted,
               fontSize: bodyFontSize,
               lineHeight: Math.round(bodyFontSize * 1.45),
             },
@@ -181,14 +192,21 @@ export function OrderConfirmModal({
           <Pressable
             accessibilityRole="button"
             disabled={busy}
-            style={[styles.actionButton, styles.cancelButton]}
+            style={[
+              styles.actionButton,
+              styles.cancelButton,
+              {
+                backgroundColor: colors.surfaceAlt,
+                borderColor: colors.border,
+              },
+            ]}
             testID="order-confirm-no"
             onPress={close}
           >
             <Text
               style={[
                 styles.actionText,
-                { color: appPalette.text, fontSize: actionFontSize },
+                { color: colors.text, fontSize: actionFontSize },
               ]}
             >
               Нет
@@ -336,6 +354,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   cancelButton: {
+    borderWidth: 1,
     backgroundColor: appPalette.surfaceAlt,
   },
   actionText: {

@@ -7,6 +7,7 @@ const mockCloseDrawer = jest.fn()
 const mockLogOut = jest.fn()
 const mockDialCall = jest.fn()
 const mockAnalyticsLog = jest.fn()
+let mockIsOffline = false
 
 let mockGlobalState: any
 
@@ -40,6 +41,10 @@ jest.mock('@/shared/store/store', () => ({
 
 jest.mock('@/shared/lib/useDialCall', () => ({
   useDialCall: () => mockDialCall,
+}))
+
+jest.mock('@/shared/ui/ConnectivityLocationIndicator', () => ({
+  useIsOffline: () => mockIsOffline,
 }))
 
 jest.mock('@/analytics/AppMetricaService', () => ({
@@ -78,6 +83,7 @@ function drawerProps(activeRoute = 'List_orders'): any {
 describe('боковое меню', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockIsOffline = false
     mockGlobalState = {
       globalFontSize: 16,
       phones: {
@@ -104,6 +110,7 @@ describe('боковое меню', () => {
       minHeight: 60,
       flexDirection: 'row',
       borderWidth: 1,
+      borderRadius: 24,
       backgroundColor: '#E9EEF3',
     })
     expect(screen.queryByTestId('drawer-route-Statistics')).toBeNull()
@@ -113,6 +120,7 @@ describe('боковое меню', () => {
       minHeight: 60,
       flexDirection: 'row',
       borderWidth: 1,
+      borderRadius: 24,
       backgroundColor: '#FFFFFF',
     })
     expect(screen.queryByTestId('drawer-contact-Контакт-центр')).toBeNull()
@@ -154,6 +162,26 @@ describe('боковое меню', () => {
       routes: [{ name: 'Auth' }],
     })
     expect(mockCloseDrawer).toHaveBeenCalled()
+  })
+
+  it('показывает отключённый выход серым без сети', async () => {
+    mockIsOffline = true
+    const screen = await render(
+      <CustomDrawerContent {...drawerProps('List_orders')} />,
+    )
+
+    const logout = screen.getByTestId('drawer-logout')
+    expect(logout.props.accessibilityState).toEqual({ disabled: true })
+    expect(logout).toHaveStyle({
+      backgroundColor: '#E0E0E0',
+      borderColor: '#C9CDD1',
+      shadowOpacity: 0,
+      elevation: 0,
+    })
+    expect(screen.getByText('Выйти')).toHaveStyle({ color: '#9E9E9E' })
+
+    await fireEvent.press(logout)
+    expect(mockLogOut).not.toHaveBeenCalled()
   })
 
 })

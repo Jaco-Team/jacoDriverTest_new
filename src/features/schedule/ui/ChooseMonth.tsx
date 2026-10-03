@@ -13,7 +13,9 @@ import {
 import { Analytics, AnalyticsEvent } from '@/analytics/AppMetricaService'
 import { appPalette } from '@/shared/styles/appPalette'
 import { useChooseMonthLogic } from '../model/useChooseMonthLogic'
-import { graphStyles } from './graphStyles'
+import { useGraphStyles } from './graphStyles'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
 
 // Полупрозрачный appPalette.soft вместе с elevation даёт на Android белый
 // прямоугольник под Text. Это тот же цвет, заранее смешанный с белым фоном.
@@ -21,6 +23,12 @@ const SELECTED_MONTH_BACKGROUND = '#F0F2F5'
 
 export function ChooseMonth(): React.JSX.Element {
   const insets = useSafeAreaInsets()
+  const { colors, isDark } = useAppTheme()
+  const graphStyles = useGraphStyles()
+  const isOffline = useIsOffline()
+  const selectedMonthBackground = isDark
+    ? colors.surfaceAlt
+    : SELECTED_MONTH_BACKGROUND
   const {
     month_list,
     activeMounth,
@@ -31,6 +39,7 @@ export function ChooseMonth(): React.JSX.Element {
   } = useChooseMonthLogic()
 
   const openMonthPicker = () => {
+    if (isOffline) return
     Analytics.log(
       AnalyticsEvent.GraphMonthPickerOpen,
       'Открытие выбора месяца (График работы)',
@@ -46,6 +55,10 @@ export function ChooseMonth(): React.JSX.Element {
     setIsOpenDateMenu(false)
   }
 
+  React.useEffect(() => {
+    if (isOffline && isOpenDateMenu) setIsOpenDateMenu(false)
+  }, [isOffline, isOpenDateMenu, setIsOpenDateMenu])
+
   return (
     <>
       <View style={[graphStyles.card, graphStyles.hero]} testID="graph-month-card">
@@ -54,29 +67,40 @@ export function ChooseMonth(): React.JSX.Element {
         <Pressable
           accessibilityLabel="Выбрать месяц"
           accessibilityRole="button"
-          style={graphStyles.monthButton}
+          accessibilityState={{ disabled: isOffline }}
+          disabled={isOffline}
+          style={[
+            graphStyles.monthButton,
+            isOffline && { backgroundColor: colors.softStrong, opacity: 0.7 },
+          ]}
           testID="graph-month-trigger"
           onPress={openMonthPicker}
         >
           <Text
             numberOfLines={1}
-            style={[graphStyles.monthButtonText, { fontSize: globalFontSize }]}
+            style={[
+              graphStyles.monthButtonText,
+              {
+                color: isOffline ? colors.textMuted : colors.text,
+                fontSize: globalFontSize,
+              },
+            ]}
           >
-            {activeMounth || 'Выберите месяц'}
+            {!isOffline && activeMounth ? activeMounth : 'Выберите месяц'}
           </Text>
-          <ChevronDown color={appPalette.primaryDark} size={22} />
+          <ChevronDown color={isOffline ? colors.textMuted : colors.text} size={22} />
         </Pressable>
       </View>
 
       <Actionsheet isOpen={isOpenDateMenu} onClose={closeMonthPicker}>
         <ActionsheetBackdrop testID="graph-month-backdrop" />
         <ActionsheetContent
-          style={[styles.sheet, { paddingBottom: insets.bottom + 30 }]}
+          style={[styles.sheet, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, paddingBottom: insets.bottom + 30 }]}
           testID="graph-month-sheet"
         >
           <ActionsheetDragIndicatorWrapper>
             <ActionsheetDragIndicator style={styles.handleArea}>
-              <View style={styles.handle} />
+              <View style={[styles.handle, { backgroundColor: colors.border }]} />
             </ActionsheetDragIndicator>
           </ActionsheetDragIndicatorWrapper>
 
@@ -89,7 +113,14 @@ export function ChooseMonth(): React.JSX.Element {
                   accessibilityState={{ selected }}
                   accessibilityRole="button"
                   key={`${item.day}-${index}`}
-                  style={[styles.monthItem, selected && styles.monthItemSelected]}
+                  style={[
+                    styles.monthItem,
+                    {
+                      borderColor: selected ? colors.primary : colors.border,
+                      backgroundColor: selected ? selectedMonthBackground : colors.surfaceRaised,
+                      shadowColor: colors.shadowStrong,
+                    },
+                  ]}
                   testID={`graph-month-option-${item.day}`}
                   onPress={() => {
                     Analytics.log(
@@ -106,8 +137,12 @@ export function ChooseMonth(): React.JSX.Element {
                   <Text
                     style={[
                       styles.monthItemText,
-                      { fontSize: globalFontSize + 2 },
                       selected && styles.monthItemTextSelected,
+                      {
+                        backgroundColor: selected ? selectedMonthBackground : 'transparent',
+                        color: colors.text,
+                        fontSize: globalFontSize + 2,
+                      },
                     ]}
                   >
                     {item.mounth}

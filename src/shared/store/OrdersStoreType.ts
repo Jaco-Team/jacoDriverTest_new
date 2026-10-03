@@ -59,13 +59,14 @@ export interface OrdersStore {
   getOrders: (is_reload?: boolean) => Promise<void>;
   prefetchOrders: (warmAll?: boolean) => Promise<void>;
   selectType: (item: {id: number, text: string}) => Promise<void>;
+  switchPoint: (pointId: number | null) => void;
   setUpdateInterval: (interval: number) => void,
   actionButtonOrder: (type: number, order_id: number) => void,
   actionOrder: (params: actionOrderType) => Promise<void>,
   actionOrderFake: (params: actionOrderFakeType) => Promise<void>,
   setActiveConfirm: (active: boolean, order_id?: number, type_confirm?: typeConfirm, order_confirm_is_delete?: boolean) => void,
   showOrdersMap: (id: number) => void,
-  requestMapHomeCenter: () => void,
+  requestMapHomeCenter: (force?: boolean) => void,
 }
 
 export interface GetOrdersResponse {

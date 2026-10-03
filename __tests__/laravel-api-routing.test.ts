@@ -17,6 +17,7 @@ jest.mock('@/shared/lib/laravelAuthTokenStorage', () => ({
 }))
 
 import { api } from '@/shared/store/api'
+import { laravelApiConfig } from '@/shared/api/laravel/config'
 
 describe('Laravel API compatibility routing', () => {
   beforeEach(() => {
@@ -39,7 +40,10 @@ describe('Laravel API compatibility routing', () => {
     expect(mockPost).toHaveBeenCalledWith(
       '/api/v1/orders/get_orders',
       { type_orders: 2, point_id: 15 },
-      { headers: { Authorization: 'Bearer secure-token' } },
+      {
+        headers: { Authorization: 'Bearer secure-token' },
+        timeout: laravelApiConfig.mode === 'local' ? 60_000 : 30_000,
+      },
     )
     expect(result.st).toBe(true)
   })
@@ -146,7 +150,7 @@ describe('Laravel API compatibility routing', () => {
 
     const result = await api('orders', { type: 'get_orders', type_orders: 1 })
 
-    expect(result).toEqual({ st: false, text: 'Unauthenticated.' })
+    expect(result).toEqual({ st: false, text: 'Unauthenticated.', retryable: false })
     expect(mockClearLaravelAuthToken).toHaveBeenCalledTimes(1)
   })
 })

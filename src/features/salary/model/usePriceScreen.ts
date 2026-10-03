@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useStatStore, useGlobalStore } from '@/shared/store/store'
 import { useShallow } from 'zustand/react/shallow'
 import dayjs from 'dayjs'
@@ -6,11 +6,14 @@ import 'dayjs/locale/ru'
 
 import { Analytics, AnalyticsEvent } from '@/analytics/AppMetricaService'
 import type { ActivePricePicker, PriceMetricRow } from './types'
+import {useIsOffline} from '@/shared/ui/ConnectivityLocationIndicator'
+import {useOnlineScreenRefresh} from '@/shared/lib/useOnlineScreenRefresh'
 
 const API_DATE_FORMAT = 'YYYY-MM-DD'
 const UI_DATE_FORMAT = 'D MMMM YYYY'
 
 export function usePriceScreen() {
+  const isOffline = useIsOffline()
   const [globalFontSize] = useGlobalStore(useShallow((state) => [state.globalFontSize]))
 
   const [getStatBetween, statPrice, give_history, FormatPrice] = useStatStore(
@@ -28,25 +31,32 @@ export function usePriceScreen() {
   const [dateEnd, setDateEnd] = useState<string>(todayIso)
   const [activePicker, setActivePicker] = useState<ActivePricePicker>(null)
 
-  const fetchRange = useCallback((start: string, end: string) => {
-    getStatBetween(start, end)
-  }, [getStatBetween])
+  const fetchRange = useCallback(
+    () => getStatBetween(dateStart, dateEnd),
+    [dateEnd, dateStart, getStatBetween],
+  )
+
+  useEffect(() => {
+    if (isOffline) setActivePicker(null)
+  }, [isOffline])
 
   const openStartPicker = useCallback(() => {
+    if (isOffline) return
     setActivePicker('start')
     Analytics.log(
       AnalyticsEvent.PriceStartCalendarOpen,
       'Открытие календаря (Расчет): Дата от',
     )
-  }, [])
+  }, [isOffline])
 
   const openEndPicker = useCallback(() => {
+    if (isOffline) return
     setActivePicker('end')
     Analytics.log(
       AnalyticsEvent.PriceEndCalendarOpen,
       'Открытие календаря (Расчет): Дата до',
     )
-  }, [])
+  }, [isOffline])
 
   const closePicker = useCallback(() => {
     if (activePicker === 'start') {
@@ -189,9 +199,7 @@ export function usePriceScreen() {
 
   const totalPriceLabel = formatPriceValue(getMetricValue(statPrice?.my_price))
 
-  useEffect(() => {
-    fetchRange(dateStart, dateEnd)
-  }, [dateEnd, dateStart, fetchRange])
+  useOnlineScreenRefresh(isOffline, fetchRange)
 
   return {
     activePicker,
@@ -199,6 +207,8 @@ export function usePriceScreen() {
     dateEnd,
     dateStart,
     globalFontSize,
+    hasPriceData: statPrice != null,
+    isOffline,
     openEndPicker,
     openStartPicker,
     pickerMaxDate,

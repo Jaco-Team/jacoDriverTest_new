@@ -18,33 +18,33 @@ describe('New Architecture contract', () => {
     );
   });
 
-  it('держит RN 0.87, Reanimated 4.6+, worklets и yamap-plus', () => {
+  it('держит RN 0.87, Reanimated 4.6, Worklets 0.12 и yamap-plus', () => {
     const pkg = JSON.parse(read('package.json')) as {
       dependencies: Record<string, string>;
     };
     const deps = pkg.dependencies;
 
     expect(deps['react-native']).toBe('0.87.1');
-    expect(deps['react-native-reanimated']).toMatch(/^4\.(6|7|8|9)/);
-    expect(deps['react-native-worklets']).toBeTruthy();
+    expect(deps['react-native-reanimated']).toBe('4.6.0');
+    expect(deps['react-native-worklets']).toBe('0.12.2');
     expect(deps['react-native-yamap-plus']).toMatch(/^\^?6\.11/);
-    expect(deps['react-native-screens']).toMatch(/^\^?4\.27/);
-    expect(deps['react-native-gesture-handler']).toMatch(/^\^?3\.2/);
-    expect(deps['react-native-safe-area-context']).toMatch(/^\^?5\.9/);
+    expect(deps['react-native-screens']).toMatch(/^\^?4\.28/);
+    expect(deps['react-native-gesture-handler']).toMatch(/^\^?3\.3/);
+    expect(deps['react-native-safe-area-context']).toMatch(/^\^?5\.10/);
     expect(deps['react-native-yamap']).toBeUndefined();
     expect(deps['react-native-worklets-core']).toBeUndefined();
   });
 
-  it('держит Navigation 7.13+, Sentry 8, Firebase 26 и CocoaPods Firebase', () => {
+  it('держит Navigation 7, Sentry 8, Firebase 26 и CocoaPods Firebase', () => {
     const pkg = JSON.parse(read('package.json')) as {
       dependencies: Record<string, string>;
       devDependencies: Record<string, string>;
     };
     const deps = pkg.dependencies;
 
-    expect(deps['@react-navigation/drawer']).toMatch(/^\^?7\.13/);
-    expect(deps['@react-navigation/native']).toMatch(/^\^?7\.3/);
-    expect(deps['@react-navigation/native-stack']).toMatch(/^\^?7\.18/);
+    expect(deps['@react-navigation/drawer']).toMatch(/^\^?7\.14/);
+    expect(deps['@react-navigation/native']).toMatch(/^\^?7\.4/);
+    expect(deps['@react-navigation/native-stack']).toMatch(/^\^?7\.19/);
     expect(deps['@sentry/react-native']).toMatch(/^\^?8\./);
     expect(deps['@react-native-firebase/app']).toMatch(/^\^?26\./);
     expect(deps['@react-native-firebase/messaging']).toMatch(/^\^?26\./);
@@ -56,7 +56,7 @@ describe('New Architecture contract', () => {
     expect(deps['@react-native-async-storage/async-storage']).toMatch(/^\^?3\.1/);
     expect(deps['@react-native-community/datetimepicker']).toMatch(/^\^?9\.2/);
     expect(deps['@fortawesome/react-native-fontawesome']).toMatch(/^\^?1\.0/);
-    expect(deps['lucide-react-native']).toMatch(/^\^?1\.41/);
+    expect(deps['lucide-react-native']).toMatch(/^\^?1\.47/);
     expect(deps['@react-native-community/netinfo']).toMatch(/^\^?12\.0/);
     expect(deps['react-native-device-info']).toMatch(/^\^?15\.0/);
     expect(read('ios/Podfile')).toMatch(/\$RNFirebaseDisableSPM\s*=\s*true/);
@@ -90,6 +90,14 @@ describe('New Architecture contract', () => {
     expect(markerPatch).toContain('prepareForRecycle');
   });
 
+  it('явно применяет светлый режим к iOS-карте при первом mount и повторном использовании', () => {
+    const mapPatch = read('patches/react-native-yamap-plus+6.11.0.patch');
+
+    expect(mapPatch).toContain('if (!nightModeConfigured || oldViewProps.nightMode != newViewProps.nightMode)');
+    expect(mapPatch).toContain('[self setNightMode:newViewProps.nightMode]');
+    expect(mapPatch).toContain('nightModeConfigured = NO;');
+  });
+
   it('Android использует edge-to-edge и системный Splash в стиле Greeting', () => {
     const pkg = JSON.parse(read('package.json')) as {
       dependencies: Record<string, string>;
@@ -105,7 +113,7 @@ describe('New Architecture contract', () => {
       'android/app/src/main/res/drawable/splash_icon_padded.xml',
     );
 
-    expect(pkg.dependencies['react-native-edge-to-edge']).toBe('1.8.1');
+    expect(pkg.dependencies['react-native-edge-to-edge']).toBe('1.8.2');
     expect(read('android/gradle.properties')).toMatch(
       /edgeToEdgeEnabled\s*=\s*true/,
     );
@@ -130,12 +138,15 @@ describe('New Architecture contract', () => {
     );
   });
 
-  it('не включает индикатор сети/GPS в AppProviders', () => {
+  it('показывает индикатор сети отдельной строкой под шапкой', () => {
     const providers = read('src/app/providers/AppProviders.tsx');
-    expect(providers).not.toMatch(/^import \{ ConnectivityLocationIndicator \}/m);
-    expect(providers).not.toMatch(/^\s*<ConnectivityLocationIndicator/m);
-    expect(providers).toContain('//import { ConnectivityLocationIndicator }');
-    expect(providers).toContain('//<ConnectivityLocationIndicator />');
+    const drawer = read('src/app/navigation/MainDrawerNavigator.tsx');
+    expect(providers).toContain(
+      "import {ConnectivityProvider} from '@/shared/ui/ConnectivityLocationIndicator';",
+    );
+    expect(providers).toContain('<ConnectivityProvider>');
+    expect(drawer).toContain('testID="main-drawer-header"');
+    expect(drawer).toContain('<ConnectivityLocationIndicator />');
   });
 
   it('поднимает единый SafeAreaProvider на корне приложения', () => {

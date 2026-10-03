@@ -171,7 +171,7 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
     await view.unmount();
   });
 
-  it('centers map after native onMapLoaded and exposes ready-to-render flag', async () => {
+  it('keeps the initial region after native onMapLoaded without a second camera move', async () => {
     const view = await renderProbe();
     attachMapRef();
 
@@ -182,7 +182,52 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
     });
 
     expect(api!.isMapLoaded).toBe(true);
-    expect(setCenter).toHaveBeenCalledWith({ lon: 20.5, lat: 54.7 }, 12, 0, 0, 0, 0);
+    expect(setCenter).not.toHaveBeenCalled();
+    await view.unmount();
+  });
+
+  it('does not remount a slowly loading native map before the recovery timeout', async () => {
+    const view = await renderProbe();
+
+    await act(async () => {
+      jest.advanceTimersByTime(0);
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(2_500);
+    });
+
+    expect(api!.mapInstanceKey).toBe(0);
+
+    await act(async () => {
+      api!.handleMapLoaded();
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(10_000);
+    });
+
+    expect(api!.mapInstanceKey).toBe(0);
+    await view.unmount();
+  });
+
+  it('keeps a single recovery remount if native loading never completes', async () => {
+    const view = await renderProbe();
+
+    await act(async () => {
+      jest.advanceTimersByTime(0);
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(10_000);
+    });
+
+    expect(api!.mapInstanceKey).toBe(1);
+
+    await act(async () => {
+      jest.advanceTimersByTime(10_000);
+    });
+
+    expect(api!.mapInstanceKey).toBe(1);
     await view.unmount();
   });
 

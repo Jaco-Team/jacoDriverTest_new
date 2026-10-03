@@ -8,12 +8,13 @@ import {
   View,
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
-function PasswordVisibilityIcon({ passwordVisible }: { passwordVisible: boolean }) {
+function PasswordVisibilityIcon({ passwordVisible, color }: { passwordVisible: boolean; color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" accessibilityElementsHidden>
       <Path
-        fill="#68747D"
+        fill={color}
         d={
           passwordVisible
             ? 'M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92A11.94 11.94 0 0 0 23 12c-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7ZM2.27 3.27 4.45 5.45l.43.43A11.8 11.8 0 0 0 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42 2.73 2.73 1.27-1.27L3.54 2 2.27 3.27Zm5.26 5.26 1.55 1.55c-.05.3-.08.6-.08.92a3 3 0 0 0 3 3c.32 0 .62-.03.92-.08l1.55 1.55a5 5 0 0 1-6.94-6.94Zm4.31.49 3.15 3.15.02-.16a3 3 0 0 0-3-3l-.17.01Z'
@@ -48,12 +49,21 @@ export const AuthTextField = forwardRef<
   },
   ref
 ) {
+  const { colors } = useAppTheme()
   const [isFocused, setIsFocused] = useState(false)
   const isLabelFloating = isFocused || Boolean(value)
 
   return (
     <View
-      style={[styles.field, isFocused && styles.fieldFocused]}
+      style={[
+        styles.field,
+        {
+          borderColor: isFocused ? colors.brand : colors.border,
+          backgroundColor: colors.surfaceRaised,
+          shadowColor: colors.shadowStrong,
+        },
+        isFocused && styles.fieldFocused,
+      ]}
       testID={`${testID}-container`}
     >
       <TextInput
@@ -61,8 +71,8 @@ export const AuthTextField = forwardRef<
         {...inputProps}
         value={value}
         secureTextEntry={secureTextEntry}
-        style={styles.input}
-        selectionColor="#1F1015"
+        style={[styles.input, { color: colors.text }]}
+        selectionColor={colors.text}
         accessibilityLabel={label}
         testID={testID}
         onFocus={(event) => {
@@ -77,7 +87,13 @@ export const AuthTextField = forwardRef<
 
       <Text
         pointerEvents="none"
-        style={isLabelFloating ? styles.floatingLabel : styles.restingLabel}
+        style={[
+          isLabelFloating ? styles.floatingLabel : styles.restingLabel,
+          {
+            color: colors.textMuted,
+            ...(isLabelFloating ? { backgroundColor: colors.surfaceRaised } : null),
+          },
+        ]}
       >
         {label}
       </Text>
@@ -91,7 +107,7 @@ export const AuthTextField = forwardRef<
           testID="auth-password-toggle"
           onPress={onTogglePassword}
         >
-          <PasswordVisibilityIcon passwordVisible={passwordVisible} />
+          <PasswordVisibilityIcon passwordVisible={passwordVisible} color={colors.textMuted} />
         </Pressable>
       ) : null}
     </View>

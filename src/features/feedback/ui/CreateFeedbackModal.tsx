@@ -19,6 +19,7 @@ import { appPalette } from '@/shared/styles/appPalette'
 
 import { useCreateFeedbackModal } from '../model/useCreateFeedbackModal'
 import { FeedbackSheet } from './FeedbackSheet'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -30,6 +31,7 @@ function FeedbackTextInput(props: TextInputProps): React.JSX.Element {
 }
 
 const CreateFeedbackModal: React.FC = () => {
+  const { colors } = useAppTheme()
   const {
     isCreateModalOpen,
     closeCreateModal,
@@ -67,10 +69,10 @@ const CreateFeedbackModal: React.FC = () => {
       onClose={closeCreateModal}
       testID="feedback-create-sheet"
     >
-      <Text style={[styles.title, { fontSize: clamp(bodyFontSize + 6, 20, 30) }]}>Новое предложение</Text>
-      <View style={styles.divider} />
+      <Text style={[styles.title, { color: colors.text, fontSize: clamp(bodyFontSize + 6, 20, 30) }]}>Новое предложение</Text>
+      <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-      <Text style={[styles.sectionTitle, { fontSize: sectionFontSize }]}>Тип</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text, fontSize: sectionFontSize }]}>Тип</Text>
       <View style={styles.typeList}>
         {feedbackTypes.map(feedbackType => {
           const selected = type === feedbackType
@@ -84,7 +86,10 @@ const CreateFeedbackModal: React.FC = () => {
               onPress={() => setType(feedbackType)}
               style={[
                 styles.typeChip,
-                selected && styles.typeChipSelected,
+                {
+                  borderColor: selected ? colors.brand : colors.border,
+                  backgroundColor: selected ? colors.brand : colors.surface,
+                },
               ]}
               testID={`feedback-type-${feedbackType}`}
             >
@@ -92,7 +97,7 @@ const CreateFeedbackModal: React.FC = () => {
                 style={[
                   styles.typeChipText,
                   selected && styles.typeChipTextSelected,
-                  { fontSize: clamp(bodyFontSize - 1, 13, 19) },
+                  { color: selected ? '#FFFFFF' : colors.text, fontSize: clamp(bodyFontSize - 1, 13, 19) },
                 ]}
               >
                 {feedbackType}
@@ -102,33 +107,33 @@ const CreateFeedbackModal: React.FC = () => {
         })}
       </View>
 
-      <Text style={[styles.sectionTitle, { fontSize: sectionFontSize }]}>Заголовок</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text, fontSize: sectionFontSize }]}>Заголовок</Text>
       <FeedbackTextInput
         editable={!isSaving}
         maxLength={255}
         onChangeText={setTitle}
         placeholder="Введите заголовок"
-        placeholderTextColor="#8A94A0"
-        style={[styles.input, { fontSize: bodyFontSize }]}
+        placeholderTextColor={colors.textMuted}
+        style={[styles.input, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, color: colors.text, fontSize: bodyFontSize }]}
         testID="feedback-title-input"
         value={title}
       />
 
-      <Text style={[styles.sectionTitle, { fontSize: sectionFontSize }]}>Описание</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text, fontSize: sectionFontSize }]}>Описание</Text>
       <FeedbackTextInput
         editable={!isSaving}
         maxLength={5000}
         multiline
         onChangeText={setDescription}
         placeholder="Расскажите о проблемах в работе приложения, предложите, как можно улучшить систему"
-        placeholderTextColor="#8A94A0"
-        style={[styles.input, styles.descriptionInput, { fontSize: bodyFontSize }]}
+        placeholderTextColor={colors.textMuted}
+        style={[styles.input, styles.descriptionInput, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, color: colors.text, fontSize: bodyFontSize }]}
         testID="feedback-description-input"
         textAlignVertical="top"
         value={description}
       />
 
-      <Text style={[styles.sectionTitle, { fontSize: sectionFontSize }]}>Изображение (опционально)</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text, fontSize: sectionFontSize }]}>Изображение (опционально)</Text>
       {previewImages.length > 0 ? (
         <ScrollView
           horizontal
@@ -157,10 +162,10 @@ const CreateFeedbackModal: React.FC = () => {
         accessibilityRole="button"
         disabled={isSaving}
         onPress={showImagePickerOptions}
-        style={styles.imagePicker}
+        style={[styles.imagePicker, { borderColor: colors.border, backgroundColor: colors.surfaceRaised }]}
         testID="feedback-image-picker"
       >
-        <Text style={[styles.imagePickerText, { fontSize: clamp(bodyFontSize - 1, 13, 18) }]}>
+        <Text style={[styles.imagePickerText, { color: colors.textMuted, fontSize: clamp(bodyFontSize - 1, 13, 18) }]}>
           {images.length > 0 ? 'Добавить еще изображения' : 'Нажмите, чтобы добавить изображения'}
         </Text>
       </Pressable>
@@ -173,10 +178,14 @@ const CreateFeedbackModal: React.FC = () => {
         style={styles.checkboxRow}
         testID="feedback-notification-checkbox"
       >
-        <View style={[styles.checkbox, isNeedNotification && styles.checkboxChecked]}>
+        <View style={[
+          styles.checkbox,
+          { borderColor: colors.border, backgroundColor: colors.surfaceRaised },
+          isNeedNotification && [styles.checkboxChecked, { borderColor: colors.brand, backgroundColor: colors.brand }],
+        ]}>
           {isNeedNotification ? <Check color="#FFFFFF" size={16} strokeWidth={4} /> : null}
         </View>
-        <Text style={[styles.checkboxLabel, { fontSize: bodyFontSize }]}>Уведомить о решении</Text>
+        <Text style={[styles.checkboxLabel, { color: colors.text, fontSize: bodyFontSize }]}>Уведомить о решении</Text>
       </Pressable>
 
       <Pressable
@@ -185,6 +194,7 @@ const CreateFeedbackModal: React.FC = () => {
         onPress={handleSubmit}
         style={[
           styles.submit,
+          { backgroundColor: colors.brand, shadowColor: colors.brandDeep },
           isSaving && styles.submitDisabled,
         ]}
         testID="feedback-submit-button"

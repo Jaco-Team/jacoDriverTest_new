@@ -79,6 +79,14 @@ def(rn, 'Linking', {
   openURL: jest.fn(async () => true),
 });
 
+/** App foreground/background transitions used by settings synchronization. */
+if (!rn.AppState || typeof rn.AppState.addEventListener !== 'function') {
+  def(rn, 'AppState', {
+    currentState: 'active',
+    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+  });
+}
+
 /** Android hardware back button used by the root navigation provider. */
 if (!rn.BackHandler || typeof rn.BackHandler.addEventListener !== 'function') {
   def(rn, 'BackHandler', {

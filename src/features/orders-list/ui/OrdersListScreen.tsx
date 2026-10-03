@@ -13,15 +13,16 @@ import { ScreenLayout } from '@/shared/ui/ScreenLayout'
 export function OrdersListScreen() {
   const dialCall = useDialCall();
   
-  const { orders, isChecking, isGlobalLoading, getOrders, update_interval, actionButtonOrder, setActiveConfirm, FormatPrice, showAlertText, globalFontSize } = useOrdersList()
+  const { orders, hasCachedOrders, isChecking, isGlobalLoading, getOrders, getSettings, update_interval, actionButtonOrder, setActiveConfirm, FormatPrice, showAlertText, globalFontSize } = useOrdersList()
 
-  useOrdersUpdater(getOrders, update_interval)
+  useOrdersUpdater(getOrders, update_interval, getSettings)
 
   return (
     <ScreenLayout>
       
       <OrdersList 
         orders={orders}
+        hasCachedOrders={hasCachedOrders}
         isChecking={isChecking}
         isGlobalLoading={isGlobalLoading}
         getOrders={getOrders}

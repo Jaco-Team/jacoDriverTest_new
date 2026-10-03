@@ -12,6 +12,7 @@ import {
   graphErrorSheetStyles,
   type GraphErrorScrollHandle,
 } from './GraphErrorSheetParts';
+import {useAppTheme} from '@/shared/theme/AppThemeProvider';
 
 interface ModalErrOrderPreview {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export function ModalErrOrder({
   preview?: ModalErrOrderPreview;
 }): React.JSX.Element {
   const insets = useSafeAreaInsets();
+  const {colors} = useAppTheme();
   const {
     isShowModalErrOrder,
     modalErrOrder,
@@ -85,7 +87,7 @@ export function ModalErrOrder({
         onScrollRef={instance => {
           scrollRef.current = instance;
         }}>
-        <Text style={[graphErrorSheetStyles.title, {fontSize: globalFontSize}]}>
+        <Text style={[graphErrorSheetStyles.title, {color: colors.text, fontSize: globalFontSize}]}>
           Ошибка по заказу №{activeModal?.order_id}
         </Text>
         <GraphErrorField
@@ -121,7 +123,7 @@ export function ModalErrOrder({
               {activeImages.map((image, index) => (
                 <Pressable
                   key={`${image.uri}-${index}`}
-                  style={graphErrorSheetStyles.imageButton}
+                  style={[graphErrorSheetStyles.imageButton, {backgroundColor: colors.surfaceAlt}]}
                   onPress={() => openImage(index)}>
                   <Image
                     resizeMode="contain"

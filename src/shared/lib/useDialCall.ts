@@ -9,7 +9,7 @@ export const useDialCall = () => {
 
   const dialCall = (phone: string | undefined) => {
     if (!phone || phone.length === 0) {
-      showAlertText(true, `Номер телефона не указан, или нет данных: ${phone}`);
+      showAlertText(true, `Номер телефона не указан, или нет данных: ${phone}`, 'error');
       return;
     }
 
@@ -26,7 +26,7 @@ export const useDialCall = () => {
         if (supported) {
           return Linking.openURL(phoneNumber).catch(() => null);
         } else {
-          showAlertText(true, 'Невозможно открыть URL: ' + phoneNumber);
+          showAlertText(true, 'Невозможно открыть URL: ' + phoneNumber, 'error');
           //console.log('Невозможно открыть URL: ', phoneNumber);
         }
       })

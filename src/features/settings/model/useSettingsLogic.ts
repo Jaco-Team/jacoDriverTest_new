@@ -1,8 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import { useShallow } from 'zustand/react/shallow'
 
 import { useGlobalStore, useLoginStore, useSettingsStore } from '@/shared/store/store'
 import { DelType, ShowType, Theme } from '@/shared/types/globalTypes'
+import {
+  useAppTheme,
+  type AppThemePreference,
+} from '@/shared/theme/AppThemeProvider'
+import {useIsOffline} from '@/shared/ui/ConnectivityLocationIndicator'
 
 function normalizeNumber(value: unknown, fallback: number): number {
   const parsed = Number.parseFloat(String(value))
@@ -14,6 +20,13 @@ function normalizeFlag(value: unknown): boolean {
 }
 
 export function useSettingsLogic() {
+  const isOffline = useIsOffline()
+  const {
+    preference: storedAppThemePreference,
+    deviceScheme,
+    setPreviewPreference,
+    clearPreviewPreference,
+  } = useAppTheme()
   const settings = useSettingsStore(
     useShallow(state => ({
       getSettings: state.getSettings,
@@ -27,7 +40,6 @@ export function useSettingsLogic() {
       typeDataMap: state.type_data_map,
       typeShowDel: state.type_show_del,
       updateInterval: state.update_interval,
-      nightMap: state.night_map,
       isScaleMap: state.is_scaleMap,
       points: state.points,
       pointId: state.point_id,
@@ -46,7 +58,6 @@ export function useSettingsLogic() {
     typeDataMap,
     typeShowDel: storedTypeShowDel,
     updateInterval: storedUpdateInterval,
-    nightMap: storedNightMap,
     isScaleMap,
     points,
     pointId,
@@ -60,7 +71,9 @@ export function useSettingsLogic() {
 
   const [typeShowDel, setTypeShowDel] = useState<DelType>(storedTypeShowDel)
   const [centeredMap, setCenteredMap] = useState(normalizeFlag(actionCenteredMap))
-  const [nightMap, setNightMap] = useState(normalizeFlag(storedNightMap))
+  const [appThemePreference, setAppThemePreference] = useState<AppThemePreference>(
+    storedAppThemePreference,
+  )
   const [showMapScale, setShowMapScale] = useState(normalizeFlag(isScaleMap))
   const [fontSize, setFontSize] = useState(normalizeNumber(storedFontSize, 16))
   const [updateInterval, setUpdateInterval] = useState(normalizeNumber(storedUpdateInterval, 30))
@@ -70,14 +83,19 @@ export function useSettingsLogic() {
   const [markerTheme, setMarkerTheme] = useState<Theme>(storedTheme)
   const [mapScale, setMapScale] = useState(normalizeNumber(storedMapScale, 1))
 
-  useEffect(() => {
-    void getSettings()
-  }, [getSettings])
+  useFocusEffect(
+    useCallback(() => {
+      if (!isOffline) void getSettings()
+    }, [getSettings, isOffline]),
+  )
+
+  useFocusEffect(
+    useCallback(() => () => clearPreviewPreference(), [clearPreviewPreference]),
+  )
 
   useEffect(() => {
     setTypeShowDel(storedTypeShowDel)
     setCenteredMap(normalizeFlag(actionCenteredMap))
-    setNightMap(normalizeFlag(storedNightMap))
     setShowMapScale(normalizeFlag(isScaleMap))
     setFontSize(normalizeNumber(storedFontSize, 16))
     setUpdateInterval(normalizeNumber(storedUpdateInterval, 30))
@@ -91,14 +109,25 @@ export function useSettingsLogic() {
     storedColor,
     storedFontSize,
     storedMapScale,
-    storedNightMap,
     storedTheme,
     storedTypeShowDel,
     storedUpdateInterval,
     typeDataMap,
   ])
 
+  useEffect(() => {
+    setAppThemePreference(storedAppThemePreference)
+  }, [storedAppThemePreference])
+
+  const selectAppThemePreference = (preference: AppThemePreference) => {
+    setAppThemePreference(preference)
+    setPreviewPreference(preference)
+  }
+
   const saveSettings = async () => {
+    const useDarkMap = appThemePreference === 'dark'
+      || (appThemePreference === 'system' && deviceScheme === 'dark')
+
     await persistSettings(
       typeShowDel,
       centeredMap ? ['is_center'] : [],
@@ -108,8 +137,9 @@ export function useSettingsLogic() {
       mapScale,
       mapDataType,
       markerTheme,
-      nightMap ? ['is_night'] : [],
+      useDarkMap ? ['is_night'] : [],
       showMapScale ? ['is_scaleMap'] : [],
+      appThemePreference,
     )
   }
 
@@ -143,8 +173,8 @@ export function useSettingsLogic() {
     setMarkerTheme,
     mapScale,
     setMapScale,
-    nightMap,
-    setNightMap,
+    appThemePreference,
+    setAppThemePreference: selectAppThemePreference,
     showMapScale,
     setShowMapScale,
     isSaving,

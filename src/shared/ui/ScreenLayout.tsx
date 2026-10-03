@@ -10,6 +10,7 @@ import {
   SafeAreaView,
 } from 'react-native-safe-area-context'
 import type { Edges } from 'react-native-safe-area-context'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 const DRAWER_SCREEN_EDGES: Edges = ['right', 'bottom', 'left']
 
@@ -26,11 +27,13 @@ export function ScreenLayout({
   style,
   safeAreaEdges = DRAWER_SCREEN_EDGES,
 }: ScreenLayoutProps) {
+  const { colors } = useAppTheme()
+
   if (withScroll) {
     return (
       <SafeAreaView
         edges={safeAreaEdges}
-        style={[styles.safeArea, style]}
+        style={[styles.safeArea, { backgroundColor: colors.surface }, style]}
         testID="screen-layout-safe-area"
       >
         <ScrollView
@@ -47,10 +50,10 @@ export function ScreenLayout({
   return (
     <SafeAreaView
       edges={safeAreaEdges}
-      style={[styles.safeArea, style]}
+      style={[styles.safeArea, { backgroundColor: colors.surface }, style]}
       testID="screen-layout-safe-area"
     >
-      <View className='h-full w-full relative bg-gray-50'>
+      <View style={[styles.content, { backgroundColor: colors.surface }]}>
         {children}
       </View>
     </SafeAreaView>
@@ -61,6 +64,10 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  content: {
+    flex: 1,
+    position: 'relative',
   },
   scrollContainer: {
     paddingTop: 16,

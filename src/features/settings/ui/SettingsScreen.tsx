@@ -11,7 +11,7 @@ import {
 import { useNavigation, type ParamListBase } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import ColorPicker from 'react-native-wheel-color-picker'
-import { Check, X } from 'lucide-react-native'
+import { Check } from 'lucide-react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import {
@@ -30,16 +30,18 @@ import {
 } from '@/components/ui/slider'
 import { DelType, ShowType, Theme } from '@/shared/types/globalTypes'
 import { ScreenLayout } from '@/shared/ui/ScreenLayout'
+import { useScrollToTopOnFocus } from '@/shared/lib/useScrollToTopOnFocus'
+import {
+  useAppTheme,
+  type AppThemePreference,
+} from '@/shared/theme/AppThemeProvider'
+import type { AppPalette } from '@/shared/styles/appPalette'
+import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
 
 import { useSettingsLogic } from '../model/useSettingsLogic'
 import { MapPointTheme } from './MapPointTheme'
 import { MapPointTime } from './MapPointTime'
 
-const BRAND = '#cc0033'
-const TEXT = '#22303d'
-const MUTED = '#6f7f8d'
-const BORDER = '#dce3e8'
-const SURFACE_ALT = '#f3f6f8'
 const PRESET_COLORS = [
   '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3',
   '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39',
@@ -59,10 +61,12 @@ function SettingsCard({
   roomy?: boolean
   testID?: string
 }) {
+  const styles = useSettingsStyles()
   return <View testID={testID} style={[styles.card, roomy && styles.cardRoomy]}>{children}</View>
 }
 
 function SectionTitle({ children, fontSize, centered = false }: { children: string; fontSize: number; centered?: boolean }) {
+  const styles = useSettingsStyles()
   const titleFontSize = clamp(fontSize + 2, 16, 28)
 
   return (
@@ -87,6 +91,7 @@ type ChoiceProps = {
 }
 
 function RadioChoice({ label, selected, onPress, fontSize, testID }: ChoiceProps) {
+  const styles = useSettingsStyles()
   return (
     <Pressable
       accessibilityRole="radio"
@@ -106,6 +111,7 @@ function RadioChoice({ label, selected, onPress, fontSize, testID }: ChoiceProps
 }
 
 function CheckboxChoice({ label, selected, onPress, fontSize, testID }: ChoiceProps) {
+  const styles = useSettingsStyles()
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -134,6 +140,7 @@ type SettingsSliderProps = {
 }
 
 function SettingsSlider({ value, min, max, step, onChange, testID }: SettingsSliderProps) {
+  const styles = useSettingsStyles()
   return (
     <Slider
       value={value}
@@ -154,6 +161,9 @@ function SettingsSlider({ value, min, max, step, onChange, testID }: SettingsSli
 }
 
 export function SettingsScreen(): React.JSX.Element {
+  const isOffline = useIsOffline()
+  const { colors } = useAppTheme()
+  const styles = useSettingsStyles()
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>()
   const insets = useSafeAreaInsets()
   const [isPointListOpen, setIsPointListOpen] = React.useState(false)
@@ -179,8 +189,8 @@ export function SettingsScreen(): React.JSX.Element {
     setMarkerTheme,
     mapScale,
     setMapScale,
-    nightMap,
-    setNightMap,
+    appThemePreference,
+    setAppThemePreference,
     showMapScale,
     setShowMapScale,
     isSaving,
@@ -209,6 +219,11 @@ export function SettingsScreen(): React.JSX.Element {
     { value: 'white_border', text: '21:46 (53 мин.)' },
     { value: 'black', text: '21:46 (53 мин.)' },
   ]
+  const appThemeOptions: Array<{ value: AppThemePreference; text: string }> = [
+    { value: 'system', text: 'Системная' },
+    { value: 'light', text: 'Светлая' },
+    { value: 'dark', text: 'Тёмная' },
+  ]
   const pointOptions = [...points]
     .filter(point => Number(point.id) > 0)
     .sort((left, right) => {
@@ -216,6 +231,7 @@ export function SettingsScreen(): React.JSX.Element {
       return cityDiff !== 0 ? cityDiff : Number(left.id) - Number(right.id)
     })
   const selectedPoint = pointOptions.find(point => point.id === pointId) ?? null
+  const scrollRef = useScrollToTopOnFocus<ScrollView>()
 
   const closePointList = () => setIsPointListOpen(false)
   const closeDeleteSheet = () => {
@@ -247,6 +263,7 @@ export function SettingsScreen(): React.JSX.Element {
     <>
       <ScreenLayout>
         <ScrollView
+          ref={scrollRef}
           scrollEnabled={!isColorPickerActive}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
@@ -288,22 +305,6 @@ export function SettingsScreen(): React.JSX.Element {
               </Pressable>
 
               <View style={styles.pointSelectControls}>
-                {selectedPoint ? (
-                  <Pressable
-                    accessibilityLabel="Очистить выбранное кафе"
-                    accessibilityRole="button"
-                    hitSlop={6}
-                    onPress={() => {
-                      setPointId(null)
-                      closePointList()
-                    }}
-                    style={styles.pointSelectControl}
-                    testID="settings-cafe-clear"
-                  >
-                    <X color={MUTED} size={21} strokeWidth={2.2} />
-                  </Pressable>
-                ) : null}
-
                 <Pressable
                   accessibilityLabel="Открыть список кафе"
                   accessibilityRole="button"
@@ -318,6 +319,23 @@ export function SettingsScreen(): React.JSX.Element {
             </View>
           </SettingsCard>
         ) : null}
+
+        <SettingsCard testID="settings-app-theme-card">
+          <SectionTitle fontSize={normalizedFontSize}>Тема приложения</SectionTitle>
+          {appThemeOptions.map(option => (
+            <RadioChoice
+              key={option.value}
+              label={option.text}
+              selected={appThemePreference === option.value}
+              onPress={() => setAppThemePreference(option.value)}
+              fontSize={normalizedFontSize}
+              testID={`settings-app-theme-${option.value}`}
+            />
+          ))}
+          <Text style={[styles.helperText, { fontSize: helperFontSize, marginTop: 6, marginBottom: 0 }]}>
+            Тема карты меняется вместе с темой приложения.
+          </Text>
+        </SettingsCard>
 
         <SettingsCard testID="settings-map-data-card">
           <SectionTitle fontSize={normalizedFontSize}>Формат данных на карте</SectionTitle>
@@ -371,7 +389,6 @@ export function SettingsScreen(): React.JSX.Element {
 
         <SettingsCard testID="settings-map-card">
           <SectionTitle fontSize={normalizedFontSize}>Карта</SectionTitle>
-          <CheckboxChoice label="Темная тема" selected={nightMap} onPress={() => setNightMap(!nightMap)} fontSize={normalizedFontSize} testID="settings-night-map" />
           <CheckboxChoice label="Ползунок масштабирования карты" selected={showMapScale} onPress={() => setShowMapScale(!showMapScale)} fontSize={normalizedFontSize} testID="settings-map-scale-control" />
           <CheckboxChoice label="При взятии, отмене заказа, центрировать карту" selected={centeredMap} onPress={() => setCenteredMap(!centeredMap)} fontSize={normalizedFontSize} testID="settings-center-map" />
         </SettingsCard>
@@ -442,16 +459,35 @@ export function SettingsScreen(): React.JSX.Element {
           </View>
         </SettingsCard>
 
-        <View style={[styles.saveButtonSurface, isSaving && styles.saveButtonDisabled]}>
+        <View
+          style={[
+            styles.saveButtonSurface,
+            isSaving && styles.saveButtonBusy,
+            isOffline && styles.saveButtonOffline,
+          ]}
+        >
           <Pressable
             accessibilityRole="button"
-            disabled={isSaving}
+            accessibilityState={{ busy: isSaving, disabled: isSaving || isOffline }}
+            disabled={isSaving || isOffline}
             onPress={saveSettings}
-            style={({ pressed }) => [styles.saveButton, pressed && !isSaving && styles.saveButtonPressed]}
+            style={({ pressed }) => [
+              styles.saveButton,
+              isOffline && styles.saveButtonControlOffline,
+              pressed && !isSaving && !isOffline && styles.saveButtonPressed,
+            ]}
             testID="settings-save"
           >
             <View style={styles.saveButtonContent}>
-              <Text style={[styles.saveButtonText, { fontSize: clamp(normalizedFontSize + 1, 15, 24) }]}>
+              <Text
+                style={[
+                  styles.saveButtonText,
+                  {
+                    color: isOffline ? colors.textMuted : '#ffffff',
+                    fontSize: clamp(normalizedFontSize + 1, 15, 24),
+                  },
+                ]}
+              >
                 {isSaving ? 'Сохраняем...' : 'Сохранить'}
               </Text>
             </View>
@@ -468,6 +504,7 @@ export function SettingsScreen(): React.JSX.Element {
             </Text>
             <Pressable
               accessibilityRole="button"
+              hitSlop={10}
               onPress={() => setIsDeleteSheetOpen(true)}
               style={({ pressed }) => [styles.deleteAccountButton, pressed && styles.deleteAccountButtonPressed]}
               testID="settings-delete-account"
@@ -594,82 +631,91 @@ export function SettingsScreen(): React.JSX.Element {
   )
 }
 
-const cardShadow = Platform.select({
-  ios: { shadowColor: '#1f2b36', shadowOpacity: 0.08, shadowRadius: 15, shadowOffset: { width: 0, height: 7 } },
-  android: { elevation: 3 },
-})
+function createStyles(colors: AppPalette) {
+  const cardShadow = Platform.select({
+    ios: { shadowColor: colors.shadowStrong, shadowOpacity: 0.16, shadowRadius: 15, shadowOffset: { width: 0, height: 7 } },
+    android: { elevation: 3 },
+  })
 
-const styles = StyleSheet.create({
+  return StyleSheet.create({
   content: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 30, gap: 18 },
-  intro: { borderRadius: 20, borderWidth: 1, borderColor: BORDER, backgroundColor: '#ffffff', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14, ...cardShadow },
-  introTitle: { color: TEXT, fontWeight: '800', lineHeight: 28 },
-  introText: { color: MUTED, lineHeight: 22, marginTop: 8 },
-  card: { borderRadius: 24, borderWidth: 1, borderColor: BORDER, backgroundColor: '#ffffff', padding: 16, overflow: 'visible', ...cardShadow },
+  intro: { borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceRaised, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14, ...cardShadow },
+  introTitle: { color: colors.text, fontWeight: '800', lineHeight: 28 },
+  introText: { color: colors.textMuted, lineHeight: 22, marginTop: 8 },
+  card: { borderRadius: 24, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceRaised, padding: 16, overflow: 'visible', ...cardShadow },
   cardRoomy: { padding: 20 },
-  sectionTitle: { color: TEXT, fontWeight: '700', marginBottom: 12 },
-  previewSurface: { minHeight: 170, borderRadius: 20, borderWidth: 1, borderColor: BORDER, backgroundColor: '#e5e5e5', paddingHorizontal: 12, paddingVertical: 12, justifyContent: 'space-around', overflow: 'hidden' },
+  sectionTitle: { color: colors.text, fontWeight: '700', marginBottom: 12 },
+  previewSurface: { minHeight: 170, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt, paddingHorizontal: 12, paddingVertical: 12, justifyContent: 'space-around', overflow: 'hidden' },
   themePreviewSurface: { minHeight: 400 },
   choiceRow: { minHeight: 43, borderRadius: 12, justifyContent: 'center' },
   choiceRowContent: { width: '100%', minHeight: 43, paddingHorizontal: 4, paddingVertical: 7, flexDirection: 'row', alignItems: 'center' },
-  choicePressed: { backgroundColor: '#eef2f5' },
-  choiceLabel: { color: TEXT, lineHeight: 24, flex: 1 },
-  pointSelect: { width: '100%', minHeight: 58, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(66, 98, 125, 0.22)', backgroundColor: '#ffffff', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, shadowColor: '#1f2b36', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 1 },
+  choicePressed: { backgroundColor: colors.surfacePressed },
+  choiceLabel: { color: colors.text, lineHeight: 24, flex: 1 },
+  pointSelect: { width: '100%', minHeight: 58, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceRaised, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, shadowColor: colors.shadowStrong, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 1 },
   pointSelectValue: { flex: 1, minHeight: 56, justifyContent: 'center' },
-  pointSelectText: { color: TEXT, fontWeight: '600', lineHeight: 22 },
-  pointSelectPlaceholder: { color: MUTED },
+  pointSelectText: { color: colors.text, fontWeight: '600', lineHeight: 22 },
+  pointSelectPlaceholder: { color: colors.textMuted },
   pointSelectControls: { flexDirection: 'row', alignItems: 'center' },
   pointSelectControl: { width: 34, minHeight: 56, alignItems: 'center', justifyContent: 'center' },
-  pointSelectArrow: { width: 0, height: 0, borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 6, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: MUTED },
-  pointSheet: { minHeight: '68%', maxHeight: '90%', overflow: 'hidden', paddingTop: 8, paddingHorizontal: 0, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 0, backgroundColor: '#ffffff' },
+  pointSelectArrow: { width: 0, height: 0, borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 6, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: colors.textMuted },
+  pointSheet: { minHeight: '68%', maxHeight: '90%', overflow: 'hidden', paddingTop: 8, paddingHorizontal: 0, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 0, backgroundColor: colors.surfaceRaised },
   pointSheetHandleArea: { width: '100%', height: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
-  pointSheetHandle: { width: 56, height: 5, borderRadius: 999, backgroundColor: 'rgba(31, 43, 54, 0.22)' },
-  pointSheetTitle: { width: '100%', color: TEXT, fontWeight: '800', lineHeight: 36, textAlign: 'center', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 18 },
+  pointSheetHandle: { width: 56, height: 5, borderRadius: 999, backgroundColor: colors.border },
+  pointSheetTitle: { width: '100%', color: colors.text, fontWeight: '800', lineHeight: 36, textAlign: 'center', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 18 },
   pointOptionsScroll: { width: '100%', flexGrow: 0 },
   pointOptionsContent: { paddingHorizontal: 32, paddingBottom: 24 },
-  pointOption: { width: '100%', minHeight: 62, paddingHorizontal: 15, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: 'rgba(31, 43, 54, 0.20)', justifyContent: 'center', backgroundColor: '#ffffff' },
-  pointOptionSelected: { backgroundColor: SURFACE_ALT },
-  pointOptionText: { color: '#333333', fontWeight: '400', lineHeight: 24 },
+  pointOption: { width: '100%', minHeight: 62, paddingHorizontal: 15, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, backgroundColor: colors.surfaceRaised },
+  pointOptionSelected: { borderLeftWidth: 3, borderLeftColor: colors.brand, backgroundColor: colors.brandSoft },
+  pointOptionText: { flex: 1, color: colors.text, fontWeight: '400', lineHeight: 24 },
   pointOptionTextSelected: { fontWeight: '700' },
-  radioOuter: { width: 21, height: 21, borderRadius: 11, borderWidth: 2, borderColor: '#9aabb8', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  radioOuterSelected: { borderColor: BRAND },
-  radioInner: { width: 11, height: 11, borderRadius: 6, backgroundColor: BRAND },
+  radioOuter: { width: 21, height: 21, borderRadius: 11, borderWidth: 2, borderColor: colors.textMuted, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  radioOuterSelected: { borderColor: colors.brand },
+  radioInner: { width: 11, height: 11, borderRadius: 6, backgroundColor: colors.brand },
   checkbox: { width: 20, height: 20, borderRadius: 3, borderWidth: 2, borderColor: '#9aabb8', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  checkboxSelected: { borderColor: BRAND, backgroundColor: BRAND },
-  helperText: { color: MUTED, lineHeight: 20, marginBottom: 12 },
+  checkboxSelected: { borderColor: colors.brand, backgroundColor: colors.brand },
+  helperText: { color: colors.textMuted, lineHeight: 20, marginBottom: 12 },
   textCentered: { textAlign: 'center' },
-  scalePreview: { minHeight: 92, borderRadius: 16, borderWidth: 1, borderColor: BORDER, backgroundColor: SURFACE_ALT, paddingHorizontal: 10, paddingVertical: 10, marginBottom: 14, flexDirection: 'row', alignItems: 'center' },
+  scalePreview: { minHeight: 92, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt, paddingHorizontal: 10, paddingVertical: 10, marginBottom: 14, flexDirection: 'row', alignItems: 'center' },
   scalePreviewItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  sampleText: { color: TEXT, lineHeight: 40 },
-  scaleCaption: { color: MUTED, fontSize: 12 },
-  sliderTrack: { height: 5, backgroundColor: '#d7dee4' },
-  sliderFilledTrack: { backgroundColor: '#42627d' },
-  sliderThumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#42627d', shadowColor: '#42627d', shadowOpacity: 0.25, shadowRadius: 4, elevation: 3 },
+  sampleText: { color: colors.text, lineHeight: 40 },
+  scaleCaption: { color: colors.textMuted, fontSize: 12 },
+  sliderTrack: { height: 5, backgroundColor: colors.border },
+  sliderFilledTrack: { backgroundColor: colors.primary },
+  sliderThumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, shadowColor: colors.primary, shadowOpacity: 0.25, shadowRadius: 4, elevation: 3 },
   colorPreview: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', gap: 10, marginBottom: 16 },
-  colorDot: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: '#8c9aa5' },
-  colorPreviewText: { color: TEXT, fontWeight: '600' },
+  colorDot: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: colors.textMuted },
+  colorPreviewText: { color: colors.text, fontWeight: '600' },
   colorPicker: { height: 320, width: '100%' },
   palette: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 14, paddingTop: 16, paddingHorizontal: 4 },
   swatch: { width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(66,98,125,0.28)' },
-  swatchSelected: { borderWidth: 3, borderColor: '#22303d' },
-  saveButtonSurface: { minHeight: 54, borderRadius: 16, overflow: 'hidden', backgroundColor: BRAND, marginBottom: 22, shadowColor: '#920024', shadowOpacity: 0.28, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
-  saveButton: { minHeight: 54, borderRadius: 16, backgroundColor: BRAND },
+  swatchSelected: { borderWidth: 3, borderColor: colors.text },
+  saveButtonSurface: { minHeight: 54, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.brand, marginBottom: 22, shadowColor: colors.brandDeep, shadowOpacity: 0.28, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  saveButton: { minHeight: 54, borderRadius: 16, backgroundColor: colors.brand },
   saveButtonContent: { width: '100%', minHeight: 54, alignItems: 'center', justifyContent: 'center' },
-  saveButtonPressed: { backgroundColor: '#a9002a' },
-  saveButtonDisabled: { opacity: 0.65 },
+  saveButtonPressed: { backgroundColor: colors.brandDark },
+  saveButtonBusy: { opacity: 0.65 },
+  saveButtonOffline: { backgroundColor: colors.surfaceAlt, shadowOpacity: 0, elevation: 0 },
+  saveButtonControlOffline: { backgroundColor: colors.surfaceAlt },
   saveButtonText: { color: '#ffffff', fontWeight: '700' },
-  dangerZone: { borderRadius: 20, borderWidth: 1, borderColor: 'rgba(204, 0, 51, 0.24)', backgroundColor: '#fff6f7', padding: 16, marginBottom: 22 },
-  dangerTitle: { color: '#8f0024', fontWeight: '800', lineHeight: 28 },
-  dangerText: { color: '#6f4b54', lineHeight: 21, marginTop: 7, marginBottom: 16 },
-  deleteAccountButton: { minHeight: 50, borderRadius: 15, borderWidth: 1.5, borderColor: BRAND, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 },
-  deleteAccountButtonPressed: { backgroundColor: '#ffe9ee' },
-  deleteAccountButtonText: { color: BRAND, fontWeight: '700' },
-  deleteSheet: { paddingTop: 8, paddingHorizontal: 20, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 0, backgroundColor: '#ffffff' },
-  deleteSheetTitle: { width: '100%', color: TEXT, fontWeight: '800', lineHeight: 34, textAlign: 'left', paddingTop: 14 },
-  deleteSheetText: { width: '100%', color: MUTED, lineHeight: 23, marginTop: 8 },
+  dangerZone: { borderRadius: 20, borderWidth: 1, borderColor: colors.brandSoftStrong, backgroundColor: colors.dangerSurface, padding: 16, marginBottom: 22 },
+  dangerTitle: { color: colors.dangerText, fontWeight: '800', lineHeight: 28 },
+  dangerText: { color: colors.textMuted, lineHeight: 21, marginTop: 7, marginBottom: 16 },
+  deleteAccountButton: { alignSelf: 'flex-start', minHeight: 24, justifyContent: 'center' },
+  deleteAccountButtonPressed: { opacity: 0.7 },
+  deleteAccountButtonText: { color: colors.brand, fontWeight: '700' },
+  deleteSheet: { paddingTop: 8, paddingHorizontal: 20, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 0, backgroundColor: colors.surfaceRaised },
+  deleteSheetTitle: { width: '100%', color: colors.text, fontWeight: '800', lineHeight: 34, textAlign: 'left', paddingTop: 14 },
+  deleteSheetText: { width: '100%', color: colors.textMuted, lineHeight: 23, marginTop: 8 },
   deleteSheetActions: { width: '100%', flexDirection: 'row', gap: 10, marginTop: 24 },
-  deleteSheetCancel: { flex: 1, minHeight: 52, borderRadius: 15, backgroundColor: '#e8edf1', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
-  deleteSheetCancelText: { color: TEXT, fontSize: 16, fontWeight: '700' },
-  deleteSheetConfirm: { flex: 1, minHeight: 52, borderRadius: 15, backgroundColor: BRAND, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  deleteSheetCancel: { flex: 1, minHeight: 52, borderRadius: 15, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  deleteSheetCancelText: { color: colors.text, fontSize: 16, fontWeight: '700' },
+  deleteSheetConfirm: { flex: 1, minHeight: 52, borderRadius: 15, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
   deleteSheetConfirmDisabled: { opacity: 0.65 },
   deleteSheetConfirmText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
-})
+  })
+}
+
+function useSettingsStyles() {
+  const { colors } = useAppTheme()
+  return React.useMemo(() => createStyles(colors), [colors])
+}

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -10,7 +10,9 @@ import { CardOrder } from '@/entities/CardOrder/ui/CardOrder'
 import { ModalErrCam } from '@/features/schedule/ui/ModalErrCam'
 import { ModalErrOrder } from '@/features/schedule/ui/ModalErrOrder'
 import { appPalette } from '@/shared/styles/appPalette'
+import { OFFLINE_ORDER_ACTION_MESSAGE } from '@/shared/lib/offlineOrderAction'
 import { useGlobalStore } from '@/shared/store/store'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 import type { Order } from '@/shared/store/OrdersStoreType'
 import type { GraphErrCam, GraphErrOrder } from '@/shared/store/StatStoreType'
 
@@ -236,6 +238,8 @@ function getPreviewOrders(): PreviewOrder[] {
 
 export function OrdersUiPreviewScreen(): React.JSX.Element {
   const globalFontSize = useGlobalStore((state) => state.globalFontSize)
+  const showModalText = useGlobalStore((state) => state.showModalText)
+  const { colors, resolvedScheme, setPreviewPreference, clearPreviewPreference } = useAppTheme()
   const previewOrders = useMemo(getPreviewOrders, [])
   const [confirm, setConfirm] = useState<PreviewConfirmState>(
     CLOSED_CONFIRM_STATE,
@@ -243,6 +247,8 @@ export function OrdersUiPreviewScreen(): React.JSX.Element {
   const [graphErrorPreview, setGraphErrorPreview] = useState<
     'order' | 'camera' | null
   >(null)
+
+  useEffect(() => () => clearPreviewPreference(), [clearPreviewPreference])
 
   function showSafeAction(message: string): void {
     Alert.alert('UI-предпросмотр', `${message}\nЗапрос не отправлен.`)
@@ -262,22 +268,57 @@ export function OrdersUiPreviewScreen(): React.JSX.Element {
   }
 
   return (
-    <View style={styles.screen} testID="orders-ui-preview">
+    <View style={[styles.screen, { backgroundColor: colors.surface }]} testID="orders-ui-preview">
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>DEV: тестовые заказы</Text>
-          <Text style={styles.noticeText}>
+        <View style={[styles.notice, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+          <Text style={[styles.noticeTitle, { color: colors.text }]}>DEV: тестовые заказы</Text>
+          <Text style={[styles.noticeText, { color: colors.textMuted }]}>
             Это локальные данные. Кнопки не вызывают API, GPS и телефон.
           </Text>
         </View>
 
+        <View style={[styles.modalPreview, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Сообщение об офлайне</Text>
+          <Text style={[styles.sectionDescription, { color: colors.textMuted }]}>
+            Без заказа, сети и API. Выберите тему и откройте настоящую панель ошибки.
+          </Text>
+          <View style={styles.graphPreviewActions}>
+            <View style={styles.themeActions}>
+              {(['light', 'dark'] as const).map(theme => (
+                <Pressable
+                  key={theme}
+                  accessibilityRole="button"
+                  style={[styles.themeButton, {
+                    borderColor: colors.border,
+                    backgroundColor: resolvedScheme === theme ? colors.brandSoft : colors.surfaceAlt,
+                  }]}
+                  testID={`preview-error-theme-${theme}`}
+                  onPress={() => setPreviewPreference(theme)}
+                >
+                  <Text style={[styles.themeButtonText, { color: colors.text }]}>
+                    {theme === 'light' ? 'Светлая' : 'Тёмная'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              style={[styles.previewButton, { backgroundColor: colors.brand }]}
+              testID="preview-offline-error"
+              onPress={() => showModalText(true, OFFLINE_ORDER_ACTION_MESSAGE)}
+            >
+              <Text style={styles.previewButtonText}>Показать ошибку офлайн</Text>
+            </Pressable>
+          </View>
+        </View>
+
         {previewOrders.map(({ title, description, order }) => (
           <View key={order.id} testID={`preview-order-${order.id}`}>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            <Text style={styles.sectionDescription}>{description}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+            <Text style={[styles.sectionDescription, { color: colors.textMuted }]}>{description}</Text>
             <CardOrder
               FormatPrice={(price) => String(price)}
               actionButtonOrder={(_type, orderId) =>
@@ -295,14 +336,14 @@ export function OrdersUiPreviewScreen(): React.JSX.Element {
         ))}
 
         <View style={styles.graphPreview}>
-          <Text style={styles.sectionTitle}>Модалки графика</Text>
-          <Text style={styles.sectionDescription}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Модалки графика</Text>
+          <Text style={[styles.sectionDescription, { color: colors.textMuted }]}>
             Настоящие шторки на локальных данных. Обжалование не вызывает API.
           </Text>
           <View style={styles.graphPreviewActions}>
             <Pressable
               accessibilityRole="button"
-              style={styles.previewButton}
+              style={[styles.previewButton, { backgroundColor: colors.brand }]}
               testID="preview-graph-order-error"
               onPress={() => setGraphErrorPreview('order')}
             >
@@ -310,11 +351,34 @@ export function OrdersUiPreviewScreen(): React.JSX.Element {
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              style={styles.previewButton}
+              style={[styles.previewButton, { backgroundColor: colors.brand }]}
               testID="preview-graph-camera-error"
               onPress={() => setGraphErrorPreview('camera')}
             >
               <Text style={styles.previewButtonText}>Ошибка по камере</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.graphPreview}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Системное окно</Text>
+          <Text style={[styles.sectionDescription, { color: colors.textMuted }]}>
+            Обычное окно Android или iOS. Действий и запросов нет.
+          </Text>
+          <View style={styles.graphPreviewActions}>
+            <Pressable
+              accessibilityRole="button"
+              style={[styles.previewButton, { backgroundColor: colors.brand }]}
+              testID="preview-system-alert"
+              onPress={() =>
+                Alert.alert(
+                  'Проверка системного окна',
+                  'Это тестовое сообщение. Никаких действий не выполнено.',
+                  [{ text: 'Понятно' }],
+                )
+              }
+            >
+              <Text style={styles.previewButtonText}>Показать системное окно</Text>
             </Pressable>
           </View>
         </View>
@@ -411,6 +475,23 @@ const styles = StyleSheet.create({
   graphPreview: {
     marginTop: 12,
   },
+  modalPreview: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderRadius: 16,
+  },
+  themeActions: { flexDirection: 'row', gap: 8 },
+  themeButton: {
+    flex: 1,
+    minHeight: 42,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  themeButtonText: { fontFamily: 'Roboto-Bold', fontSize: 14 },
   graphPreviewActions: {
     gap: 10,
     paddingTop: 12,

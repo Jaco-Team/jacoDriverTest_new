@@ -490,7 +490,17 @@ jest.mock('react-native-yamap-plus', () => {
   (YaMap as any).setCenter = jest.fn();
   (YaMap as any).setZoom = jest.fn();
   const Animation = {SMOOTH: 0};
-  const YamapInstance = {init: jest.fn(() => Promise.resolve())};
+  const YamapInstance = {
+    init: jest.fn(() => Promise.resolve()),
+    setLocale: jest.fn(() => Promise.resolve()),
+    getOfflineRegionsAtPoint: jest.fn(async () =>
+      JSON.stringify([{id: 1, name: 'Тестовый регион', sizeBytes: 1000}]),
+    ),
+    getOfflineRegionStatus: jest.fn(async () =>
+      JSON.stringify({id: 1, state: 'completed', progress: 1}),
+    ),
+    startOfflineRegionDownload: jest.fn(async () => undefined),
+  };
   return {
     __esModule: true,
     default: YaMap,
@@ -887,13 +897,21 @@ jest.mock('@react-native-community/netinfo', () => {
     details: {isConnectionExpensive: false},
   }));
 
-  const NetInfo = {addEventListener, fetch};
+  const refresh = jest.fn(async () => ({
+    isConnected: true,
+    isInternetReachable: true,
+    type: 'wifi',
+    details: {isConnectionExpensive: false},
+  }));
+
+  const NetInfo = {addEventListener, fetch, refresh};
 
   return {
     __esModule: true,
     default: NetInfo,
     addEventListener,
     fetch,
+    refresh,
   };
 });
 

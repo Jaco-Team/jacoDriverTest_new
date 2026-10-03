@@ -10,8 +10,10 @@ import {
 
 import { TextPopoverProps } from '../model/types'
 import { appPalette } from '@/shared/styles/appPalette'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 export function TextPopover({ Main, title, globalFontSize }: TextPopoverProps) {
+  const { colors } = useAppTheme()
   const [isOpen, setIsOpen] = React.useState(false)
 
   const handleOpen = () => setIsOpen(true)
@@ -38,10 +40,10 @@ export function TextPopover({ Main, title, globalFontSize }: TextPopoverProps) {
       }}
     >
       <PopoverBackdrop />
-      <PopoverContent style={styles.content}>
+      <PopoverContent style={[styles.content, { borderColor: colors.border, backgroundColor: colors.surfaceRaised }]}>
         <PopoverArrow />
         <PopoverBody>
-          <Text style={[styles.text, { fontSize: globalFontSize }]}>{title}</Text>
+          <Text style={[styles.text, { color: colors.text, fontSize: globalFontSize }]}>{title}</Text>
         </PopoverBody>
       </PopoverContent>
     </Popover>

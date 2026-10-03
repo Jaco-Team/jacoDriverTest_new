@@ -1,5 +1,6 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 interface RecoveryStepperProps {
   activeStep: 0 | 1
@@ -8,6 +9,7 @@ interface RecoveryStepperProps {
 export function RecoveryStepper({
   activeStep,
 }: RecoveryStepperProps): React.JSX.Element {
+  const { colors } = useAppTheme()
   return (
     <View
       accessible
@@ -17,8 +19,8 @@ export function RecoveryStepper({
     >
       <View style={styles.markers}>
         <View style={styles.markerColumn}>
-          <View style={styles.markerHalo}>
-            <View style={styles.activeCircle}>
+          <View style={[styles.markerHalo, { backgroundColor: colors.surfaceRaised }]}>
+            <View style={[styles.activeCircle, { backgroundColor: colors.brand }]}>
               <Text style={styles.activeCircleText}>
                 {activeStep === 1 ? '✓' : '1'}
               </Text>
@@ -26,13 +28,15 @@ export function RecoveryStepper({
           </View>
         </View>
 
-        <View style={styles.connectionLine} />
+        <View style={[styles.connectionLine, { backgroundColor: colors.border }]} />
 
         <View style={styles.markerColumn}>
-          <View style={styles.markerHalo}>
+          <View style={[styles.markerHalo, { backgroundColor: colors.surfaceRaised }]}>
             <View
               style={
-                activeStep === 1 ? styles.activeCircle : styles.inactiveCircle
+                activeStep === 1
+                  ? [styles.activeCircle, { backgroundColor: colors.brand }]
+                  : [styles.inactiveCircle, { backgroundColor: colors.border }]
               }
             >
               <Text
@@ -50,9 +54,12 @@ export function RecoveryStepper({
       </View>
 
       <View style={styles.labels}>
-        <Text style={styles.activeLabel}>Телефон</Text>
+        <Text style={[styles.activeLabel, { color: colors.brand }]}>Телефон</Text>
         <Text
-          style={activeStep === 1 ? styles.activeLabel : styles.inactiveLabel}
+          style={[
+            activeStep === 1 ? styles.activeLabel : styles.inactiveLabel,
+            { color: activeStep === 1 ? colors.brand : colors.textMuted },
+          ]}
         >
           Подтверждение
         </Text>

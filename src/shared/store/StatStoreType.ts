@@ -171,13 +171,13 @@ export interface StatTypes {
   FormatPrice: (price: number) => string,
   FormatDate: (date: ConfigType) => string,
   getStatPrice: (date: string) => Promise<void>,
-  getStatBetween: (dateStart: string, dateEnd: string) => Promise<void>,
-  getGraph: (date?: string | null) => Promise<void>,
+  getStatBetween: (dateStart: string, dateEnd: string) => Promise<boolean>,
+  getGraph: (date?: string | null) => Promise<boolean>,
   showModalErrCam: (is_show: boolean, err?: GraphErrCam | null) => void,
   showModalErrOrder: (is_show: boolean, err?: GraphErrOrder | null) => void,
   answer_err_cam: (text: string, err_id: number) => void,
   answer_err_order: (text: string, err_id: number, row_id: number) => void,
-  getStatistics: (date_start: string, date_end: string) => void,
+  getStatistics: (date_start: string, date_end: string) => Promise<boolean>,
   getAvgTime: () => void
 }
 

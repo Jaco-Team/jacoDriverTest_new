@@ -7,10 +7,13 @@ import YaMap, { Animation } from 'react-native-yamap-plus'
 import { useOrdersStore, useGEOStore, useSettingsStore } from '@/shared/store/store'
 import { initYaMap } from '@/shared/lib/yaMapInit'
 import { isValidMapPoint } from './mapPoint'
+import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
 
 import {Analytics, AnalyticsEvent} from '@/analytics/AppMetricaService';
 
-const MAP_LOAD_RETRY_MS = 2500
+// A slow first render is not a failed map load. Give MapKit time to finish
+// before the one-time recovery remount can replace the native view.
+const MAP_LOAD_RETRY_MS = 10000
 
 function scheduleAfterInteractions(cb: () => void): () => void {
   const g = globalThis as typeof globalThis & {
@@ -28,9 +31,9 @@ function scheduleAfterInteractions(cb: () => void): () => void {
 }
 
 export function useMapLogic() {
+  const isOffline = useIsOffline()
   const mapRef = useRef<React.ElementRef<typeof YaMap>>(null)
   const didAutoRemountRef = useRef(false)
-  const didCenterOnLoadRef = useRef(false)
   const [zoom, setZoom] = useState<number>(12)
   const [trafficVisible, setTrafficVisible] = useState<boolean>(false)
   const [mapInitStatus, setMapInitStatus] = useState<'pending' | 'ready' | 'error'>('pending')
@@ -92,11 +95,7 @@ export function useMapLogic() {
 
   const handleMapLoaded = useCallback(() => {
     setMapLoaded(true)
-    if (!didCenterOnLoadRef.current) {
-      didCenterOnLoadRef.current = true
-      getHome()
-    }
-  }, [getHome])
+  }, [])
 
   useEffect(() => {
     if (!mapHomeCenterRequestId) return
@@ -106,7 +105,6 @@ export function useMapLogic() {
   }, [mapHomeCenterRequestId])
 
   const remountMap = useCallback(() => {
-    didCenterOnLoadRef.current = false
     setMapLoaded(false)
     setMapInstanceKey((key) => key + 1)
   }, [])
@@ -124,16 +122,13 @@ export function useMapLogic() {
     })
   }, [remountMap])
 
-  // ✅ 1) Один раз на вход в экран (на фокус), без завязки на update_interval
+  // Монтирование карты зависит только от фокуса, а не от состояния сети.
   useFocusEffect(
     useCallback(() => {
       let cancelled = false
 
-      getOrders();
-      getSettings();
       setMapLoaded(false)
       didAutoRemountRef.current = false
-      didCenterOnLoadRef.current = false
       setMapMounted(false)
 
       const mountMap = () => {
@@ -149,18 +144,37 @@ export function useMapLogic() {
         cancelSchedule()
         setMapMounted(false)
       };
-    }, [getOrders, getSettings])
+    }, [])
   );
 
-  // ✅ 2) Отдельно — только интервал автообновления
+  // Заказы обновляются только для открытой карты. Изменение isOffline на false
+  // повторно запускает этот effect и восстанавливает данные после офлайна.
+  useFocusEffect(
+    useCallback(() => {
+      if (isOffline) return undefined
+
+      let cancelled = false
+      const refresh = async () => {
+        await getSettings()
+        if (!cancelled) await getOrders()
+      }
+      void refresh()
+
+      return () => {
+        cancelled = true
+      }
+    }, [getOrders, getSettings, isOffline]),
+  )
+
+  // Отдельно — только интервал автообновления.
   useEffect(() => {
-    if (!isFocused) return;
+    if (!isFocused || isOffline) return;
     const ms = Number(update_interval) * 1000;
     if (ms <= 0) return;
 
     const id = setInterval(() => getOrders(false), ms);
     return () => clearInterval(id);
-  }, [isFocused, update_interval, getOrders]);
+  }, [getOrders, isFocused, isOffline, update_interval]);
 
   useEffect(() => {
     if (!isFocused || mapInitStatus !== 'ready' || !isMapMounted || isMapLoaded || didAutoRemountRef.current) {
@@ -185,12 +199,20 @@ export function useMapLogic() {
 
   // Метод для отображения/скрытия пробок
   const toggleTrafficVisible = () => {
+    if (isOffline) return
+
     setTrafficVisible((prev) => {
       const nextValue = !prev
       mapRef.current?.setTrafficVisible(nextValue)
       return nextValue
     })
   }
+
+  useEffect(() => {
+    if (!isOffline || !trafficVisible) return
+    mapRef.current?.setTrafficVisible(false)
+    setTrafficVisible(false)
+  }, [isOffline, trafficVisible])
 
   return {
     mapRef,
@@ -209,6 +231,7 @@ export function useMapLogic() {
     type_location,
     driver_location_requesting,
     trafficVisible,
+    isOffline,
     toggleTrafficVisible,
     mapInitStatus,
     isMapMounted,

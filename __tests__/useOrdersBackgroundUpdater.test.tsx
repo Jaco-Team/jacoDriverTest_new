@@ -36,17 +36,17 @@ describe('useOrdersBackgroundUpdater', () => {
     jest.useRealTimers()
   })
 
-  it('прогревает остальные разделы после загрузки текущего и обновляет один каждые 45 секунд', async () => {
+  it('один раз прогревает остальные разделы после загрузки текущего без фонового опроса скрытых экранов', async () => {
     const prefetchOrders = jest.fn(async () => undefined)
     const view = await render(<TestComponent prefetchOrders={prefetchOrders} />)
 
     expect(prefetchOrders).toHaveBeenNthCalledWith(1, true)
 
     await act(async () => {
-      jest.advanceTimersByTime(45_000)
+      jest.advanceTimersByTime(5 * 60_000)
     })
 
-    expect(prefetchOrders).toHaveBeenNthCalledWith(2, false)
+    expect(prefetchOrders).toHaveBeenCalledTimes(1)
     await view.unmount()
   })
 

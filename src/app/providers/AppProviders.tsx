@@ -1,5 +1,5 @@
 import React, {ReactNode} from 'react';
-import {StyleSheet} from 'react-native';
+import {View} from 'react-native';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {
@@ -13,34 +13,54 @@ import {CustomSpinner} from '@/shared/ui/CustomSpinner';
 import {CustomSpinner_hidden} from '@/shared/ui/CustomSpinner_hidden';
 import {CustomAlert} from '@/shared/ui/CustomAlert';
 import {ModalText} from '@/shared/ui/ModalText';
-//import { ConnectivityLocationIndicator } from '@/shared/ui/ConnectivityLocationIndicator'
+import {ConnectivityProvider} from '@/shared/ui/ConnectivityLocationIndicator';
+import {AppThemeProvider, useAppTheme} from '@/shared/theme/AppThemeProvider';
+import {useGlobalStore} from '@/shared/store/store';
 
-const rootStyle = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-});
-
-export function AppProviders({children}: {children: ReactNode}) {
-  //<ConnectivityLocationIndicator />
+function ThemedAppProviders({children}: {children: ReactNode}) {
+  const {colors} = useAppTheme()
+  const alertBannerRef = React.useRef<View>(null)
 
   return (
-    <GestureHandlerRootView style={rootStyle.root}>
+    <View
+      style={{flex: 1, backgroundColor: colors.surface}}
+      onStartShouldSetResponderCapture={event => {
+        if (!useGlobalStore.getState().is_show_alert_text) return false
+
+        const {pageX, pageY} = event.nativeEvent
+        alertBannerRef.current?.measureInWindow((x, y, width, height) => {
+          const isOutside = pageX < x || pageX > x + width || pageY < y || pageY > y + height
+          if (isOutside) useGlobalStore.getState().showAlertText(false)
+        })
+        return false
+      }}
+    >
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <BottomSheetModalProvider>
           <UiProvider>
-            <NavigationProvider>
-              {children}
+            <ConnectivityProvider>
+              <NavigationProvider>
+                {children}
 
-              <CustomSpinner />
-              <CustomSpinner_hidden />
-              <CustomAlert />
-              <ModalText />
-            </NavigationProvider>
+                <CustomSpinner />
+                <CustomSpinner_hidden />
+                <CustomAlert bannerRef={alertBannerRef} />
+                <ModalText />
+              </NavigationProvider>
+            </ConnectivityProvider>
           </UiProvider>
         </BottomSheetModalProvider>
       </SafeAreaProvider>
+    </View>
+  )
+}
+
+export function AppProviders({children}: {children: ReactNode}) {
+  return (
+    <GestureHandlerRootView style={{flex: 1}}>
+      <AppThemeProvider>
+        <ThemedAppProviders>{children}</ThemedAppProviders>
+      </AppThemeProvider>
     </GestureHandlerRootView>
   );
 }

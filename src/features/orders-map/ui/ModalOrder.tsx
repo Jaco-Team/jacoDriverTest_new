@@ -23,9 +23,11 @@ import { toOrderInt } from '@/entities/CardOrder/model/normalizeOrderValue'
 import { appPalette } from '@/shared/styles/appPalette'
 
 import { useModalOrderLogic } from '../model/useModalOrderLogic'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 export const ModalOrder = (): React.JSX.Element => {
   const insets = useSafeAreaInsets()
+  const { colors } = useAppTheme()
   const {
     FormatPrice,
     globalFontSize,
@@ -41,7 +43,7 @@ export const ModalOrder = (): React.JSX.Element => {
   const isDeleted =
     showOrders.length > 0 &&
     showOrders.every((item) => toOrderInt(item.is_delete) === 1)
-  const sheetBackground = isDeleted ? ORDER_CARD_DELETED_BG : '#FFFFFF'
+  const sheetBackground = isDeleted ? ORDER_CARD_DELETED_BG : colors.surfaceRaised
 
   function close(): void {
     if (!isBusy) showOrdersMap(-1)
@@ -51,7 +53,7 @@ export const ModalOrder = (): React.JSX.Element => {
     <Actionsheet isOpen={isOpenOrderMap} onClose={close}>
       <ActionsheetBackdrop testID="order-map-backdrop" />
       <ActionsheetContent
-        style={[styles.sheet, { backgroundColor: sheetBackground }]}
+        style={[styles.sheet, { borderColor: colors.border, backgroundColor: sheetBackground }]}
         testID="order-map-sheet"
       >
         <ActionsheetDragIndicatorWrapper>
@@ -67,6 +69,7 @@ export const ModalOrder = (): React.JSX.Element => {
               <View
                 style={[
                   styles.handle,
+                  !isDeleted && { backgroundColor: colors.border },
                   isDeleted ? styles.handleDeleted : null,
                 ]}
               />
@@ -96,7 +99,7 @@ export const ModalOrder = (): React.JSX.Element => {
 
         {isBusy ? (
           <View style={styles.busyOverlay} testID="order-map-sheet-spinner">
-            <ActivityIndicator color={appPalette.primary} size="large" />
+            <ActivityIndicator color={colors.primary} size="large" />
           </View>
         ) : null}
       </ActionsheetContent>

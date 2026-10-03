@@ -20,5 +20,8 @@ export const laravelApiConfig = {
   captchaPageUrl: `${laravelApiOrigin}/mobile/captcha`,
   ssoLoginUrl: `${laravelApiOrigin}/auth/sso/login?client=mobile`,
   ssoCallbackUrl: 'jacodriver://auth/sso',
-  timeoutMs: 15_000,
+  // Локальный API ходит в удалённые рабочие БД и в dev запускается одним
+  // серверным процессом. При двух эмуляторах запрос может долго ждать в
+  // очереди ещё до начала обработки. Production-таймаут не меняем.
+  timeoutMs: laravelApiMode === 'local' ? 45_000 : 15_000,
 } as const

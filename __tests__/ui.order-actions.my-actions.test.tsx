@@ -65,6 +65,8 @@ test('мой заказ: cancel/finish/fake → корректные setActiveCo
   const phoneButton = screen.getByTestId(`order-${item.id}-phone`);
   expect(phoneButton).toHaveStyle({
     height: 44,
+    borderWidth: 1,
+    borderColor: 'rgba(66, 98, 125, 0.16)',
     borderRadius: 8,
     backgroundColor: '#E0E0E0',
   });

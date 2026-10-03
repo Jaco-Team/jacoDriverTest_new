@@ -25,6 +25,18 @@ const mockMapLogic = {
   shouldRenderMap: true,
 }
 
+const mockTheme = {
+  colors: {
+    surface: '#F4F7FA',
+    text: '#1F2D38',
+  },
+  isDark: false,
+}
+
+jest.mock('@/shared/theme/AppThemeProvider', () => ({
+  useAppTheme: () => mockTheme,
+}))
+
 jest.mock('@/features/orders-map/model/useMapLogic', () => ({
   useMapLogic: () => mockMapLogic,
 }))
@@ -81,6 +93,9 @@ jest.mock('@/features/orders-map/ui/DriverMarker', () => ({
 jest.mock('@/features/orders-map/ui/ModalFilterOrders', () => ({
   ModalFilterOrders: () => null,
 }))
+jest.mock('@/features/orders-map/ui/OrdersMapCompass', () => ({
+  OrdersMapCompass: () => null,
+}))
 
 import { MapScreen } from '@/features/orders-map/ui/MapScreen'
 
@@ -90,6 +105,7 @@ describe('экран карты заказов', () => {
     mockMapLogic.type_location = 'none'
     mockMapLogic.driver_location_requesting = false
     mockMapLogic.set_type_location.mockClear()
+    mockTheme.isDark = false
   })
 
   it('занимает всю доступную область и сохраняет собственные элементы карты', async () => {
@@ -105,10 +121,14 @@ describe('экран карты заказов', () => {
       overflow: 'hidden',
     })
     expect(screen.getByTestId('native-yandex-map')).toBeTruthy()
+    expect(screen.getByTestId('native-yandex-map').props.nightMode).toBe(false)
     expect(screen.getByTestId('map-zoom-slider')).toBeTruthy()
     expect(screen.getByTestId('orders-map-rotation-lock')).toBeTruthy()
     expect(screen.getByTestId('orders-map-driver-location')).toBeTruthy()
     expect(screen.getByTestId('orders-map-traffic')).toBeTruthy()
+    expect(typeof screen.getByTestId('native-yandex-map').props.onCameraPositionChangeEnd).toBe(
+      'function',
+    )
   })
 
   it('использует тот же трёхрежимный обработчик геолокации, что и сайт', async () => {
@@ -167,5 +187,18 @@ describe('экран карты заказов', () => {
 
     expect(screen.getByTestId('native-yandex-map').props.initialRegion).toBeUndefined()
     expect(screen.queryByTestId('orders-map-home-marker')).toBeNull()
+  })
+
+  it('включает тёмный режим Яндекс-карты вместе с темой приложения', async () => {
+    mockTheme.isDark = true
+
+    await render(<MapScreen />)
+    await act(async () => {
+      fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
+        nativeEvent: { layout: { width: 390, height: 700 } },
+      })
+    })
+
+    expect(screen.getByTestId('native-yandex-map').props.nightMode).toBe(true)
   })
 })

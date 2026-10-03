@@ -1,8 +1,13 @@
 import React, { useState } from 'react'
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native'
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native'
 
 let mockDriverMarkerState: any
 let mockSvgCaptureOptions: { width: number; height: number } | null
+let mockIsDark = false
+
+jest.mock('@/shared/theme/AppThemeProvider', () => ({
+  useAppTheme: () => ({ isDark: mockIsDark }),
+}))
 
 jest.mock('@/features/orders-map/model/useDriverMarkerLogic', () => ({
   useDriverMarkerLogic: () => mockDriverMarkerState,
@@ -61,6 +66,7 @@ import {
   DriverMarkerImage,
   getDriverMarkerCaptureSize,
   getDriverMarkerNativeScale,
+  getMarkerPalette,
   type DriverMarkerImageSource,
 } from '@/features/orders-map/ui/DriverMarker'
 
@@ -78,6 +84,7 @@ function DriverMarkerProbe() {
 describe('DriverMarker', () => {
   beforeEach(() => {
     mockSvgCaptureOptions = null
+    mockIsDark = false
     mockDriverMarkerState = {
       location_driver: { lon: 49.40071, lat: 53.529781 },
       location_driver_time_text: '16:10',
@@ -125,7 +132,9 @@ describe('DriverMarker', () => {
       'data:image/png;base64,',
     )
 
-    fireEvent(screen.getByTestId('orders-map-driver-svg'), 'layout')
+    await act(async () => {
+      fireEvent(screen.getByTestId('orders-map-driver-svg'), 'layout')
+    })
 
     await waitFor(() => {
       const marker = screen.getByTestId('orders-map-driver-native-marker')
@@ -148,5 +157,15 @@ describe('DriverMarker', () => {
     expect(getDriverMarkerNativeScale(1, false, 'android', 3.75)).toBe(1.125)
     expect(getDriverMarkerNativeScale(1, true, 'android', 3.75)).toBe(1)
   })
+
+  it.each([
+    ['transparent_white', false, '#000000'],
+    ['transparent', true, '#FFFFFF'],
+  ] as const)(
+    'делает прозрачную подпись %s контрастной для темы isDark=%s',
+    (theme, isDark, expectedColor) => {
+      expect(getMarkerPalette(theme, isDark).text).toBe(expectedColor)
+    },
+  )
 
 })

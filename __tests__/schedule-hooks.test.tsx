@@ -16,7 +16,9 @@ let mockStatState: any;
 let mockGlobalState: any;
 
 jest.mock('@/shared/store/store', () => ({
-  useStatStore: (selector: any) => selector(mockStatState),
+  useStatStore: Object.assign((selector: any) => selector(mockStatState), {
+    getState: () => mockStatState,
+  }),
   useGlobalStore: (selector: any) => selector(mockGlobalState),
 }));
 

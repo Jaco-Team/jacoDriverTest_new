@@ -12,6 +12,7 @@ import {
   graphErrorSheetStyles,
   type GraphErrorScrollHandle,
 } from './GraphErrorSheetParts';
+import {useAppTheme} from '@/shared/theme/AppThemeProvider';
 
 interface ModalErrCamPreview {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export function ModalErrCam({
   preview?: ModalErrCamPreview;
 }): React.JSX.Element {
   const insets = useSafeAreaInsets();
+  const {colors} = useAppTheme();
   const {
     isShowModalErrCam,
     modalErrCam,
@@ -85,7 +87,7 @@ export function ModalErrCam({
         onScrollRef={instance => {
           scrollRef.current = instance;
         }}>
-        <Text style={[graphErrorSheetStyles.title, {fontSize: globalFontSize}]}>
+        <Text style={[graphErrorSheetStyles.title, {color: colors.text, fontSize: globalFontSize}]}>
           Ошибка №{activeModal?.id}
         </Text>
         <GraphErrorField
@@ -111,7 +113,7 @@ export function ModalErrCam({
               {activeImages.map((image, index) => (
                 <Pressable
                   key={`${image.uri}-${index}`}
-                  style={graphErrorSheetStyles.imageButton}
+                  style={[graphErrorSheetStyles.imageButton, {backgroundColor: colors.surfaceAlt}]}
                   onPress={() => openImage(index)}>
                   <Image
                     resizeMode="contain"

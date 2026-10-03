@@ -2,7 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 
-const mockSetNightMap = jest.fn();
+const mockSetAppThemePreference = jest.fn();
 const mockSetShowMapScale = jest.fn();
 const mockSetCenteredMap = jest.fn();
 const mockSetMapDataType = jest.fn();
@@ -14,9 +14,13 @@ const mockNavigationReset = jest.fn();
 let mockPointId: number | null = 15;
 let mockIsDemoAccount = true;
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ reset: mockNavigationReset }),
-}));
+jest.mock('@react-navigation/native', () => {
+  const React = require('react');
+  return {
+    useNavigation: () => ({ reset: mockNavigationReset }),
+    useFocusEffect: (effect: () => void | (() => void)) => React.useEffect(effect, [effect]),
+  };
+});
 
 jest.mock('react-native-wheel-color-picker', () => {
   const { View } = require('react-native');
@@ -97,8 +101,8 @@ jest.mock('@/features/settings/model/useSettingsLogic', () => ({
     setMarkerTheme: mockSetMarkerTheme,
     mapScale: 1,
     setMapScale: jest.fn(),
-    nightMap: false,
-    setNightMap: mockSetNightMap,
+    appThemePreference: 'system',
+    setAppThemePreference: mockSetAppThemePreference,
     showMapScale: true,
     setShowMapScale: mockSetShowMapScale,
     isSaving: false,
@@ -133,6 +137,11 @@ describe('SettingsScreen', () => {
     expect(screen.getByText('Формат данных на карте')).toBeTruthy();
     expect(screen.getByText('Отмененные заказы')).toBeTruthy();
     expect(screen.getByText('Карта')).toBeTruthy();
+    expect(screen.getByText('Тема приложения')).toBeTruthy();
+    expect(screen.getByText('Системная')).toBeTruthy();
+    expect(screen.getByTestId('settings-app-theme-system').props.accessibilityState).toEqual({
+      selected: true,
+    });
     expect(screen.getByText('Размер шрифта')).toBeTruthy();
     expect(screen.getByText('Масштабирование иконок на карте')).toBeTruthy();
     expect(screen.getByText('Частота обновления заказов')).toBeTruthy();
@@ -174,8 +183,11 @@ describe('SettingsScreen', () => {
     expect(StyleSheet.flatten(selectedOption.props.style)).toMatchObject({
       minHeight: 62,
       borderBottomWidth: 1,
-      backgroundColor: '#f3f6f8',
+      borderLeftWidth: 3,
+      borderLeftColor: '#CC0033',
+      backgroundColor: 'rgba(204, 0, 51, 0.08)',
     });
+    expect(screen.queryByTestId('settings-cafe-15-selected-icon')).toBeNull();
     expect(screen.getByText('Тольятти, Мира 12')).toBeTruthy();
 
     await fireEvent.press(screen.getByTestId('settings-cafe-21'));
@@ -183,8 +195,7 @@ describe('SettingsScreen', () => {
     expect(mockSetPointId).toHaveBeenCalledWith(21);
     expect(screen.queryByTestId('settings-cafe-sheet')).toBeNull();
 
-    await fireEvent.press(screen.getByTestId('settings-cafe-clear'));
-    expect(mockSetPointId).toHaveBeenLastCalledWith(null);
+    expect(screen.queryByTestId('settings-cafe-clear')).toBeNull();
   });
 
   it('оформляет пустое значение кафе как placeholder сайта', async () => {
@@ -193,7 +204,7 @@ describe('SettingsScreen', () => {
     const placeholder = screen.getByText('Выберите кафе');
 
     expect(StyleSheet.flatten(placeholder.props.style)).toMatchObject({
-      color: '#6f7f8d',
+      color: '#6B7883',
       fontSize: 15,
       fontWeight: '600',
     });
@@ -203,14 +214,14 @@ describe('SettingsScreen', () => {
   it('переключает каждый параметр карты независимо и сохраняет форму', async () => {
     const screen = await render(<SettingsScreen />);
 
-    await fireEvent.press(screen.getByTestId('settings-night-map'));
+    await fireEvent.press(screen.getByTestId('settings-app-theme-dark'));
     await fireEvent.press(screen.getByTestId('settings-map-scale-control'));
     await fireEvent.press(screen.getByTestId('settings-center-map'));
     await fireEvent.press(screen.getByTestId('settings-map-data-full'));
     await fireEvent.press(screen.getByTestId('settings-marker-theme-transparent_white'));
     await fireEvent.press(screen.getByTestId('settings-save'));
 
-    expect(mockSetNightMap).toHaveBeenCalledWith(true);
+    expect(mockSetAppThemePreference).toHaveBeenCalledWith('dark');
     expect(mockSetShowMapScale).toHaveBeenCalledWith(false);
     expect(mockSetCenteredMap).toHaveBeenCalledWith(false);
     expect(mockSetMapDataType).toHaveBeenCalledWith('full');
@@ -222,10 +233,14 @@ describe('SettingsScreen', () => {
     const screen = await render(<SettingsScreen />);
 
     expect(screen.getByTestId('settings-delete-account-zone')).toBeTruthy();
+    expect(screen.getByText('Удаление аккаунта')).toBeTruthy();
+    expect(screen.getByText('После удаления вы выйдете из аккаунта. Это действие нельзя отменить.')).toBeTruthy();
+    expect(screen.getByText('Удалить аккаунт')).toBeTruthy();
     expect(screen.queryByTestId('settings-delete-account-sheet')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('settings-delete-account'));
     expect(screen.getByTestId('settings-delete-account-sheet')).toBeTruthy();
+    expect(screen.getByTestId('settings-delete-account-cancel')).toHaveStyle({ borderWidth: 1 });
 
     await fireEvent.press(screen.getByTestId('settings-delete-account-cancel'));
     expect(screen.queryByTestId('settings-delete-account-sheet')).toBeNull();

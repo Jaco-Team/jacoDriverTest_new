@@ -79,6 +79,19 @@ describe('шапка списка заказов', () => {
     expect(
       screen.getByTestId('orders-status-option-1').props.accessibilityState,
     ).toEqual({ selected: true })
+    expect(screen.getByTestId('orders-status-option-1')).toHaveStyle({
+      borderWidth: 1,
+      borderColor: '#42627D',
+      backgroundColor: '#E9EEF3',
+    })
+    expect(screen.getByText('Активные')).toHaveStyle({
+      color: '#1F2D38',
+    })
+    expect(screen.getByTestId('orders-status-option-3')).toHaveStyle({
+      borderWidth: 1,
+      borderColor: 'rgba(66, 98, 125, 0.16)',
+      backgroundColor: '#FFFFFF',
+    })
 
     await fireEvent.press(screen.getByTestId('orders-status-option-3'))
 

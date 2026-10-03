@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Theme, DelType, ShowType } from '@/shared/types/globalTypes'
+import type {AppThemePreference} from '@/shared/theme/AppThemeProvider'
 
 export interface SaveSettingsResponse {
   st: boolean,
@@ -19,6 +20,7 @@ export interface MySettingsResponse {
   driver_avg_time: number|boolean,
   driver_page_stat_time: number|boolean,
   night_map: number,
+  app_theme?: AppThemePreference,
   is_scaleMap: number,
   point_id?: number | null,
   all_points?: SettingsPoint[]
@@ -67,8 +69,8 @@ export interface SettingsStore extends MySettingsResponse {
   setRotateMap: (is_rotate: boolean) => void,
   setPointId: (pointId: number | null) => void,
 
-  getSettings: () => Promise<void>,
+  getSettings: (silent?: boolean) => Promise<void>,
 
-  saveSettings: (type_show_del: string, centered_map: string[], fontSize: number, update_interval: number, color: string, mapScale: number, groupTypeTime: string, theme: Theme, night_map: string[], is_scaleMap: string[]) => Promise<void>,
+  saveSettings: (type_show_del: string, centered_map: string[], fontSize: number, update_interval: number, color: string, mapScale: number, groupTypeTime: string, theme: Theme, night_map: string[], is_scaleMap: string[], app_theme?: AppThemePreference) => Promise<void>,
   getPhoneCafe: () => Promise<void>,
 }

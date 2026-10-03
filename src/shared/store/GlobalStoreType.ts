@@ -18,8 +18,9 @@ export interface globalTypes {
   is_show_modal_text: boolean,
   is_show_alert_text: boolean,
   modal_text: string,
+  alertSeverity: 'success' | 'error' | 'warning',
   showModalText: (is_open: boolean, text?: string) => void,
-  showAlertText: (is_open: boolean, text?: string) => void,
+  showAlertText: (is_open: boolean, text?: string, severity?: 'success' | 'error' | 'warning') => void,
 
   tokenAuth: string,
   setTokenAuth: (token: string) => Promise<void>,

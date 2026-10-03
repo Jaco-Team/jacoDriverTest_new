@@ -1,6 +1,7 @@
-import type { AxiosRequestConfig } from 'axios'
+import { isAxiosError, type AxiosRequestConfig } from 'axios'
 
 import { bearerHeaders, laravelHttp } from '@/shared/api/laravel/connector'
+import { laravelApiConfig } from '@/shared/api/laravel/config'
 import { getLaravelApiErrorInfo } from '@/shared/api/laravel/errors'
 import { laravelApiRoutes } from '@/shared/api/laravel/routes'
 import {
@@ -8,7 +9,7 @@ import {
   getLaravelAuthToken,
 } from '@/shared/lib/laravelAuthTokenStorage'
 
-export type ApiResponse<T = any> = { st: boolean; text: string; data?: T }
+export type ApiResponse<T = any> = { st: boolean; text: string; data?: T; retryable?: boolean }
 
 type FakeOrdersMode = 'off' | 'actions'
 
@@ -70,6 +71,7 @@ type LaravelRequest = {
   path: string
   payload?: Record<string, any>
   requiresAuth?: boolean
+  timeoutMs?: number
   selectData?: (payload: any) => any
 }
 
@@ -149,7 +151,12 @@ function resolveLaravelRequest(module: string, data: Record<string, any>): Larav
   }
 
   if (module === 'orders' && type === 'get_orders') {
-    return { method: 'post', path: laravelApiRoutes.orders.getOrders, payload }
+    return {
+      method: 'post',
+      path: laravelApiRoutes.orders.getOrders,
+      payload,
+      timeoutMs: laravelApiConfig.mode === 'local' ? 60_000 : 30_000,
+    }
   }
 
   if (module === 'orders' && type === 'actionOrder') {
@@ -264,7 +271,10 @@ export async function api<T>(
       return { st: false, text: 'Сессия истекла. Войдите снова.' }
     }
 
-    const config: AxiosRequestConfig = token ? { headers: bearerHeaders(token) } : {}
+    const config: AxiosRequestConfig = {
+      ...(token ? { headers: bearerHeaders(token) } : {}),
+      ...(request.timeoutMs ? { timeout: request.timeoutMs } : {}),
+    }
     const response = request.method === 'get'
       ? await laravelHttp.get(request.path, config)
       : await laravelHttp.post(request.path, request.payload ?? {}, config)
@@ -281,6 +291,6 @@ export async function api<T>(
     if (info.status === 401) {
       await clearLaravelAuthToken().catch(() => undefined)
     }
-    return { st: false, text: info.message }
+    return { st: false, text: info.message, retryable: (info.status !== null && info.status >= 500) || (info.status === null && isAxiosError(error)) }
   }
 }

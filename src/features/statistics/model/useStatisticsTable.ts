@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRef } from 'react'
 import dayjs, { type Dayjs } from 'dayjs'
 import 'dayjs/locale/ru'
 import { useShallow } from 'zustand/react/shallow'
 
 import { Analytics, AnalyticsEvent } from '@/analytics/AppMetricaService'
 import { useGlobalStore, useStatStore } from '@/shared/store/store'
+import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
+import { useOnlineScreenRefresh } from '@/shared/lib/useOnlineScreenRefresh'
 
 const MAX_SPAN_DAYS = 93
 const API_DATE_FORMAT = 'YYYY-MM-DD'
@@ -33,6 +36,7 @@ function maxDay(first: Dayjs, second: Dayjs): Dayjs {
 }
 
 export function useStatisticsTable() {
+  const isOffline = useIsOffline()
   const [getStatistics, statArr] = useStatStore(
     useShallow((state) => [state.getStatistics, state.statArr]),
   )
@@ -42,6 +46,10 @@ export function useStatisticsTable() {
 
   const [initialStartDate] = useState(() => dayjs().startOf('day').subtract(6, 'day'))
   const [initialEndDate] = useState(() => dayjs().startOf('day'))
+  const requestedRange = useRef({
+    start: formatApiDate(initialStartDate),
+    end: formatApiDate(initialEndDate),
+  })
   const [dateStart, setDateStart] = useState(initialStartDate)
   const [dateEnd, setDateEnd] = useState(initialEndDate)
   const [activePicker, setActivePicker] = useState<ActiveStatisticsPicker>(null)
@@ -117,14 +125,21 @@ export function useStatisticsTable() {
     }
     messages.push(`Выбран период: ${formatApiDate(start)} — ${formatApiDate(end)}`)
 
-    showAlertText(true, messages.join('\n'))
+    showAlertText(true, messages.join('\n'), 'warning')
   }, [globalMinDate, showAlertText])
 
+  const refreshStatistics = useCallback(
+    () => getStatistics(requestedRange.current.start, requestedRange.current.end),
+    [getStatistics],
+  )
+  useOnlineScreenRefresh(isOffline, refreshStatistics)
+
   useEffect(() => {
-    getStatistics(formatApiDate(initialStartDate), formatApiDate(initialEndDate))
-  }, [getStatistics, initialEndDate, initialStartDate])
+    if (isOffline) setActivePicker(null)
+  }, [isOffline])
 
   const openPicker = useCallback((type: Exclude<ActiveStatisticsPicker, null>) => {
+    if (isOffline) return
     setActivePicker(type)
     Analytics.log(
       type === 'start'
@@ -134,7 +149,7 @@ export function useStatisticsTable() {
         ? 'Открытие календаря (Статистика времени): Дата от'
         : 'Открытие календаря (Статистика времени): Дата до',
     )
-  }, [])
+  }, [isOffline])
 
   const closePicker = useCallback(() => {
     if (activePicker === 'start') {
@@ -167,19 +182,21 @@ export function useStatisticsTable() {
     setDateStart(normalized.start)
     setDateEnd(normalized.end)
     showAdjustmentIfNeeded(normalized.reasons, normalized.start, normalized.end)
-    getStatistics(formatApiDate(normalized.start), formatApiDate(normalized.end))
+    requestedRange.current = { start: formatApiDate(normalized.start), end: formatApiDate(normalized.end) }
+    void refreshStatistics()
     closePicker()
   }, [
     activePicker,
     closePicker,
     dateEnd,
     dateStart,
-    getStatistics,
+    refreshStatistics,
     normalizeRangeWithReasons,
     showAdjustmentIfNeeded,
   ])
 
   const getStat = useCallback(() => {
+    if (isOffline) return
     const normalized = normalizeRangeWithReasons(dateStart, dateEnd)
 
     Analytics.log(
@@ -189,11 +206,13 @@ export function useStatisticsTable() {
     setDateStart(normalized.start)
     setDateEnd(normalized.end)
     showAdjustmentIfNeeded(normalized.reasons, normalized.start, normalized.end)
-    getStatistics(formatApiDate(normalized.start), formatApiDate(normalized.end))
+    requestedRange.current = { start: formatApiDate(normalized.start), end: formatApiDate(normalized.end) }
+    void refreshStatistics()
   }, [
     dateEnd,
     dateStart,
-    getStatistics,
+    refreshStatistics,
+    isOffline,
     normalizeRangeWithReasons,
     showAdjustmentIfNeeded,
   ])
@@ -219,16 +238,17 @@ export function useStatisticsTable() {
     dateEndLabel: dateEnd.locale('ru').format(UI_DATE_FORMAT),
     dateStart: formatApiDate(dateStart),
     dateStartLabel: dateStart.locale('ru').format(UI_DATE_FORMAT),
-    displayRows,
+    displayRows: isOffline ? [] : displayRows,
     getStat,
     globalFontSize,
     isSummaryRow,
+    isOffline,
     openPicker,
     pickerMaxDate: formatApiDate(activePicker === 'start' ? startMaxAllowed : endMaxAllowed),
     pickerMinDate: formatApiDate(activePicker === 'start' ? startMinAllowed : endMinAllowed),
     pickerTitle: activePicker === 'start' ? 'Дата от' : activePicker === 'end' ? 'Дата до' : '',
     pickerValue: formatApiDate(activePicker === 'start' ? dateStart : dateEnd),
     selectPickerDate,
-    statArr,
+    statArr: isOffline ? [] : statArr,
   }
 }

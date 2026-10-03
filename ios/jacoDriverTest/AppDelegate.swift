@@ -17,7 +17,7 @@ class AppDelegate: RCTAppDelegate {
     self.initialProps = [:]
 
     YMKMapKit.setLocale("ru_RU")
-    YMKMapKit.setApiKey("c7ad032b-5368-4449-9e21-c50d73ea0026")
+    YMKMapKit.setApiKey("b18f9642-b69f-47d9-b60d-e443b6dd77cd")
     
     FirebaseApp.configure()
     

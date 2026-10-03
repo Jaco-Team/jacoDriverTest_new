@@ -8,6 +8,8 @@ const mockOpenEndPicker = jest.fn()
 jest.mock('@/features/salary/model/usePriceScreen', () => ({
   usePriceScreen: () => ({
     activePicker: null,
+    hasPriceData: true,
+    isOffline: false,
     closePicker: jest.fn(),
     globalFontSize: 16,
     openEndPicker: mockOpenEndPicker,
