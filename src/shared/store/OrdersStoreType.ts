@@ -23,6 +23,8 @@ export interface OrdersStore {
   limit_summ: string,
   limit_count: string,
   orders: Array<Order>,
+  activeOrdersSavedAt: number | null,
+  showingSavedOrders: boolean,
   home: null|XY,
   mapHomeCenterRequestId: number,
 

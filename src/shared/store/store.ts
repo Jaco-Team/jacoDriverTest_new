@@ -6,6 +6,7 @@ import {request, PERMISSIONS, RESULTS, checkMultiple} from 'react-native-permiss
 import {Platform} from 'react-native';
 
 import { api } from './api';
+import { readActiveOrders, saveActiveOrders } from './activeOrdersCache';
 import { Theme, ShowType } from '@/shared/types/globalTypes'
 import { globalTypes } from './GlobalStoreType';
 import { StatusTextType, LoginTypes, CheckTokenResponse, LoginResponse } from './LoginStoreType';
@@ -62,6 +63,9 @@ export const useGlobalStore = create<globalTypes>()((set, get) => ({
   setSpinnerHidden: (status: boolean) => { set({loadSpinnerHidden: status}) },
 
   setTokenAuth: async (token: string) => { 
+    if (token !== get().tokenAuth) {
+      useOrdersStore.setState({ orders: [], showOrders: [], activeOrdersSavedAt: null, showingSavedOrders: false });
+    }
     set({tokenAuth: token})
     await AsyncStorage.setItem('token', token); 
   },
@@ -226,6 +230,10 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
         useSettingsStore.getState().getSettings();
       }
 
+      // Offline access is limited to the previously saved account; server rejection is never bypassed.
+      if (json.networkError && useGlobalStore.getState().tokenAuth === token) {
+        return !!(await readActiveOrders(token));
+      }
       return json.st;
     },
 
@@ -949,6 +957,8 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
   limit_count: '',
 
   orders: [],
+  activeOrdersSavedAt: null,
+  showingSavedOrders: false,
   home: null,
   mapHomeCenterRequestId: 0,
 
@@ -999,8 +1009,6 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
   getOrders: async (is_reload = false) => {
     const token = await useGlobalStore.getState().getAuthToken();
 
-    const type_dop = get().type_dop;
-    const types_dop = get().types_dop;
     const type = get().type;
 
     if (!token || token.length == 0) {
@@ -1027,8 +1035,29 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
       token: token,
     };
 
+    const isCurrent = () => useGlobalStore.getState().tokenAuth === token && get().type.id === type.id;
+
     try {
+      // Restore before the request: a stalled connection must not hide saved orders.
+      if (type.id === 1) {
+        const cached = await readActiveOrders(token);
+        if (cached && isCurrent()) {
+          set({
+            orders: get().type_dop.length === get().types_dop.length
+              ? cached.data.orders
+              : get().filterOrdersByTypes(cached.data.orders, get().type_dop),
+            limit_summ: cached.data.limit ?? '',
+            limit_count: cached.data.limit_count ?? '',
+            home: cached.data.home ?? get().home,
+            activeOrdersSavedAt: cached.savedAt,
+            showingSavedOrders: true,
+          });
+          useGlobalStore.getState().setSpinner(false);
+        }
+      }
       const json = await api<GetOrdersResponse>('orders', data);
+      if (!isCurrent()) return;
+
 
       if( json.st === false ){
         Analytics.log(AnalyticsEvent.OrdersFetchFail, 'Ошибка при получении списка заказов');
@@ -1041,10 +1070,16 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
       }
 
       if (json.data?.orders) {
+        if (type.id === 1) {
+          const savedAt = Date.now();
+          const saved = await saveActiveOrders(token, json.data, savedAt);
+          if (!isCurrent()) return;
+          set({ activeOrdersSavedAt: saved ? savedAt : null, showingSavedOrders: false });
+        }
         let orders = json.data?.orders;
 
-        if( type.id == 1 && type_dop.length !== types_dop.length ){
-          orders = get().filterOrdersByTypes(orders, type_dop);
+        if( type.id == 1 && get().type_dop.length !== get().types_dop.length ){
+          orders = get().filterOrdersByTypes(orders, get().type_dop);
         }
 
         const nextHome = json.data?.home
@@ -1074,7 +1109,15 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
     } catch (err) {
       console.log(err);
       Analytics.log(AnalyticsEvent.OrdersFetchFail, 'Ошибка при получении списка заказов');
+    } finally {
+      useGlobalStore.getState().setSpinnerHidden(false);
+      if (!isCurrent()) {
+        set({ is_check: false });
+        useGlobalStore.getState().setSpinner(false);
+        void get().getOrders();
+      }
     }
+    if (!isCurrent()) return;
 
     setTimeout(() => {
       set({
@@ -1090,7 +1133,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
   selectType: (item: TypeOrder) => {
     Analytics.log(AnalyticsEvent.OrderSelect, 'Выбор типа заказа');
 
-    set({type: item});
+    set({type: item, orders: [], showingSavedOrders: false, activeOrdersSavedAt: null});
     get().getOrders(true);
   },
 

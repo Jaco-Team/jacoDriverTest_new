@@ -47,7 +47,7 @@
 import queryString from 'query-string';
 import axios from 'axios';
 
-export type ApiResponse<T = any> = { st: boolean; text: string; data?: T };
+export type ApiResponse<T = any> = { st: boolean; text: string; data?: T; networkError?: boolean };
 
 // режим моков только для модуля "orders"
 type FakeOrdersMode = 'off' | 'actions';
@@ -122,7 +122,8 @@ export async function api<T>(module: string = '', data: Record<string, any> = {}
 
   // 2) ВСЁ ОСТАЛЬНОЕ — РЕАЛЬНЫЙ БЭК
   try {
-    const response = await axios.post(URL_API + module, queryString.stringify(data));
+    const response = await axios.post(URL_API + module, queryString.stringify(data),
+      ['get_orders', 'check_token'].includes(data.type) ? { timeout: 15000 } : undefined);
 
     if (typeof response.data === 'string') {
       return { st: false, text: response.data };
@@ -136,7 +137,8 @@ export async function api<T>(module: string = '', data: Record<string, any> = {}
 
     return { st: payload?.st ?? true, text: payload?.text ?? '', data: payload as T };
   } catch (error: any) {
-    return { st: false, text: error?.message || 'Произошла неизвестная ошибка' };
+    return { st: false, text: error?.message || 'Произошла неизвестная ошибка',
+      networkError: !error?.response && ['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT'].includes(error?.code) };
   }
 }
 

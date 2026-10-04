@@ -1,4 +1,6 @@
 import React from 'react'
+import { Text } from 'react-native';
+import { useOrdersStore } from '@/shared/store/store';
 
 import { useOrdersList } from '../model/useOrdersList'
 import { OrdersList } from './OrdersList'
@@ -12,6 +14,8 @@ import { ScreenLayout } from '@/shared/ui/ScreenLayout'
 
 export function OrdersListScreen() {
   const dialCall = useDialCall();
+  const savedAt = useOrdersStore(state => state.activeOrdersSavedAt);
+  const showingSaved = useOrdersStore(state => state.showingSavedOrders);
   
   const { orders, getOrders, update_interval, actionButtonOrder, setActiveConfirm, FormatPrice, showAlertText, globalFontSize } = useOrdersList()
 
@@ -19,6 +23,12 @@ export function OrdersListScreen() {
 
   return (
     <ScreenLayout>
+      {savedAt && (
+        <Text accessibilityRole="text" style={{ padding: 12, color: '#555', backgroundColor: '#fff3cd' }}>
+          {showingSaved ? 'Сохранённые заказы. Данные могут быть устаревшими.' : 'Активные заказы сохранены для просмотра без интернета.'}
+          {'\n'}Обновлено: {new Date(savedAt).toLocaleString('ru-RU')}
+        </Text>
+      )}
       
       <OrdersList 
         orders={orders}

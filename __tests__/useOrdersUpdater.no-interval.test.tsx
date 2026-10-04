@@ -15,7 +15,7 @@ import { render, act } from '@testing-library/react-native';
 jest.mock('react-native', () => ({
   Platform: { OS: 'ios', select: (s: any) => ('ios' in s ? s.ios : s.default) },
   AppState: {
-    addEventListener: (_: any, __: any) => ({ remove: () => {} }),
+    addEventListener: jest.fn((_: any, __: any) => ({ remove: jest.fn() })),
   },
 }));
 
@@ -85,6 +85,20 @@ describe('useOrdersUpdater: поведение интервала', () => {
       jest.advanceTimersByTime(60_000);
     });
     expect(getOrders).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes on foreground even with auto refresh disabled and removes the listener', () => {
+    const { AppState } = require('react-native');
+    const getOrders = jest.fn();
+    const { unmount } = render(<TestComp getOrders={getOrders} interval={0} />);
+    const listener = AppState.addEventListener.mock.calls[0][1];
+    const subscription = AppState.addEventListener.mock.results[0].value;
+    act(() => listener('background'));
+    expect(getOrders).toHaveBeenCalledTimes(1);
+    act(() => listener('active'));
+    expect(getOrders).toHaveBeenCalledTimes(2);
+    unmount();
+    expect(subscription.remove).toHaveBeenCalledTimes(1);
   });
 
   it('при interval>0: тикает по интервалу и останавливается после unmount', () => {

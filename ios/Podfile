@@ -93,6 +93,12 @@ target 'jacoDriverTest' do
     # Xcode 26.x / modern toolchain workarounds for RN 0.77 native deps.
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |build_config|
+        # Resource bundles also need a deployment target supported by Xcode.
+        minimum_ios = Gem::Version.new(min_ios_version_supported)
+        deployment_target = build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if deployment_target.nil? || Gem::Version.new(deployment_target) < minimum_ios
+          build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = minimum_ios.to_s
+        end
         build_config.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
         build_config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
 
