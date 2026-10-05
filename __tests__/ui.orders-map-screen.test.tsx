@@ -23,7 +23,10 @@ const mockMapLogic = {
   handleMapLoaded: jest.fn(),
   retryMap: jest.fn(),
   shouldRenderMap: true,
+  isOffline: false,
 }
+const mockMapMount = jest.fn()
+const mockMapUnmount = jest.fn()
 
 const mockTheme = {
   colors: {
@@ -44,9 +47,13 @@ jest.mock('@/features/orders-map/model/useMapLogic', () => ({
 jest.mock('react-native-yamap-plus', () => {
   const React = require('react')
   const { View } = require('react-native')
-  return React.forwardRef(({ children, ...props }: any, ref: any) =>
-    React.createElement(View, { ...props, ref, testID: 'native-yandex-map' }, children),
-  )
+  return React.forwardRef(({ children, ...props }: any, ref: any) => {
+    React.useEffect(() => {
+      mockMapMount()
+      return mockMapUnmount
+    }, [])
+    return React.createElement(View, { ...props, ref, testID: 'native-yandex-map' }, children)
+  })
 })
 
 jest.mock('@fortawesome/react-native-fontawesome', () => {
@@ -75,8 +82,11 @@ jest.mock('@/features/orders-map/ui/Limit', () => ({
 }))
 jest.mock('@/features/orders-map/ui/ListOrders', () => ({
   ListOrders: () => null,
+  OrderMarkerImageSources: () => null,
+  useOrderMarkerImages: () => ({images: {}, onImage: jest.fn(), setImages: jest.fn()}),
 }))
 jest.mock('@/features/orders-map/ui/HomeMarker', () => ({
+  HomeMarkerImage: () => null,
   HomeMarker: ({ point }: any) => {
     const React = require('react')
     const { View } = require('react-native')
@@ -98,6 +108,7 @@ jest.mock('@/features/orders-map/ui/OrdersMapCompass', () => ({
 }))
 
 import { MapScreen } from '@/features/orders-map/ui/MapScreen'
+import {ConnectivityContext} from '@/shared/lib/connectivityContext'
 
 describe('экран карты заказов', () => {
   beforeEach(() => {
@@ -106,6 +117,9 @@ describe('экран карты заказов', () => {
     mockMapLogic.driver_location_requesting = false
     mockMapLogic.set_type_location.mockClear()
     mockTheme.isDark = false
+    mockMapLogic.isOffline = false
+    mockMapMount.mockClear()
+    mockMapUnmount.mockClear()
   })
 
   it('занимает всю доступную область и сохраняет собственные элементы карты', async () => {
@@ -200,5 +214,47 @@ describe('экран карты заказов', () => {
     })
 
     expect(screen.getByTestId('native-yandex-map').props.nightMode).toBe(true)
+  })
+
+  it('показывает офлайн-плашку поверх карты без изменения её геометрии и пересоздания', async () => {
+    function Probe() {
+      return <ConnectivityContext.Provider value={mockMapLogic.isOffline}>
+        <MapScreen />
+      </ConnectivityContext.Provider>
+    }
+    const view = await render(<Probe />)
+    await fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
+      nativeEvent: {layout: {width: 390, height: 700}},
+    })
+    const mapStyle = screen.getByTestId('native-yandex-map').props.style
+    const viewportStyle = screen.getByTestId('orders-map-viewport').props.style
+    expect(screen.getByTestId('orders-map-viewport')).toHaveStyle({flex: 1})
+    expect(viewportStyle.width).toBeUndefined()
+    expect(viewportStyle.height).toBeUndefined()
+
+    for (let cycle = 0; cycle < 3; cycle++) {
+      mockMapLogic.isOffline = true
+      await view.rerender(<Probe />)
+      expect(screen.getByText('Нет подключения к интернету')).toBeTruthy()
+      expect(screen.getByTestId('orders-map-offline-banner')).toHaveStyle({
+        position: 'absolute', top: 0, left: 0, right: 0,
+      })
+      expect(screen.getByTestId('orders-map-offline-banner').props.pointerEvents).toBe('none')
+      await fireEvent(screen.getByTestId('orders-map-offline-banner'), 'layout', {
+        nativeEvent: {layout: {height: 64}},
+      })
+      expect(screen.getByTestId('orders-map-rotation-lock')).toHaveStyle({top: 74})
+      expect(screen.queryByTestId('orders-map-driver-location')).toBeNull()
+      expect(screen.getByTestId('native-yandex-map').props.style).toEqual(mapStyle)
+      expect(screen.getByTestId('orders-map-viewport').props.style).toEqual(viewportStyle)
+
+      mockMapLogic.isOffline = false
+      await view.rerender(<Probe />)
+      expect(screen.queryByTestId('orders-map-offline-banner')).toBeNull()
+      expect(screen.getByTestId('orders-map-rotation-lock')).toHaveStyle({top: 10})
+      expect(screen.getByTestId('orders-map-driver-location')).toBeTruthy()
+    }
+    expect(mockMapMount).toHaveBeenCalledTimes(1)
+    expect(mockMapUnmount).not.toHaveBeenCalled()
   })
 })

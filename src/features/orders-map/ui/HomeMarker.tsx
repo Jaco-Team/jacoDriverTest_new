@@ -1,36 +1,54 @@
-import React, { memo } from 'react'
-import { Platform } from 'react-native'
+import React, {memo} from 'react';
+import {faHouse} from '@fortawesome/free-solid-svg-icons';
+import {Marker} from 'react-native-yamap-plus';
+import type {MapPointHouse} from '../model/types';
+import {MeasuredMarkerImage, type MarkerBitmap} from './MeasuredMarkerImage';
 
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import { faHouse } from '@fortawesome/free-solid-svg-icons'
+const [viewBoxWidth, viewBoxHeight, , , path] = faHouse.icon;
 
-import { Marker } from 'react-native-yamap-plus'
+export const HomeMarkerImage = memo(function HomeMarkerImage({
+  isDark,
+  onImage,
+}: {
+  isDark: boolean;
+  onImage: (image: MarkerBitmap) => void;
+}) {
+  return (
+    <MeasuredMarkerImage
+      signature={`home:${isDark}`}
+      text=""
+      fontSize={16}
+      theme="transparent"
+      isDark={isDark}
+      icon={{
+        path: Array.isArray(path) ? path[0] : path,
+        viewBoxWidth,
+        viewBoxHeight,
+        width: 20,
+        height: 20,
+        color: isDark ? '#FFFFFF' : '#000000',
+      }}
+      testID="orders-map-home-image"
+      onImage={onImage}
+    />
+  );
+});
 
-import { MapPointHouse } from '../model/types'
-
-type HomeMarkerProps = MapPointHouse & { isDark: boolean }
-
-export const HomeMarker = memo(function MapPointHouse({point, getHome, isDark}: HomeMarkerProps){
-
+export const HomeMarker = memo(function HomeMarker({
+  point,
+  getHome,
+  image,
+}: MapPointHouse & {isDark: boolean; image?: MarkerBitmap | null}) {
   return (
     <Marker
-      key={Platform.OS === 'ios' ? (isDark ? 'home-dark' : 'home-light') : undefined}
+      handled
+      strictTapBounds
       point={point}
       onPress={getHome}
-      children={
-        <FontAwesomeIcon
-          color={isDark ? '#FFFFFF' : '#000000'}
-          icon={faHouse}
-          size={20}
-          testID="orders-map-home-icon"
-        />
-      }
+      source={image?.source}
+      anchor={image?.anchor}
+      visible={Boolean(image)}
+      testID="orders-map-home-marker"
     />
-  )
-}, areEqual2)
-
-function areEqual2(prevProps: HomeMarkerProps, nextProps: HomeMarkerProps) {
-  return prevProps.isDark === nextProps.isDark &&
-    prevProps.getHome === nextProps.getHome &&
-    JSON.stringify(prevProps.point) === JSON.stringify(nextProps.point)
-}
+  );
+});

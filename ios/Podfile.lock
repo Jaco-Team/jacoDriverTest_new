@@ -22,97 +22,101 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - AppMetricaAdSupport (5.16.0):
-    - AppMetricaCore (= 5.16.0)
-    - AppMetricaCoreExtension (= 5.16.0)
-  - AppMetricaAnalytics (5.16.0):
-    - AppMetricaAdSupport (= 5.16.0)
-    - AppMetricaCore (= 5.16.0)
-    - AppMetricaCrashes (= 5.16.0)
-    - AppMetricaIDSync (= 5.16.0)
-    - AppMetricaScreenshot (= 5.16.0)
-    - AppMetricaWebKit (= 5.16.0)
-  - AppMetricaCore (5.16.0):
-    - AppMetricaCoreUtils (= 5.16.0)
-    - AppMetricaEncodingUtils (= 5.16.0)
-    - AppMetricaFMDB (= 5.16.0)
-    - AppMetricaHostState (= 5.16.0)
-    - AppMetricaIdentifiers (= 5.16.0)
-    - AppMetricaKeychain (= 5.16.0)
-    - AppMetricaLog (= 5.16.0)
-    - AppMetricaNetwork (= 5.16.0)
-    - AppMetricaPlatform (= 5.16.0)
-    - AppMetricaProtobuf (= 5.16.0)
-    - AppMetricaProtobufUtils (= 5.16.0)
-    - AppMetricaStorageUtils (= 5.16.0)
-  - AppMetricaCoreExtension (5.16.0):
-    - AppMetricaCore (= 5.16.0)
-    - AppMetricaStorageUtils (= 5.16.0)
-  - AppMetricaCoreUtils (5.16.0):
-    - AppMetricaLog (= 5.16.0)
-  - AppMetricaCrashes (5.16.0):
-    - AppMetricaCore (= 5.16.0)
-    - AppMetricaCoreExtension (= 5.16.0)
-    - AppMetricaCoreUtils (= 5.16.0)
-    - AppMetricaEncodingUtils (= 5.16.0)
-    - AppMetricaHostState (= 5.16.0)
-    - AppMetricaLog (= 5.16.0)
-    - AppMetricaPlatform (= 5.16.0)
-    - AppMetricaProtobufUtils (= 5.16.0)
-    - AppMetricaStorageUtils (= 5.16.0)
-    - KSCrash/Recording (< 2.2.0, >= 2.1.0)
-  - AppMetricaEncodingUtils (5.16.0):
-    - AppMetricaCoreUtils (= 5.16.0)
-    - AppMetricaLog (= 5.16.0)
-    - AppMetricaPlatform (= 5.16.0)
-  - AppMetricaFMDB (5.16.0)
-  - AppMetricaHostState (5.16.0):
-    - AppMetricaCoreUtils (= 5.16.0)
-    - AppMetricaLog (= 5.16.0)
-  - AppMetricaIdentifiers (5.16.0):
-    - AppMetricaKeychain (= 5.16.0)
-    - AppMetricaLogSwift (= 5.16.0)
-    - AppMetricaPlatform (= 5.16.0)
-    - AppMetricaStorageUtils (= 5.16.0)
-    - AppMetricaSynchronization (= 5.16.0)
-  - AppMetricaIDSync (5.16.0):
-    - AppMetricaCore (= 5.16.0)
-    - AppMetricaCoreExtension (= 5.16.0)
-    - AppMetricaCoreUtils (= 5.16.0)
-    - AppMetricaLog (= 5.16.0)
-    - AppMetricaNetwork (= 5.16.0)
-    - AppMetricaPlatform (= 5.16.0)
-    - AppMetricaStorageUtils (= 5.16.0)
-  - AppMetricaKeychain (5.16.0):
-    - AppMetricaCoreUtils (= 5.16.0)
-    - AppMetricaLog (= 5.16.0)
-    - AppMetricaStorageUtils (= 5.16.0)
-  - AppMetricaLog (5.16.0)
-  - AppMetricaLogSwift (5.16.0):
-    - AppMetricaLog (= 5.16.0)
-  - AppMetricaNetwork (5.16.0):
-    - AppMetricaCoreUtils (= 5.16.0)
-    - AppMetricaLog (= 5.16.0)
-    - AppMetricaPlatform (= 5.16.0)
-  - AppMetricaPlatform (5.16.0):
-    - AppMetricaCoreUtils (= 5.16.0)
-    - AppMetricaLog (= 5.16.0)
-  - AppMetricaProtobuf (5.16.0)
-  - AppMetricaProtobufUtils (5.16.0):
-    - AppMetricaProtobuf (= 5.16.0)
-  - AppMetricaScreenshot (5.16.0):
-    - AppMetricaCore (= 5.16.0)
-    - AppMetricaCoreExtension (= 5.16.0)
-    - AppMetricaStorageUtils (= 5.16.0)
-  - AppMetricaStorageUtils (5.16.0):
-    - AppMetricaCoreUtils (= 5.16.0)
-    - AppMetricaLog (= 5.16.0)
-  - AppMetricaSynchronization (5.16.0):
-    - AppMetricaLogSwift (= 5.16.0)
-  - AppMetricaWebKit (5.16.0):
-    - AppMetricaCore (= 5.16.0)
-    - AppMetricaCoreUtils (= 5.16.0)
-    - AppMetricaLog (= 5.16.0)
+  - AppMetricaAdSupport (6.7.0):
+    - AppMetricaCore (= 6.7.0)
+    - AppMetricaCoreExtension (= 6.7.0)
+  - AppMetricaAnalytics (6.7.0):
+    - AppMetricaAdSupport (= 6.7.0)
+    - AppMetricaCore (= 6.7.0)
+    - AppMetricaCrashes (= 6.7.0)
+    - AppMetricaIDSync (= 6.7.0)
+    - AppMetricaScreenshot (= 6.7.0)
+    - AppMetricaWebKit (= 6.7.0)
+  - AppMetricaCore (6.7.0):
+    - AppMetricaCoreUtils (= 6.7.0)
+    - AppMetricaEncodingUtils (= 6.7.0)
+    - AppMetricaFMDB (= 6.7.0)
+    - AppMetricaHostState (= 6.7.0)
+    - AppMetricaIdentifiers (= 6.7.0)
+    - AppMetricaKeychain (= 6.7.0)
+    - AppMetricaLog (= 6.7.0)
+    - AppMetricaNetwork (= 6.7.0)
+    - AppMetricaPlatform (= 6.7.0)
+    - AppMetricaProtobuf (= 6.7.0)
+    - AppMetricaProtobufUtils (= 6.7.0)
+    - AppMetricaStorageUtils (= 6.7.0)
+    - AppMetricaSynchronization (= 6.7.0)
+  - AppMetricaCoreExtension (6.7.0):
+    - AppMetricaCore (= 6.7.0)
+    - AppMetricaStorageUtils (= 6.7.0)
+  - AppMetricaCoreUtils (6.7.0):
+    - AppMetricaLog (= 6.7.0)
+  - AppMetricaCrashes (6.7.0):
+    - AppMetricaCore (= 6.7.0)
+    - AppMetricaCoreExtension (= 6.7.0)
+    - AppMetricaCoreUtils (= 6.7.0)
+    - AppMetricaEncodingUtils (= 6.7.0)
+    - AppMetricaHostState (= 6.7.0)
+    - AppMetricaLog (= 6.7.0)
+    - AppMetricaPlatform (= 6.7.0)
+    - AppMetricaProtobuf (= 6.7.0)
+    - AppMetricaProtobufUtils (= 6.7.0)
+    - AppMetricaStorageUtils (= 6.7.0)
+    - KSCrash/Recording (< 2.6.0, >= 2.5.1)
+  - AppMetricaEncodingUtils (6.7.0):
+    - AppMetricaCoreUtils (= 6.7.0)
+    - AppMetricaLog (= 6.7.0)
+    - AppMetricaPlatform (= 6.7.0)
+  - AppMetricaFMDB (6.7.0)
+  - AppMetricaHostState (6.7.0):
+    - AppMetricaCoreUtils (= 6.7.0)
+    - AppMetricaLog (= 6.7.0)
+  - AppMetricaIdentifiers (6.7.0):
+    - AppMetricaKeychain (= 6.7.0)
+    - AppMetricaLogSwift (= 6.7.0)
+    - AppMetricaPlatform (= 6.7.0)
+    - AppMetricaStorageUtils (= 6.7.0)
+    - AppMetricaSynchronization (= 6.7.0)
+  - AppMetricaIDSync (6.7.0):
+    - AppMetricaCore (= 6.7.0)
+    - AppMetricaCoreExtension (= 6.7.0)
+    - AppMetricaCoreUtils (= 6.7.0)
+    - AppMetricaLog (= 6.7.0)
+    - AppMetricaNetwork (= 6.7.0)
+    - AppMetricaPlatform (= 6.7.0)
+    - AppMetricaStorageUtils (= 6.7.0)
+  - AppMetricaKeychain (6.7.0):
+    - AppMetricaCoreUtils (= 6.7.0)
+    - AppMetricaLog (= 6.7.0)
+    - AppMetricaStorageUtils (= 6.7.0)
+  - AppMetricaLog (6.7.0)
+  - AppMetricaLogSwift (6.7.0):
+    - AppMetricaLog (= 6.7.0)
+  - AppMetricaNetwork (6.7.0):
+    - AppMetricaCoreUtils (= 6.7.0)
+    - AppMetricaLog (= 6.7.0)
+    - AppMetricaPlatform (= 6.7.0)
+  - AppMetricaPlatform (6.7.0):
+    - AppMetricaCoreUtils (= 6.7.0)
+    - AppMetricaLog (= 6.7.0)
+  - AppMetricaProtobuf (6.7.0)
+  - AppMetricaProtobufUtils (6.7.0):
+    - AppMetricaProtobuf (= 6.7.0)
+  - AppMetricaScreenshot (6.7.0):
+    - AppMetricaCore (= 6.7.0)
+    - AppMetricaCoreExtension (= 6.7.0)
+    - AppMetricaLog (= 6.7.0)
+    - AppMetricaStorageUtils (= 6.7.0)
+  - AppMetricaStorageUtils (6.7.0):
+    - AppMetricaCoreUtils (= 6.7.0)
+    - AppMetricaLog (= 6.7.0)
+  - AppMetricaSynchronization (6.7.0):
+    - AppMetricaLogSwift (= 6.7.0)
+  - AppMetricaWebKit (6.7.0):
+    - AppMetricaCore (= 6.7.0)
+    - AppMetricaCoreExtension (= 6.7.0)
+    - AppMetricaCoreUtils (= 6.7.0)
+    - AppMetricaLog (= 6.7.0)
   - AsyncStorage (3.1.1):
     - hermes-engine
     - RCTRequired
@@ -227,53 +231,53 @@ PODS:
   - GoogleDataTransport (10.1.1):
     - nanopb (~> 3.30910.0)
     - PromisesObjC (~> 2.4)
-  - GoogleUtilities (8.1.2):
-    - GoogleUtilities/AppDelegateSwizzler (= 8.1.2)
-    - GoogleUtilities/Environment (= 8.1.2)
-    - GoogleUtilities/Logger (= 8.1.2)
-    - GoogleUtilities/MethodSwizzler (= 8.1.2)
-    - GoogleUtilities/Network (= 8.1.2)
-    - "GoogleUtilities/NSData+zlib (= 8.1.2)"
-    - GoogleUtilities/Privacy (= 8.1.2)
-    - GoogleUtilities/Reachability (= 8.1.2)
-    - GoogleUtilities/SwizzlerTestHelpers (= 8.1.2)
-    - GoogleUtilities/UserDefaults (= 8.1.2)
-  - GoogleUtilities/AppDelegateSwizzler (8.1.2):
+  - GoogleUtilities (8.1.4):
+    - GoogleUtilities/AppDelegateSwizzler (= 8.1.4)
+    - GoogleUtilities/Environment (= 8.1.4)
+    - GoogleUtilities/Logger (= 8.1.4)
+    - GoogleUtilities/MethodSwizzler (= 8.1.4)
+    - GoogleUtilities/Network (= 8.1.4)
+    - "GoogleUtilities/NSData+zlib (= 8.1.4)"
+    - GoogleUtilities/Privacy (= 8.1.4)
+    - GoogleUtilities/Reachability (= 8.1.4)
+    - GoogleUtilities/SwizzlerTestHelpers (= 8.1.4)
+    - GoogleUtilities/UserDefaults (= 8.1.4)
+  - GoogleUtilities/AppDelegateSwizzler (8.1.4):
     - GoogleUtilities/Environment
     - GoogleUtilities/Logger
     - GoogleUtilities/Network
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Environment (8.1.2):
+  - GoogleUtilities/Environment (8.1.4):
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Logger (8.1.2):
+  - GoogleUtilities/Logger (8.1.4):
     - GoogleUtilities/Environment
     - GoogleUtilities/Privacy
-  - GoogleUtilities/MethodSwizzler (8.1.2):
+  - GoogleUtilities/MethodSwizzler (8.1.4):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Network (8.1.2):
+  - GoogleUtilities/Network (8.1.4):
     - GoogleUtilities/Logger
     - "GoogleUtilities/NSData+zlib"
     - GoogleUtilities/Privacy
     - GoogleUtilities/Reachability
-  - "GoogleUtilities/NSData+zlib (8.1.2)":
+  - "GoogleUtilities/NSData+zlib (8.1.4)":
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Privacy (8.1.2)
-  - GoogleUtilities/Reachability (8.1.2):
+  - GoogleUtilities/Privacy (8.1.4)
+  - GoogleUtilities/Reachability (8.1.4):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
-  - GoogleUtilities/SwizzlerTestHelpers (8.1.2):
+  - GoogleUtilities/SwizzlerTestHelpers (8.1.4):
     - GoogleUtilities/MethodSwizzler
-  - GoogleUtilities/UserDefaults (8.1.2):
+  - GoogleUtilities/UserDefaults (8.1.4):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
   - hermes-engine (250829098.0.17):
     - hermes-engine/Pre-built (= 250829098.0.17)
   - hermes-engine/Pre-built (250829098.0.17)
-  - KSCrash/Core (2.1.2)
-  - KSCrash/Recording (2.1.2):
+  - KSCrash/Core (2.5.1)
+  - KSCrash/Recording (2.5.1):
     - KSCrash/RecordingCore
-  - KSCrash/RecordingCore (2.1.2):
+  - KSCrash/RecordingCore (2.5.1):
     - KSCrash/Core
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
@@ -1579,7 +1583,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context (5.10.0):
+  - react-native-safe-area-context (5.10.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1592,8 +1596,8 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-safe-area-context/common (= 5.10.0)
-    - react-native-safe-area-context/fabric (= 5.10.0)
+    - react-native-safe-area-context/common (= 5.10.1)
+    - react-native-safe-area-context/fabric (= 5.10.1)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -1603,7 +1607,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/common (5.10.0):
+  - react-native-safe-area-context/common (5.10.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1625,7 +1629,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/fabric (5.10.0):
+  - react-native-safe-area-context/fabric (5.10.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2196,7 +2200,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNReanimated (4.6.0):
+  - RNReanimated (4.7.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2218,36 +2222,12 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNReanimated/apple (= 4.6.0)
-    - RNReanimated/common (= 4.6.0)
-    - RNReanimated/view (= 4.6.0)
+    - RNReanimated/apple (= 4.7.1)
+    - RNReanimated/common (= 4.7.1)
+    - RNReanimated/view (= 4.7.1)
     - RNWorklets
     - Yoga
-  - RNReanimated/apple (4.6.0):
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
-    - React-bridging
-    - React-Core
-    - React-Core-prebuilt
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-hermes
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - RNWorklets
-    - Yoga
-  - RNReanimated/common (4.6.0):
+  - RNReanimated/apple (4.7.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2271,7 +2251,31 @@ PODS:
     - ReactNativeDependencies
     - RNWorklets
     - Yoga
-  - RNReanimated/view (4.6.0):
+  - RNReanimated/common (4.7.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - RNWorklets
+    - Yoga
+  - RNReanimated/view (4.7.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2342,7 +2346,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSentry (8.27.0):
+  - RNSentry (8.29.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2432,7 +2436,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNWorklets (0.12.2):
+  - RNWorklets (0.13.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2454,10 +2458,10 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNWorklets/apple (= 0.12.2)
-    - RNWorklets/common (= 0.12.2)
+    - RNWorklets/apple (= 0.13.0)
+    - RNWorklets/common (= 0.13.0)
     - Yoga
-  - RNWorklets/apple (0.12.2):
+  - RNWorklets/apple (0.13.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2480,7 +2484,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNWorklets/common (0.12.2):
+  - RNWorklets/common (0.13.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2911,28 +2915,28 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   appmetrica-react-native-analytics: f38631057ae1bb0c92b5571bfe4148f06ef1f4c2
-  AppMetricaAdSupport: b1f4371eb11db6386dd021d9470029900e3eb26c
-  AppMetricaAnalytics: 59679f27df598fd82109401059acb079a6982e3d
-  AppMetricaCore: 22721f501af9959747d289b2c7c2aeb6c7d24a27
-  AppMetricaCoreExtension: 45a2b2e691256b8390012684ed663ecbc0c076dc
-  AppMetricaCoreUtils: 0d50f3d4cd7c2c0d521d070e0cc2af4d9892b10d
-  AppMetricaCrashes: 059614d0a488af9ad4eeb24ecf870ed8fd7c26e4
-  AppMetricaEncodingUtils: 2c69440565bed6ce13150825443e90aeede39a79
-  AppMetricaFMDB: 5c05b5f7b4fcc2ef63749df069050d07c129d8d8
-  AppMetricaHostState: b3bfb7fa920ce5172a365fd37974f436ee6fb9fe
-  AppMetricaIdentifiers: 13bf75fa7fe0ba180f673b76024f9db7445706ef
-  AppMetricaIDSync: 53ad71e0f7bb7c5ebfa7f4e9ceb370cd67210362
-  AppMetricaKeychain: 9ce8e22af9792732c2a5f913cbd24b702cc542e1
-  AppMetricaLog: b570ba93b6cbdb2c43189edf00c9afa0adb84ee9
-  AppMetricaLogSwift: 7dc596d8c90ce2dee1bda678b6ae1840a37d3ff9
-  AppMetricaNetwork: 6132d1a0686c884790bc28409bb650b1315824b9
-  AppMetricaPlatform: 16237b1e9877d7d9dcb1e3c088f366b8160fa8f5
-  AppMetricaProtobuf: bcbc3129457aeeaae860c6d818f4ea416bffc0ce
-  AppMetricaProtobufUtils: a54dfffbae870daad8a73d2bd8f0d328da94717b
-  AppMetricaScreenshot: 4582401cf9e5c85bd22b2c0adbae96249c9a6eb0
-  AppMetricaStorageUtils: defb3063fbf63c18aab8d54d87269348325816dc
-  AppMetricaSynchronization: 459495f1c9bc10754375ef2b84e427085b3060a6
-  AppMetricaWebKit: ea18edee9a1f742f0015888ec97b64e215f88b65
+  AppMetricaAdSupport: ae102d50ef327694fc3dfd037e99cc3001f69514
+  AppMetricaAnalytics: 75d99121e8443a8cadb53b0b9b7382b44d432da6
+  AppMetricaCore: 9fdc4092715cc146ef4431c36e9f05244155de34
+  AppMetricaCoreExtension: 8d7ef25283904df7d69ce8b758219ee264ccadaa
+  AppMetricaCoreUtils: 4d82b9b252d206cf50dbe4cf78252dbe1644f199
+  AppMetricaCrashes: 9edb55cf62f85220b018b934825e4c1abe01ac29
+  AppMetricaEncodingUtils: 41a89c75e828fbf531d64e573be43934714e39e6
+  AppMetricaFMDB: da309b1511f6235768019538a2ad3bf74f71b24f
+  AppMetricaHostState: 3e376324f5b8d9475d90e213894620009e990350
+  AppMetricaIdentifiers: a6989640208acb1b4074e9cb13c91365fbbf2730
+  AppMetricaIDSync: dae939b1c8bedf0f9f1e2e8ce8d8f791505ae52f
+  AppMetricaKeychain: 9901fe665108f443c0f95f4817effa5c222d39c5
+  AppMetricaLog: 0df09f49e49dd8080653a4804d0d847d1a0ded48
+  AppMetricaLogSwift: d0ec6209e0fc3dbe3e28b7ded6c6029d31b29860
+  AppMetricaNetwork: 89c68d39d00b60884779513d4dca416bdc333a84
+  AppMetricaPlatform: 14492fec367cb64e72fa454f20f864d8cf6a4785
+  AppMetricaProtobuf: 66dea6ea38643767fa2ff8f325759d00f048b5fc
+  AppMetricaProtobufUtils: 07b4b3a8fb46893c5802ff77a48d74b71cb27b55
+  AppMetricaScreenshot: bf2888e42eaabf90f1df99dc5d1d8f3785eba83d
+  AppMetricaStorageUtils: c1148b73b0376dceaa2519817283e01523d488a2
+  AppMetricaSynchronization: 95008c50199fe81d3cb3ea989a1c32f3588dcfef
+  AppMetricaWebKit: 5f3097383502a99dda6c9ee00338b3653f42b665
   AsyncStorage: f0453c14a52d22d3f6184284c55f2117fbfd9954
   boost: 8502bfdc46e2804408af2e163049ece181009af4
   DoubleConversion: 501a575c40c0b50c89685762dd3e415e6bb26fb0
@@ -2950,9 +2954,9 @@ SPEC CHECKSUMS:
   GoogleAdsOnDeviceConversion: e3b71da24ff4cf01cf520756ac1c2b93c07b86ff
   GoogleAppMeasurement: d70df385587c4175fc0836c11e413d5cbcaa3c7b
   GoogleDataTransport: a24e58982ab3ba2f64d79613e027fe7f57e88539
-  GoogleUtilities: 766ace00c6b10d8148408f329d10c4f051931850
+  GoogleUtilities: db34c1c11c6f2eccb6fab2340cb8ceb1451299dc
   hermes-engine: 63c5db7d529c36335fada6582fd293ae2a105d77
-  KSCrash: bd950ede6c40a50bfc9f246c38a7f3408705fa3c
+  KSCrash: 8c4464fd5da7de520f2ce4a00fdf63f169a80f18
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
   RCT-Folly: 82921e585c0400eda46fac1068297aa9dfb035e4
@@ -2998,7 +3002,7 @@ SPEC CHECKSUMS:
   react-native-geolocation: 4df18d46fa149833c615b98082a9598c2f0521a1
   react-native-image-picker: 870b31525256975a2d4b6b20a54db9b380cd725d
   react-native-netinfo: 58601963060e4df0c1b6b6980d4f24ce2751e64c
-  react-native-safe-area-context: b3e507b0dbfb44dfadb29f7a31e884ac13789723
+  react-native-safe-area-context: f2bf5d3db254014a48910436c4a58ab0c4e2fe1f
   react-native-webview: f189adab64d5d71cec3b9e9ec3261355376ec7a2
   React-NativeModulesApple: adb1dd8361dff80e9f6652fb3fdbf033cfbe2a89
   React-networking: c00b437c4408f0640ba0d4158357133488521eca
@@ -3046,12 +3050,12 @@ SPEC CHECKSUMS:
   RNKeychain: 551d42b0ef53426f82551a0cc961cfa10ad33afa
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
   RNPermissions: 030c8b97e5d08eb6a1d3ccee9793ec8e1ef2313d
-  RNReanimated: a40a23cfa56063c9b0c7af8794c847c0ddf8a99c
+  RNReanimated: 962c39a486cedec1b3bb97af4028c42aaa4d24a7
   RNScreens: 038dc998fe1ab34778d9e8f4a33318a6c7a5bde8
-  RNSentry: 0dedcb1fc90c37e03d9de23846d6954f196dd7dd
+  RNSentry: 0edaabede9eab155e3357d80cbd6e4c8befd1397
   RNSVG: 6c9bcbf53822153be6f6c1484f6b0b57c0040d21
   RNVectorIcons: 4f353aed7dde2ecfc77da4130afce046d147ae8a
-  RNWorklets: e00d9fe0f91ef81e6056248566c84501506ad539
+  RNWorklets: 941265f848d4f2a906a0ed4ba64e6671cf54d34e
   RNYamap: 366000728b7df192c26777f13d1fe0460cb846c9
   SocketRocket: 37aec555668fb852ec12e3c0de59a86ca58f0871
   YandexMapsMobile: 4a8373e97ea85fecde5d04bfde2d05bb365e7ee2
@@ -3059,4 +3063,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: 3d320c7ac543f306983e1d6bb4fa139fd9a1901e
 
-COCOAPODS: 1.16.2
+COCOAPODS: 1.17.0

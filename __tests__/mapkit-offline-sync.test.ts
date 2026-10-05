@@ -8,6 +8,7 @@ import {
 } from '@/features/orders-map/model/mapKitOfflineSync';
 import type {Order} from '@/shared/store/OrdersStoreType';
 import type {XY} from '@/shared/types/globalTypes';
+import {useOfflineMapStore} from '@/features/offline-map/model/offlineMap.store';
 
 jest.mock('@/shared/lib/yaMapInit', () => ({
   initYaMap: jest.fn(async () => true),
@@ -33,6 +34,7 @@ function savedRegistry() {
 describe('MapKit offline region sync', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useOfflineMapStore.setState({hydrated: true, cities: {}});
     storage.getItem.mockResolvedValue(null);
     storage.setItem.mockResolvedValue(undefined);
     netInfo.fetch.mockResolvedValue({
@@ -117,6 +119,30 @@ describe('MapKit offline region sync', () => {
 
     expect(native.getOfflineRegionsAtPoint).toHaveBeenCalledTimes(1);
     expect(native.getOfflineRegionStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it('respects a manually paused or deleted city package', async () => {
+    useOfflineMapStore.setState({cities: {samara: {regionId: 51, status: 'available', progress: 0, managed: true, autoResume: false}}});
+    await scheduleMapKitOfflineSync({pointId: 107, home, orders: [order]});
+    expect(native.getOfflineRegionsAtPoint).not.toHaveBeenCalled();
+    expect(native.startOfflineRegionDownload).not.toHaveBeenCalled();
+  });
+
+  it('reselects the region after a failed coverage change instead of reusing the old region', async () => {
+    const disk = new Map<string, string>();
+    storage.getItem.mockImplementation(async key => disk.get(key) ?? null);
+    storage.setItem.mockImplementation(async (key, value) => {disk.set(key, value);});
+    native.getOfflineRegionsAtPoint
+      .mockResolvedValueOnce(JSON.stringify([{id: 2, name: 'Old', sizeBytes: 1000}]))
+      .mockRejectedValueOnce(new Error('Catalog temporarily unavailable'))
+      .mockResolvedValue(JSON.stringify([{id: 3, name: 'New', sizeBytes: 2000}]));
+    native.getOfflineRegionStatus.mockImplementation(async id => JSON.stringify({id, state: 'completed', progress: 1}));
+    jest.spyOn(console, 'info').mockImplementation(() => undefined);
+    await scheduleMapKitOfflineSync({pointId: 108, home, orders: []});
+    const changedHome = {lat: 53.3, lon: 50.2} as XY;
+    await scheduleMapKitOfflineSync({pointId: 108, home: changedHome, orders: []});
+    await scheduleMapKitOfflineSync({pointId: 108, home: changedHome, orders: []});
+    expect(JSON.parse(disk.get(MAPKIT_OFFLINE_REGISTRY_STORAGE_KEY)!).points['point:108'].regionId).toBe(3);
   });
 
   it('records unsupported errors and delays retry for unchanged coverage', async () => {

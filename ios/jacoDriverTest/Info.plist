@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.yourcompany.yourapp.yourTaskIdentifier</string>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>ru</string>
 	<key>CFBundleDisplayName</key>
@@ -16,6 +20,10 @@
 	<string>$(APP_DISPLAY_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -27,10 +35,6 @@
 			</array>
 		</dict>
 	</array>
-	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSApplicationQueriesSchemes</key>
@@ -49,25 +53,23 @@
 		<key>NSExceptionDomains</key>
 		<dict/>
 	</dict>
-
-	
-	
+	<key>NSCameraUsageDescription</key>
+	<string>Это приложение требует доступа к камере для съемки изображений и видео.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Приложению необходим доступ к геолокации для отслеживания маршрута и определения местоположения курьера в реальном времени.</string>
-
 	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
 	<dict>
-	<key>DeliveryServicePurpose</key>
-	<string>Для временного доступа к вашему местоположению во время выполнения доставки.</string>
+		<key>DeliveryServicePurpose</key>
+		<string>Для временного доступа к вашему местоположению во время выполнения доставки.</string>
 	</dict>
-
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Приложению нужен доступ к местоположению во время работы для навигации и расчета маршрута доставки.</string>
-
-	
 	<key>NSMotionUsageDescription</key>
 	<string>Приложению требуется доступ к данным о движении для отслеживания активности и оптимизации маршрута.</string>
-
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Это приложение требует доступа к вашей фототеке для выбора изображений и видео.</string>
+	<key>RCTNewArchEnabled</key>
+	<true/>
 	<key>UIAppFonts</key>
 	<array>
 		<string>AntDesign.ttf</string>
@@ -94,6 +96,23 @@
 		<string>Roboto-Bold.ttf</string>
 		<string>Roboto-Black.ttf</string>
 	</array>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
@@ -101,8 +120,6 @@
 		<string>location</string>
 		<string>remote-notification</string>
 	</array>
-	<key>RCTNewArchEnabled</key>
-	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
@@ -115,16 +132,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>com.yourcompany.yourapp.yourTaskIdentifier</string>
-	</array>
-
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Это приложение требует доступа к вашей фототеке для выбора изображений и видео.</string>
-
-	<key>NSCameraUsageDescription</key>
-	<string>Это приложение требует доступа к камере для съемки изображений и видео.</string>
 </dict>
 </plist>

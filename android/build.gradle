@@ -5,7 +5,8 @@ buildscript {
         compileSdkVersion = 37
         targetSdkVersion  = 36
         ndkVersion        = "29.0.14206865"
-        kotlinVersion     = "2.2.0"
+        // AGP resolves Kotlin 2.2.10; AsyncStorage selects matching KSP from this value.
+        kotlinVersion     = "2.2.10"
     }
     repositories {
         google()

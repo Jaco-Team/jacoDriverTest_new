@@ -41,6 +41,7 @@ import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
 import { useSettingsLogic } from '../model/useSettingsLogic'
 import { MapPointTheme } from './MapPointTheme'
 import { MapPointTime } from './MapPointTime'
+import { OfflineCityMapsSettings } from '@/features/offline-map/ui/OfflineCityMapsSettings'
 
 const PRESET_COLORS = [
   '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3',
@@ -335,6 +336,10 @@ export function SettingsScreen(): React.JSX.Element {
           <Text style={[styles.helperText, { fontSize: helperFontSize, marginTop: 6, marginBottom: 0 }]}>
             Тема карты меняется вместе с темой приложения.
           </Text>
+        </SettingsCard>
+
+        <SettingsCard testID="settings-offline-maps-card">
+          <OfflineCityMapsSettings fontSize={normalizedFontSize} />
         </SettingsCard>
 
         <SettingsCard testID="settings-map-data-card">

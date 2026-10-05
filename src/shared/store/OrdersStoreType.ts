@@ -44,6 +44,7 @@ export interface OrdersStore {
 
   showOrders: Array<Order>,
   isOpenOrderMap: boolean,
+  mapOrderSession: number,
 
   types_dop: Array<types_dop>,
   type_dop: string[],
@@ -65,7 +66,7 @@ export interface OrdersStore {
   actionOrder: (params: actionOrderType) => Promise<void>,
   actionOrderFake: (params: actionOrderFakeType) => Promise<void>,
   setActiveConfirm: (active: boolean, order_id?: number, type_confirm?: typeConfirm, order_confirm_is_delete?: boolean) => void,
-  showOrdersMap: (id: number) => void,
+  showOrdersMap: (id: number, expectedSession?: number) => void,
   requestMapHomeCenter: (force?: boolean) => void,
 }
 

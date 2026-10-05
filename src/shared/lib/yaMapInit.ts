@@ -1,7 +1,8 @@
 import { Platform } from 'react-native'
 import { YamapInstance } from 'react-native-yamap-plus'
 
-export const YAMAP_API_KEY = 'b18f9642-b69f-47d9-b60d-e443b6dd77cd'
+// Babel reads the root .env (or CI variable) and embeds the key at build time.
+export const YAMAP_API_KEY = process.env.YAMAP_API_KEY!
 
 let initPromise: Promise<boolean> | null = null
 

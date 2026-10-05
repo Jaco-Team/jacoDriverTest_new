@@ -145,6 +145,7 @@ jest.mock('@/features/feedback/ui/FeedbackScreen', () => ({
 }));
 
 import { MainDrawerNavigator } from '@/app/navigation/MainDrawerNavigator';
+import {ConnectivityContext} from '@/shared/lib/connectivityContext';
 
 function setPlatform(os: 'android' | 'ios'): void {
   Object.defineProperty(Platform, 'OS', {
@@ -210,5 +211,20 @@ describe('системные области бокового меню', () => {
     expect(options.drawerType).toBe('front');
     expect(options.drawerHideStatusBarOnOpen).toBe(true);
     expect(options.drawerStatusBarAnimation).toBe('fade');
+  });
+
+  it.each(['Map', 'List_orders'])('офлайн-плашка не меняет заголовок карты: %s', async routeName => {
+    const view = await render(<MainDrawerNavigator />);
+    const options = mockDrawerNavigatorProps.screenOptions({navigation: {openDrawer: jest.fn()}});
+    await view.rerender(
+      <ConnectivityContext.Provider value={true}>
+        {options.header({options: {title: routeName}, route: {name: routeName}})}
+      </ConnectivityContext.Provider>,
+    );
+    if (routeName === 'Map') {
+      expect(view.queryByTestId('offline-status-banner')).toBeNull();
+    } else {
+      expect(view.getByTestId('offline-status-banner')).toBeTruthy();
+    }
   });
 });

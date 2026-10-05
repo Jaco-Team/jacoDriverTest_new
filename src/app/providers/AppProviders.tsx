@@ -16,6 +16,12 @@ import {ModalText} from '@/shared/ui/ModalText';
 import {ConnectivityProvider} from '@/shared/ui/ConnectivityLocationIndicator';
 import {AppThemeProvider, useAppTheme} from '@/shared/theme/AppThemeProvider';
 import {useGlobalStore} from '@/shared/store/store';
+import {useOfflineCityDownloads} from '@/features/offline-map/model/useOfflineCityDownloads';
+
+function OfflineCityDownloads() {
+  useOfflineCityDownloads();
+  return null;
+}
 
 function ThemedAppProviders({children}: {children: ReactNode}) {
   const {colors} = useAppTheme()
@@ -39,6 +45,7 @@ function ThemedAppProviders({children}: {children: ReactNode}) {
         <BottomSheetModalProvider>
           <UiProvider>
             <ConnectivityProvider>
+              <OfflineCityDownloads />
               <NavigationProvider>
                 {children}
 

@@ -18,13 +18,14 @@ jest.mock('react-native-yamap-plus', () => {
   const { View } = require('react-native')
 
   return {
-    Marker: ({ point, scale, source, visible }: any) =>
+    Marker: ({ point, scale, source, visible, anchor }: any) =>
       React.createElement(View, {
         testID: 'orders-map-driver-native-marker',
         point,
         scale,
         source,
         visible,
+        anchor,
       }),
   }
 })
@@ -61,10 +62,11 @@ jest.mock('react-native-svg', () => {
   }
 })
 
+import {getMarkerCaptureSize} from '@/features/orders-map/ui/MeasuredMarkerImage'
+
 import {
   DriverMarker,
   DriverMarkerImage,
-  getDriverMarkerCaptureSize,
   getDriverMarkerNativeScale,
   getMarkerPalette,
   type DriverMarkerImageSource,
@@ -133,6 +135,9 @@ describe('DriverMarker', () => {
     )
 
     await act(async () => {
+      fireEvent(screen.getByTestId('orders-map-driver-marker-source-measure'), 'textLayout', {nativeEvent: {lines: [{width: 40, height: 19, ascender: 15}]}})
+    })
+    await act(async () => {
       fireEvent(screen.getByTestId('orders-map-driver-svg'), 'layout')
     })
 
@@ -140,17 +145,19 @@ describe('DriverMarker', () => {
       const marker = screen.getByTestId('orders-map-driver-native-marker')
       expect(marker.props.point).toEqual({ lon: 49.40071, lat: 53.529781 })
       expect(marker.props.scale).toBe(1)
+      expect(marker.props.anchor.x * 84).toBeCloseTo(12)
+      expect(marker.props.anchor.y).toBe(0.5)
       expect(marker.props.source).toEqual({
         uri: 'data:image/png;base64,driver-marker-base64',
       })
     })
-    expect(mockSvgCaptureOptions).toEqual({ width: 96, height: 32 })
-    expect(screen.getByText('16:10').props.fontSize).toBe(16)
-    expect(screen.getByText('16:10').props.fontWeight).toBe('400')
+    expect(mockSvgCaptureOptions).toEqual({ width: 84, height: 32 })
+    expect(screen.getAllByText('16:10').find(node => node.props.fontSize === 16)).toBeTruthy()
+    expect(screen.getAllByText('16:10').find(node => node.props.fontWeight === '400')).toBeTruthy()
   })
 
   it('компенсирует плотность Android для PNG и резервной метки', () => {
-    expect(getDriverMarkerCaptureSize(32, 'android', 3.75)).toEqual({
+    expect(getMarkerCaptureSize(96, 32, 'android', 3.75)).toEqual({
       width: 360,
       height: 120,
     })

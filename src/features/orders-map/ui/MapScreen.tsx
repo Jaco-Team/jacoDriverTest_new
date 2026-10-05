@@ -1,6 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
-  Dimensions,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -26,8 +25,9 @@ import {
 } from '@/components/ui/slider';
 
 import {TypeLimit} from './Limit';
-import {ListOrders} from './ListOrders';
-import {HomeMarker} from './HomeMarker';
+import {ListOrders, OrderMarkerImageSources, useOrderMarkerImages} from './ListOrders';
+import {HomeMarker, HomeMarkerImage} from './HomeMarker';
+import type {MarkerBitmap} from './MeasuredMarkerImage';
 import {ModalOrder} from './ModalOrder';
 import {
   DriverMarker,
@@ -37,7 +37,6 @@ import {
 import {ModalFilterOrders} from './ModalFilterOrders';
 import {OrdersMapCompass} from './OrdersMapCompass';
 
-const {width, height} = Dimensions.get('window');
 const MAP_CONTROL_RIGHT = 20;
 
 import {useMapLogic} from '../model/useMapLogic';
@@ -51,6 +50,7 @@ import {
 import {Center} from '@/components/ui/center';
 import {Spinner} from '@/components/ui/spinner';
 import {useAppTheme} from '@/shared/theme/AppThemeProvider';
+import {ConnectivityLocationIndicator} from '@/shared/ui/ConnectivityLocationIndicator';
 
 export function MapScreen() {
   const {colors, isDark} = useAppTheme();
@@ -77,7 +77,11 @@ export function MapScreen() {
     retryMap,
     shouldRenderMap,
   } = useMapLogic();
-  const [hasViewport, setHasViewport] = useState(false);
+  const [homeMarkerImage, setHomeMarkerImage] = useState<MarkerBitmap | null>(null);
+  const orderMarkerImages = useOrderMarkerImages();
+  const [viewportSize, setViewportSize] = useState({width: 0, height: 0});
+  const hasViewport = viewportSize.width > 1 && viewportSize.height > 1;
+  const [offlineBannerHeight, setOfflineBannerHeight] = useState(48);
   const [driverMarkerImage, setDriverMarkerImage] =
     useState<DriverMarkerImageSource | null>(null);
   const [mapViewport, setMapViewport] = useState<MapViewport | null>(null);
@@ -128,12 +132,22 @@ export function MapScreen() {
     setMapViewport(null);
   }, [mapInstanceKey]);
 
-  const mtop = (height - 300) / 4;
+  const controlsTop = isOffline ? offlineBannerHeight + 10 : 10;
+  const mtop = Math.max(controlsTop + 50, (viewportSize.height - 300) / 4);
 
   return (
     <View
       style={[styles1.root, {backgroundColor: colors.surface}]}
       testID="orders-map-screen">
+      {isOffline ? (
+        <View
+          pointerEvents="none"
+          style={styles1.offlineBanner}
+          testID="orders-map-offline-banner"
+          onLayout={event => setOfflineBannerHeight(event.nativeEvent.layout.height)}>
+          <ConnectivityLocationIndicator />
+        </View>
+      ) : null}
       {!(is_showModalTypeDop || isOpenOrderMap) && is_scaleMap == 1 && (
         <Slider
           value={zoom}
@@ -158,7 +172,9 @@ export function MapScreen() {
         </Slider>
       )}
 
+      <HomeMarkerImage isDark={isDark} onImage={setHomeMarkerImage} />
       <DriverMarkerImage onImage={setDriverMarkerImage} />
+      <OrderMarkerImageSources onImage={orderMarkerImages.onImage} setImages={orderMarkerImages.setImages} />
 
       <TouchableOpacity
         accessibilityLabel={
@@ -171,7 +187,7 @@ export function MapScreen() {
           backgroundColor: 'transparent',
           position: 'absolute',
           left: 10,
-          top: 10,
+          top: controlsTop,
           zIndex: 22,
           padding: 10,
         }}
@@ -258,7 +274,11 @@ export function MapScreen() {
         testID="orders-map-viewport"
         onLayout={event => {
           const {width, height} = event.nativeEvent.layout;
-          setHasViewport(width > 1 && height > 1);
+          setViewportSize(current =>
+            current.width === width && current.height === height
+              ? current
+              : {width, height},
+          );
         }}>
         {shouldRenderMap && hasViewport ? (
           <YaMap
@@ -276,9 +296,9 @@ export function MapScreen() {
             onMapLoaded={handleLoadedMap}
             onCameraPositionChangeEnd={updateMapViewport}
             collapsable={false}>
-            {validHome && <HomeMarker point={validHome} getHome={getHome} isDark={isDark} />}
+            {validHome && <HomeMarker point={validHome} getHome={getHome} isDark={isDark} image={homeMarkerImage} />}
             <DriverMarker image={driverMarkerImage} />
-            <ListOrders />
+            <ListOrders images={orderMarkerImages.images} />
           </YaMap>
         ) : (
           <Center className="w-full h-full">
@@ -312,7 +332,12 @@ export const styles1 = StyleSheet.create({
   },
   ymap: {
     flex: 1,
-    width: width,
-    height: height,
+  },
+  offlineBanner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 201,
   },
 });

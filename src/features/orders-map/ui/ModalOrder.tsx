@@ -25,7 +25,7 @@ import { appPalette } from '@/shared/styles/appPalette'
 import { useModalOrderLogic } from '../model/useModalOrderLogic'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
-export const ModalOrder = (): React.JSX.Element => {
+export const ModalOrder = (): React.JSX.Element | null => {
   const insets = useSafeAreaInsets()
   const { colors } = useAppTheme()
   const {
@@ -39,6 +39,7 @@ export const ModalOrder = (): React.JSX.Element => {
     setActiveConfirm,
     dialCall,
     isBusy,
+    mapOrderSession,
   } = useModalOrderLogic()
   const isDeleted =
     showOrders.length > 0 &&
@@ -46,11 +47,16 @@ export const ModalOrder = (): React.JSX.Element => {
   const sheetBackground = isDeleted ? ORDER_CARD_DELETED_BG : colors.surfaceRaised
 
   function close(): void {
-    if (!isBusy) showOrdersMap(-1)
+    if (!isBusy) showOrdersMap(-1, mapOrderSession)
   }
 
+  // Unmount the overlay immediately; a cancelled exit animation must not
+  // leave an invisible touch interceptor over the map. Sessions also isolate
+  // rapid close/open updates that React batches into one render.
+  if (!isOpenOrderMap) return null
+
   return (
-    <Actionsheet isOpen={isOpenOrderMap} onClose={close}>
+    <Actionsheet key={mapOrderSession} isOpen={isOpenOrderMap} onClose={close}>
       <ActionsheetBackdrop testID="order-map-backdrop" />
       <ActionsheetContent
         style={[styles.sheet, { borderColor: colors.border, backgroundColor: sheetBackground }]}

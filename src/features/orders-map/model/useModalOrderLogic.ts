@@ -16,6 +16,7 @@ export function useModalOrderLogic() {
     setActiveConfirm,
     isClick,
     isLoad,
+    mapOrderSession,
   ] =
     useOrdersStore(
       useShallow((state) => [
@@ -26,6 +27,7 @@ export function useModalOrderLogic() {
         state.setActiveConfirm,
         state.isClick,
         state.is_load,
+        state.mapOrderSession,
       ])
     )
 
@@ -43,6 +45,7 @@ export function useModalOrderLogic() {
     setActiveConfirm,
     dialCall,
     isBusy: isClick || isLoad,
+    mapOrderSession,
   }
 }
 

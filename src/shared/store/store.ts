@@ -1793,6 +1793,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
   showOrders: [],
   isOpenOrderMap: false,
+  mapOrderSession: 0,
 
   // показ модалки выбора доп. типов заказов
   showModalTypeDop: (is_show: boolean) => {
@@ -2451,8 +2452,10 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
   },
 
   // открытие заказа на карте
-  showOrdersMap: (id: number) => {
+  showOrdersMap: (id: number, expectedSession?: number) => {
     if (id === -1) {
+      const current = get();
+      if (expectedSession !== undefined && (current.isClick || current.is_load || current.mapOrderSession !== expectedSession)) return;
       // логируем закрытие ТОЛЬКО если реально было открыто
       if (get().isOpenOrderMap) {
         Analytics.log(AnalyticsEvent.OrderMapClose, 'Закрытие заказа на карте');
@@ -2467,6 +2470,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
     const order = get().orders.find(item => item.id === id);
 
     if (order) {
+      if (get().isOpenOrderMap && get().showOrders.some(item => item.id === id)) return;
       const new_orders = get().orders.filter(
         item => item.addr === order.addr && item.pd === order.pd,
       );
@@ -2476,6 +2480,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
       set({
         showOrders: new_orders,
         isOpenOrderMap: true,
+        mapOrderSession: get().mapOrderSession + 1,
       });
     }
   },

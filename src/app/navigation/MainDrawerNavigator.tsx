@@ -200,7 +200,7 @@ export function MainDrawerNavigator() {
                   })}
                 </View>
               </View>
-              <ConnectivityLocationIndicator />
+              {route.name !== 'Map' ? <ConnectivityLocationIndicator /> : null}
             </View>
           ),
           headerLeft: () => (

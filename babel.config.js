@@ -1,3 +1,17 @@
+const {readMapKitApiKey} = require('./scripts/mapkit-env.cjs');
+
+function inlineMapKitKey({types}) {
+  return {
+    visitor: {
+      MemberExpression(path, state) {
+        if (path.matchesPattern('process.env.YAMAP_API_KEY')) {
+          path.replaceWith(types.stringLiteral(state.opts.apiKey));
+        }
+      },
+    },
+  };
+}
+
 module.exports = function (api) {
   const isTest = api.env('test');
   api.cache(true);
@@ -5,9 +19,15 @@ module.exports = function (api) {
   return {
     presets: [
       'module:@react-native/babel-preset',
-      ...(!isTest ? ['nativewind/babel'] : []),
     ],
+    // Framework internals (LogBox, Pressable, nested Text) must keep React's
+    // own JSX runtime. NativeWind's wrappers can swallow their callback styles.
+    overrides: !isTest ? [{
+      exclude: /[\\/]node_modules[\\/]react-native[\\/]/,
+      presets: ['nativewind/babel'],
+    }] : [],
     plugins: [
+      [inlineMapKitKey, {apiKey: isTest ? 'test-mapkit-api-key' : readMapKitApiKey()}],
       [
         'transform-inline-environment-variables',
         { include: ['JACO_LARAVEL_API'] },

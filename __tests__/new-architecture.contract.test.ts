@@ -18,15 +18,15 @@ describe('New Architecture contract', () => {
     );
   });
 
-  it('держит RN 0.87, Reanimated 4.6, Worklets 0.12 и yamap-plus', () => {
+  it('держит RN 0.87, Reanimated 4.7, Worklets 0.13 и yamap-plus', () => {
     const pkg = JSON.parse(read('package.json')) as {
       dependencies: Record<string, string>;
     };
     const deps = pkg.dependencies;
 
     expect(deps['react-native']).toBe('0.87.1');
-    expect(deps['react-native-reanimated']).toBe('4.6.0');
-    expect(deps['react-native-worklets']).toBe('0.12.2');
+    expect(deps['react-native-reanimated']).toBe('4.7.1');
+    expect(deps['react-native-worklets']).toBe('0.13.0');
     expect(deps['react-native-yamap-plus']).toMatch(/^\^?6\.11/);
     expect(deps['react-native-screens']).toMatch(/^\^?4\.28/);
     expect(deps['react-native-gesture-handler']).toMatch(/^\^?3\.3/);

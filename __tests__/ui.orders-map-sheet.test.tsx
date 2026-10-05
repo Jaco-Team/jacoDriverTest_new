@@ -1,12 +1,15 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react-native'
+import { act, fireEvent, render, screen } from '@testing-library/react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 
 const mockShowOrdersMap = jest.fn()
 let mockLogic: any
+const mockSheetMount = jest.fn()
+const mockSheetUnmount = jest.fn()
+const mockSheetCallbacks: Array<() => void> = []
 
 jest.mock('@/features/orders-map/model/useModalOrderLogic', () => ({
-  useModalOrderLogic: () => mockLogic,
+  useModalOrderLogic: () => mockLogic ?? jest.requireActual('@/features/orders-map/model/useModalOrderLogic').useModalOrderLogic(),
 }))
 
 jest.mock('@/entities/CardOrder/ui/CardOrder', () => {
@@ -27,8 +30,13 @@ jest.mock('@/components/ui/actionsheet', () => {
   const { ScrollView, View } = require('react-native')
 
   return {
-    Actionsheet: ({ children, isOpen }: any) =>
-      isOpen ? React.createElement(View, null, children) : null,
+    // A real Actionsheet retains its overlay while exiting. Keep the mocked
+    // layer even when isOpen=false so this test detects hidden interceptors.
+    Actionsheet: ({ children, onClose }: any) => {
+      React.useEffect(() => { mockSheetMount(); return mockSheetUnmount }, [])
+      mockSheetCallbacks.push(onClose)
+      return React.createElement(View, {testID: 'retained-sheet-overlay'}, children)
+    },
     ActionsheetBackdrop: View,
     ActionsheetContent: View,
     ActionsheetDragIndicator: View,
@@ -37,7 +45,16 @@ jest.mock('@/components/ui/actionsheet', () => {
   }
 })
 
+jest.mock('react-native-yamap-plus', () => ({
+  Marker: require('react-native').View,
+}))
+
 import { ModalOrder } from '@/features/orders-map/ui/ModalOrder'
+import { OrderMarker } from '@/features/orders-map/ui/OrderMarker'
+import {useOrdersStore} from '@/shared/store/store'
+import {setAppOffline} from '@/shared/lib/connectivityState'
+import {ConnectivityContext} from '@/shared/lib/connectivityContext'
+import * as ApiModule from '@/shared/store/api'
 
 const metrics = {
   frame: { x: 0, y: 0, width: 390, height: 844 },
@@ -55,6 +72,7 @@ async function renderSheet() {
 describe('карточка заказа на карте', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockSheetCallbacks.length = 0
     mockLogic = {
       FormatPrice: (value: number) => String(value),
       globalFontSize: 16,
@@ -66,6 +84,7 @@ describe('карточка заказа на карте', () => {
       setActiveConfirm: jest.fn(),
       dialCall: jest.fn(),
       isBusy: false,
+      mapOrderSession: 1,
     }
   })
 
@@ -84,7 +103,7 @@ describe('карточка заказа на карте', () => {
     expect(screen.getByTestId('map-order-card-169340')).toBeTruthy()
 
     fireEvent.press(screen.getByTestId('order-map-sheet-handle'))
-    expect(mockShowOrdersMap).toHaveBeenCalledWith(-1)
+    expect(mockShowOrdersMap).toHaveBeenCalledWith(-1, 1)
   })
 
   it('блокирует закрытие и показывает спинер во время действия', async () => {
@@ -111,4 +130,80 @@ describe('карточка заказа на карте', () => {
 
     expect(screen.queryByTestId('order-map-sheet')).toBeNull()
   })
+})
+
+
+it('полностью удаляет перехватывающий слой при закрытии', async () => {
+  mockLogic = {FormatPrice: String, globalFontSize: 16, showAlertText: jest.fn(), showOrders: [{id: 1}], isOpenOrderMap: true, showOrdersMap: jest.fn(), actionButtonOrder: jest.fn(), setActiveConfirm: jest.fn(), dialCall: jest.fn(), isBusy: false, mapOrderSession: 1}
+  const probe = await renderSheet()
+  expect(probe.getByTestId('retained-sheet-overlay')).toBeTruthy()
+  mockLogic = {...mockLogic, isOpenOrderMap: false}
+  await probe.rerender(<SafeAreaProvider initialMetrics={metrics}><ModalOrder /></SafeAreaProvider>)
+  expect(probe.queryByTestId('retained-sheet-overlay')).toBeNull()
+  expect(mockSheetUnmount).toHaveBeenCalled()
+})
+
+it('защищает повторное открытие от старого close callback, включая React batching', async () => {
+  mockLogic = undefined
+  useOrdersStore.setState({isOpenOrderMap: false, mapOrderSession: 0, isClick: false, is_load: false, showOrders: [], orders: [{id: 1, addr: 'A', pd: '1'}] as any})
+  const probe = await renderSheet()
+  await act(async () => {useOrdersStore.getState().showOrdersMap(1)})
+  const oldClose = mockSheetCallbacks[mockSheetCallbacks.length - 1]
+  const mounts = mockSheetMount.mock.calls.length
+  await act(async () => {oldClose();useOrdersStore.getState().showOrdersMap(1)})
+  expect(mockSheetMount.mock.calls.length).toBe(mounts + 1)
+  await act(async () => {oldClose()})
+  expect(probe.getByTestId('order-map-sheet')).toBeTruthy()
+  const currentClose = mockSheetCallbacks[mockSheetCallbacks.length - 1]
+  await act(async () => {currentClose()})
+  expect(probe.queryByTestId('retained-sheet-overlay')).toBeNull()
+  await act(async () => {useOrdersStore.setState({orders: [], showOrders: [], isOpenOrderMap: false})})
+})
+
+it('без сети открывает сохранённые заказы по метке и выдерживает 100 циклов быстрых нажатий/закрытий', async () => {
+  mockLogic = undefined
+  const initial = useOrdersStore.getState()
+  const api = jest.spyOn(ApiModule, 'api')
+  const item = {id: 1, addr: 'A', pd: '1', xy: {lat: 53.2, lon: 50.1}} as any
+  setAppOffline(true)
+  useOrdersStore.setState({
+    orders: [item, {...item, id: 2}], showOrders: [],
+    isOpenOrderMap: false, mapOrderSession: 0, isClick: false, is_load: false,
+  })
+  try {
+    const probe = await render(
+      <ConnectivityContext.Provider value={true}>
+        <SafeAreaProvider initialMetrics={metrics}>
+          <OrderMarker item={item} theme="white_border" globalFontSize={16} mapScale={1}
+            showOrdersMap={useOrdersStore.getState().showOrdersMap}
+            image={{signature: 'offline', source: {uri: 'data:image/png;base64,a'}, width: 120, height: 30, anchor: {x: 10 / 120, y: 0.5}}} />
+          <ModalOrder />
+        </SafeAreaProvider>
+      </ConnectivityContext.Provider>,
+    )
+    for (let i = 0; i < 100; ++i) {
+      await fireEvent.press(probe.getByTestId('order-marker-1'))
+      expect(probe.getByTestId('map-order-card-1')).toBeTruthy()
+      expect(probe.getByTestId('map-order-card-2')).toBeTruthy()
+      const session = useOrdersStore.getState().mapOrderSession
+      const oldClose = mockSheetCallbacks[mockSheetCallbacks.length - 1]
+      await act(async () => {
+        const tap = probe.getByTestId('order-marker-1').props.onPress
+        for (let repeat = 0; repeat < 10; ++repeat) tap()
+      })
+      expect(useOrdersStore.getState().mapOrderSession).toBe(session)
+      await fireEvent.press(probe.getByTestId('order-map-sheet-handle'))
+      expect(probe.queryByTestId('retained-sheet-overlay')).toBeNull()
+      await fireEvent.press(probe.getByTestId('order-marker-1'))
+      await act(async () => { oldClose() })
+      expect(probe.getByTestId('map-order-card-1')).toBeTruthy()
+      await fireEvent.press(probe.getByTestId('order-map-sheet-handle'))
+      expect(probe.queryByTestId('retained-sheet-overlay')).toBeNull()
+    }
+    expect(api).not.toHaveBeenCalled()
+  } finally {
+    setAppOffline(false)
+    await act(async () => {useOrdersStore.setState(initial)})
+    api.mockRestore()
+  }
 })

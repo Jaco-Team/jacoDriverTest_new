@@ -500,6 +500,8 @@ jest.mock('react-native-yamap-plus', () => {
       JSON.stringify({id: 1, state: 'completed', progress: 1}),
     ),
     startOfflineRegionDownload: jest.fn(async () => undefined),
+    pauseOfflineRegionDownload: jest.fn(async () => undefined),
+    removeOfflineRegion: jest.fn(async () => undefined),
   };
   return {
     __esModule: true,

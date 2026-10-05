@@ -3,6 +3,8 @@ import NetInfo from '@react-native-community/netinfo';
 import {YamapInstance} from 'react-native-yamap-plus';
 
 import {initYaMap} from '@/shared/lib/yaMapInit';
+import {useOfflineMapStore} from '@/features/offline-map/model/offlineMap.store';
+import {findOfflineMapCity} from '@/features/offline-map/model/offlineMapCities';
 import type {Order} from '@/shared/store/OrdersStoreType';
 import type {XY} from '@/shared/types/globalTypes';
 import {isValidMapPoint, type MapPoint} from './mapPoint';
@@ -264,6 +266,13 @@ async function syncOnce(input: SyncInput): Promise<void> {
   if (network?.isConnected === false || network?.isInternetReachable === false)
     return;
 
+  await useOfflineMapStore.getState().hydrate();
+  const city = findOfflineMapCity(input.home);
+  const cityEntry = city ? useOfflineMapStore.getState().cities[city.id] : undefined;
+  // City downloads have explicit pause/delete controls. Automatic cafe sync
+  // must not restart a package the user has paused or removed.
+  if (cityEntry?.managed) return;
+
   const home = input.home;
   const points = buildCoveragePoints(home, input.orders);
   const coverageKey = getCoverageKey(points);
@@ -295,6 +304,7 @@ async function syncOnce(input: SyncInput): Promise<void> {
       region = await selectRegion(points);
     }
 
+    if (city && useOfflineMapStore.getState().cities[city.id]?.managed) return;
     const status = await ensureRegionDownloaded(region.id);
     const now = Date.now();
 
@@ -312,7 +322,7 @@ async function syncOnce(input: SyncInput): Promise<void> {
     const now = Date.now();
 
     await updateRegistry(pointKey, previous => ({
-      coverageKey,
+      coverageKey: previous?.coverageKey ?? coverageKey,
       lastAttemptAt: now,
       lastError: message,
       lastUsedAt: previous?.lastUsedAt ?? now,
