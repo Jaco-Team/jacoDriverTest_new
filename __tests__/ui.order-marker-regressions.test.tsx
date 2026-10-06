@@ -4,6 +4,7 @@ import type {Theme} from '@/shared/types/globalTypes';
 
 let mockIsDark = false;
 let mockLogic: any;
+let mockExportThrows = false;
 const mockMount = jest.fn();
 const mockUnmount = jest.fn();
 const mockCaptures: Array<{
@@ -35,8 +36,13 @@ jest.mock('react-native-svg', () => {
   const {View, Text} = require('react-native');
   const Svg = R.forwardRef((props: any, ref: any) => {
     R.useImperativeHandle(ref, () => ({
-      toDataURL: (callback: (value: string) => void, options: any) =>
-        mockCaptures.push({callback, options}),
+      toDataURL: (callback: (value: string) => void, options: any) => {
+        if (mockExportThrows) {
+          mockExportThrows = false;
+          throw new Error('SVG not ready');
+        }
+        mockCaptures.push({callback, options});
+      },
     }));
     return R.createElement(View, props, props.children);
   });
@@ -53,8 +59,13 @@ jest.mock('react-native-svg', () => {
 import {
   OrderMarker,
   OrderMarkerImage,
+  getOrderMarkerNativeScale,
 } from '@/features/orders-map/ui/OrderMarker';
-import {ListOrders} from '@/features/orders-map/ui/ListOrders';
+import {
+  ListOrders,
+  OrderMarkerImageSources,
+  useOrderMarkerImages,
+} from '@/features/orders-map/ui/ListOrders';
 import {
   getMarkerCaptureSize,
   type MarkerBitmap,
@@ -84,11 +95,18 @@ const base = {
 };
 
 beforeEach(() => {
+  jest.useFakeTimers();
   mockIsDark = false;
+  mockExportThrows = false;
   mockCaptures.length = 0;
   mockMount.mockClear();
   mockUnmount.mockClear();
   mockLogic = {...base, orders: [baseItem]};
+});
+
+afterEach(() => {
+  jest.clearAllTimers();
+  jest.useRealTimers();
 });
 
 it.each([
@@ -125,7 +143,9 @@ it.each([
       (theme === 'black' || theme === 'white_border' ? 2 : 0);
     expect(svg.props.width).toBe(expectedWidth);
     expect(svg.props.height).toBeGreaterThanOrEqual(41);
-    await fireEvent(svg, 'layout');
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(50);
+    });
     expect(mockCaptures).toHaveLength(1);
     await act(async () => {
       mockCaptures[0].callback('new');
@@ -149,7 +169,9 @@ it('отбрасывает запоздалый PNG и измерение пос
     'textLayout',
     {nativeEvent: {lines: [{width: 100, height: 19}]}},
   );
-  await fireEvent(probe.getByTestId('order-marker-image-1-svg'), 'layout');
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(50);
+  });
   await probe.rerender(
     <OrderMarkerImage
       {...base}
@@ -169,7 +191,9 @@ it('отбрасывает запоздалый PNG и измерение пос
     'textLayout',
     {nativeEvent: {lines: [{width: 120, height: 19}]}},
   );
-  await fireEvent(probe.getByTestId('order-marker-image-1-svg'), 'layout');
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(50);
+  });
   await act(async () => {
     mockCaptures[1].callback('latest');
   });
@@ -185,7 +209,9 @@ it('не отправляет PNG после удаления метки', async
     'textLayout',
     {nativeEvent: {lines: [{width: 100, height: 19}]}},
   );
-  await fireEvent(probe.getByTestId('order-marker-image-1-svg'), 'layout');
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(50);
+  });
   await probe.unmount();
   await act(async () => {
     mockCaptures[0].callback('late');
@@ -251,8 +277,16 @@ it('сохраняет размеры PNG с учётом плотности And
 });
 
 it.each(
-  (['classic', 'transparent', 'transparent_white', 'white', 'white_border', 'black'] as Theme[])
-    .flatMap(theme => [0, 1].map(closeTime => [theme, closeTime] as const)),
+  (
+    [
+      'classic',
+      'transparent',
+      'transparent_white',
+      'white',
+      'white_border',
+      'black',
+    ] as Theme[]
+  ).flatMap(theme => [0, 1].map(closeTime => [theme, closeTime] as const)),
 )(
   'держит значок на адресе при изменении длины подписи: %s, pin=%s',
   async (theme, closeTime) => {
@@ -264,44 +298,272 @@ it.each(
         onImage(next);
         setImage(next);
       }, []);
-      return <>
-        <OrderMarkerImage {...base} item={{...item, point_text: text}} theme={theme} globalFontSize={fontSize} onImage={acceptImage} />
-        <OrderMarker {...base} item={item} image={image} mapScale={1.8} />
-      </>;
+      return (
+        <>
+          <OrderMarkerImage
+            {...base}
+            item={{...item, point_text: text}}
+            theme={theme}
+            globalFontSize={fontSize}
+            onImage={acceptImage}
+          />
+          <OrderMarker {...base} item={item} image={image} mapScale={1.8} />
+        </>
+      );
     }
-    const probe = await render(<Probe text={baseItem.point_text} fontSize={16} />);
+    const probe = await render(
+      <Probe text={baseItem.point_text} fontSize={16} />,
+    );
 
     for (const [text, textWidth, fontSize, textHeight] of [
       ['18:56 (85 мин.)', 100, 16, 19],
       ['20:00 - 20:30 (94 мин.)', 320, 28, 33],
     ] as const) {
       await probe.rerender(<Probe text={text} fontSize={fontSize} />);
-      await fireEvent(probe.getByTestId('order-marker-image-1-measure'), 'textLayout', {
-        nativeEvent: {lines: [{width: textWidth, height: textHeight, ascender: fontSize}]},
+      await fireEvent(
+        probe.getByTestId('order-marker-image-1-measure'),
+        'textLayout',
+        {
+          nativeEvent: {
+            lines: [{width: textWidth, height: textHeight, ascender: fontSize}],
+          },
+        },
+      );
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(50);
       });
-      await fireEvent(probe.getByTestId('order-marker-image-1-svg'), 'layout');
-      await act(async () => {mockCaptures[mockCaptures.length - 1].callback('bitmap');});
-      const image: MarkerBitmap = onImage.mock.calls[onImage.mock.calls.length - 1][0];
+      await act(async () => {
+        mockCaptures[mockCaptures.length - 1].callback('bitmap');
+      });
+      const image: MarkerBitmap =
+        onImage.mock.calls[onImage.mock.calls.length - 1][0];
       const marker = probe.getByTestId('order-marker-1');
       const iconHeight = theme === 'classic' ? 28 : 20;
       const pin = theme === 'classic' || Boolean(closeTime);
-      const iconX = theme === 'classic' ? 20 * 75.66 / 183 : 10;
-      const iconY = theme === 'classic' ? 28 * 283.39 / 285 : (pin ? iconHeight : iconHeight / 2);
+      const iconX = theme === 'classic' ? (20 * 75.66) / 183 : 10;
+      const iconY =
+        theme === 'classic'
+          ? (28 * 283.39) / 285
+          : pin
+            ? iconHeight
+            : iconHeight / 2;
       expect(marker.props.point).toEqual(baseItem.xy);
       // The address must coincide with the icon, regardless of the label box or scale.
       expect(marker.props.anchor.x * image.width).toBeCloseTo(iconX);
-      expect(marker.props.anchor.y * image.height).toBeCloseTo((image.height - iconHeight) / 2 + iconY);
+      expect(marker.props.anchor.y * image.height).toBeCloseTo(
+        (image.height - iconHeight) / 2 + iconY,
+      );
     }
   },
 );
 
-
 it('при смене темы до первого layout использует актуальную палитру и исходное измерение того же текста', async () => {
-  const onImage = jest.fn(); const probe = await render(<OrderMarkerImage {...base} onImage={onImage} />);
-  const measure = probe.getByTestId('order-marker-image-1-measure').props.onTextLayout;
-  await probe.rerender(<OrderMarkerImage {...base} theme="black" onImage={onImage} />);
-  await act(async () => {measure({nativeEvent: {lines: [{width: 100, height: 19, ascender: 15}]}})});
-  await fireEvent(probe.getByTestId('order-marker-image-1-svg'), 'layout');
-  await act(async () => {mockCaptures[0].callback('black')});
+  const onImage = jest.fn();
+  const probe = await render(<OrderMarkerImage {...base} onImage={onImage} />);
+  const measure = probe.getByTestId('order-marker-image-1-measure').props
+    .onTextLayout;
+  await probe.rerender(
+    <OrderMarkerImage {...base} theme="black" onImage={onImage} />,
+  );
+  await act(async () => {
+    measure({nativeEvent: {lines: [{width: 100, height: 19, ascender: 15}]}});
+  });
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(50);
+  });
+  await act(async () => {
+    mockCaptures[0].callback('black');
+  });
   expect(onImage.mock.calls[0][0].signature).toContain('black');
+});
+
+it('показывает доступный для нажатия резервный значок до создания подписи', async () => {
+  const showOrdersMap = jest.fn();
+  const probe = await render(
+    <OrderMarker {...base} showOrdersMap={showOrdersMap} />,
+  );
+  const marker = probe.getByTestId('order-marker-1');
+  expect(marker.props.visible).toBe(true);
+  expect(marker.props.source).toBeTruthy();
+  expect(marker.props.anchor).toEqual({x: 0.5, y: 0.5});
+  fireEvent.press(marker);
+  expect(showOrdersMap).toHaveBeenCalledWith(1);
+});
+
+it.each(['empty', 'missing'])(
+  'восстанавливает изображение без обновления заказа, если SVG вернул %s ответ',
+  async failure => {
+    jest.useFakeTimers();
+    try {
+      const onImage = jest.fn();
+      const probe = await render(
+        <OrderMarkerImage {...base} onImage={onImage} />,
+      );
+      await fireEvent(
+        probe.getByTestId('order-marker-image-1-measure'),
+        'textLayout',
+        {
+          nativeEvent: {lines: [{width: 100, height: 19}]},
+        },
+      );
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(50);
+      });
+      if (failure === 'empty') {
+        await act(async () => {
+          mockCaptures[0].callback('');
+        });
+      }
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(600);
+      });
+      expect(mockCaptures.length).toBeGreaterThan(1);
+      await act(async () => {
+        mockCaptures[mockCaptures.length - 1].callback('recovered');
+      });
+      expect(onImage).toHaveBeenCalledTimes(1);
+      expect(onImage.mock.calls[0][0].source.uri).toContain('recovered');
+      await probe.unmount();
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  },
+);
+
+it('держит резервный значок одного размера на iOS и Android без сети', async () => {
+  const probe = await render(<OrderMarker {...base} />);
+  expect(probe.getByTestId('order-marker-1').props.source.uri).toMatch(
+    /^data:image\/png;base64,/,
+  );
+  expect(getOrderMarkerNativeScale(1, false, 'ios', 3) * 60).toBe(20);
+  expect((getOrderMarkerNativeScale(1, false, 'android', 3) * 60) / 3).toBe(20);
+  expect(getOrderMarkerNativeScale(1.8, true, 'android', 3)).toBe(1.8);
+});
+
+it('ограничивает число попыток и игнорирует старый ответ после повтора', async () => {
+  const onImage = jest.fn();
+  const probe = await render(<OrderMarkerImage {...base} onImage={onImage} />);
+  await fireEvent(
+    probe.getByTestId('order-marker-image-1-measure'),
+    'textLayout',
+    {
+      nativeEvent: {lines: [{width: 100, height: 19}]},
+    },
+  );
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(50);
+  });
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(500);
+  });
+  await act(async () => {
+    mockCaptures[0].callback('obsolete');
+  });
+  expect(onImage).not.toHaveBeenCalled();
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(5000);
+  });
+  expect(mockCaptures).toHaveLength(3);
+  await probe.unmount();
+  await act(async () => {
+    mockCaptures[2].callback('unmounted');
+  });
+  expect(onImage).not.toHaveBeenCalled();
+});
+
+it('повторяет пустой экспорт и очищает переносы строк в PNG', async () => {
+  const onImage = jest.fn();
+  const probe = await render(<OrderMarkerImage {...base} onImage={onImage} />);
+  await fireEvent(
+    probe.getByTestId('order-marker-image-1-measure'),
+    'textLayout',
+    {
+      nativeEvent: {lines: [{width: 100, height: 19}]},
+    },
+  );
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(50);
+  });
+  await act(async () => {
+    mockCaptures[0].callback('');
+  });
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(100);
+  });
+  await act(async () => {
+    mockCaptures[1].callback('bmV3\r\n');
+  });
+  expect(onImage.mock.calls[0][0].source.uri).toBe(
+    'data:image/png;base64,bmV3',
+  );
+});
+
+it('заменяет резервный значок подписью после повтора, сохраняя координаты и нажатие', async () => {
+  function Probe() {
+    const images = useOrderMarkerImages();
+    return (
+      <>
+        <OrderMarkerImageSources
+          onImage={images.onImage}
+          setImages={images.setImages}
+        />
+        <ListOrders images={images.images} />
+      </>
+    );
+  }
+  const probe = await render(<Probe />);
+  const fallbackSource = probe.getByTestId('order-marker-1').props.source;
+  await fireEvent(
+    probe.getByTestId('order-marker-image-1-measure'),
+    'textLayout',
+    {
+      nativeEvent: {lines: [{width: 100, height: 19}]},
+    },
+  );
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(50);
+  });
+  await act(async () => {
+    mockCaptures[0].callback('');
+  });
+  expect(probe.getByTestId('order-marker-1').props.source).toBe(fallbackSource);
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(100);
+  });
+  await act(async () => {
+    mockCaptures[1].callback('restored-label');
+  });
+  const marker = probe.getByTestId('order-marker-1');
+  expect(marker.props.visible).toBe(true);
+  expect(marker.props.source.uri).toBe('data:image/png;base64,restored-label');
+  expect(marker.props.point).toEqual(baseItem.xy);
+  expect(mockMount).toHaveBeenCalledTimes(1);
+  expect(mockUnmount).not.toHaveBeenCalled();
+  fireEvent.press(marker);
+  expect(mockLogic.showOrdersMap).toHaveBeenCalledWith(baseItem.id);
+});
+
+it('повторяет экспорт после исключения нативного SVG', async () => {
+  mockExportThrows = true;
+  const onImage = jest.fn();
+  const probe = await render(<OrderMarkerImage {...base} onImage={onImage} />);
+  await fireEvent(
+    probe.getByTestId('order-marker-image-1-measure'),
+    'textLayout',
+    {
+      nativeEvent: {lines: [{width: 100, height: 19}]},
+    },
+  );
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(50);
+  });
+  expect(mockCaptures).toHaveLength(0);
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(100);
+  });
+  await act(async () => {
+    mockCaptures[0].callback('recovered');
+  });
+  expect(onImage.mock.calls[0][0].source.uri).toContain('recovered');
 });

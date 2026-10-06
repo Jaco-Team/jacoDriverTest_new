@@ -230,6 +230,55 @@ describe('orders-map filters and getOrders', () => {
     expect(useOrdersStore.getState().ordersRefreshPending).toBe(false);
   });
 
+  it('не теряет новые заказы при запоздалом ответе после возврата в раздел', async () => {
+    let finishOld!: (value: any) => void;
+    let started!: () => void;
+    const oldStarted = new Promise<void>(resolve => { started = resolve; });
+    const response = (ids: number[]) => ({st: true, text: '', data: {
+      orders: ids.map(id => ({id, status: 'В очереди', xy: {lat: 53.2, lon: 50.1}})),
+    }});
+    mockApi.mockImplementationOnce(() => {
+      started();
+      return new Promise(resolve => { finishOld = resolve; });
+    }).mockResolvedValueOnce(response([20])).mockResolvedValueOnce(response([10, 11]));
+
+    const old = useOrdersStore.getState().getOrders(false);
+    await oldStarted;
+    await useOrdersStore.getState().selectType({id: 2, text: 'Мои отмеченные'});
+    await useOrdersStore.getState().selectType({id: 1, text: 'Активные'});
+    finishOld(response([10]));
+    await old;
+
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([10, 11]);
+    await jest.advanceTimersByTimeAsync(300);
+    setAppOffline(true);
+    await useOrdersStore.getState().selectType({id: 2, text: 'Мои отмеченные'});
+    await useOrdersStore.getState().selectType({id: 1, text: 'Активные'});
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([10, 11]);
+  });
+
+  it('фоновый ответ не скрывает новый заказ после открытия того же раздела', async () => {
+    let finishBackground!: (value: any) => void;
+    let started!: () => void;
+    const backgroundStarted = new Promise<void>(resolve => { started = resolve; });
+    mockApi.mockImplementationOnce(() => {
+      started();
+      return new Promise(resolve => { finishBackground = resolve; });
+    }).mockResolvedValueOnce({st: true, text: '', data: {orders: [{id: 20}, {id: 21}]}});
+    const background = useOrdersStore.getState().prefetchOrders(false);
+    await backgroundStarted;
+    await useOrdersStore.getState().selectType({id: 2, text: 'Мои отмеченные'});
+    finishBackground({st: true, text: '', data: {orders: [{id: 20}]}});
+    await background;
+
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([20, 21]);
+    await jest.advanceTimersByTimeAsync(300);
+    setAppOffline(true);
+    await useOrdersStore.getState().selectType({id: 1, text: 'Активные'});
+    await useOrdersStore.getState().selectType({id: 2, text: 'Мои отмеченные'});
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([20, 21]);
+  });
+
   it('getOrders: без сети сохраняет заказы и позволяет открыть их с карты', async () => {
     const orders = [{
       id: 10,

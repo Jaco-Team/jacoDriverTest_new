@@ -34,7 +34,11 @@ export interface MarkerIcon {
   anchor?: {x: number; y: number};
 }
 
-export function getMarkerAnchor(width: number, height: number, icon: MarkerIcon) {
+export function getMarkerAnchor(
+  width: number,
+  height: number,
+  icon: MarkerIcon,
+) {
   const anchor = icon.anchor ?? {x: 0.5, y: 0.5};
   return {
     x: (icon.width * anchor.x) / width,
@@ -114,6 +118,11 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
 }: Props) {
   const svgRef = useRef<React.ElementRef<typeof Svg>>(null);
   const captured = useRef('');
+  const requestId = useRef(0);
+  const pending = useRef(false);
+  const attempts = useRef(0);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const captureLatest = useRef<() => void>(() => undefined);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -158,28 +167,83 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
   const latestCaptureKey = useRef(captureKey);
   latestCaptureKey.current = captureKey;
 
+  const anchor = useMemo(
+    () => getMarkerAnchor(width, height, icon),
+    [width, height, icon],
+  );
+  const ready = Boolean(measured);
   const capture = useCallback(() => {
-    if (!measured || !svgRef.current || captured.current === captureKey) return;
-    captured.current = captureKey;
-    svgRef.current.toDataURL(
-      base64 => {
-        if (
-          !mounted.current ||
-          latestCaptureKey.current !== captureKey ||
-          !base64
-        )
-          return;
-        onImage({
-          signature,
-          source: {uri: `data:image/png;base64,${base64}`},
-          width,
-          height,
-          anchor: getMarkerAnchor(width, height, icon),
-        });
-      },
-      getMarkerCaptureSize(width, height),
-    );
-  }, [captureKey, height, icon, measured, onImage, signature, width]);
+    if (
+      !ready ||
+      !svgRef.current ||
+      captured.current === captureKey ||
+      pending.current ||
+      attempts.current >= 3
+    )
+      return;
+    pending.current = true;
+    attempts.current += 1;
+    const id = ++requestId.current;
+    const isCurrent = () =>
+      mounted.current &&
+      latestCaptureKey.current === captureKey &&
+      requestId.current === id;
+    const retry = () => {
+      if (!isCurrent()) return;
+      pending.current = false;
+      captureLatest.current();
+    };
+    // Some native exports never call back (e.g. the Fabric view is not ready).
+    retryTimer.current = setTimeout(retry, 500);
+    const failed = () => {
+      if (!isCurrent()) return;
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+      retryTimer.current = setTimeout(retry, 100);
+    };
+    try {
+      svgRef.current.toDataURL(
+        base64 => {
+          if (!isCurrent()) return;
+          const data = base64?.replace(/\s/g, '');
+          if (!data) {
+            failed();
+            return;
+          }
+          if (retryTimer.current) clearTimeout(retryTimer.current);
+          retryTimer.current = null;
+          pending.current = false;
+          captured.current = captureKey;
+          onImage({
+            signature,
+            source: {uri: `data:image/png;base64,${data}`},
+            width,
+            height,
+            anchor,
+          });
+        },
+        getMarkerCaptureSize(width, height),
+      );
+    } catch {
+      failed();
+    }
+  }, [anchor, captureKey, height, onImage, ready, signature, width]);
+  captureLatest.current = capture;
+
+  useEffect(() => {
+    pending.current = false;
+    attempts.current = 0;
+    // Export after Fabric commits the SVG bounds, even if onLayout was lost.
+    const initial = ready
+      ? setTimeout(() => captureLatest.current(), 50)
+      : null;
+    return () => {
+      if (initial) clearTimeout(initial);
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+      retryTimer.current = null;
+      pending.current = false;
+      requestId.current += 1;
+    };
+  }, [captureKey, ready]);
 
   return (
     <View
@@ -230,7 +294,6 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
           width={width}
           height={height}
           viewBox={`0 0 ${width} ${height}`}
-          onLayout={capture}
           testID={`${testID}-svg`}>
           {hasText ? (
             <Rect

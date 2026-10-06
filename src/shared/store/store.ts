@@ -1696,6 +1696,8 @@ function getOrdersCacheKey(
 let activeOrdersRequestContextKey = '';
 let ordersRequestSequence = 0;
 let latestOrdersRequestId = 0;
+// Foreground and background requests share a revision for each cached section.
+const latestOrdersRequestByContext = new Map<string, number>();
 
 function getOrdersForCurrentScope(
   ordersCache: Record<string, Array<Order>>,
@@ -1891,6 +1893,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
     const requestId = ++ordersRequestSequence;
     latestOrdersRequestId = requestId;
+    latestOrdersRequestByContext.set(cacheKey, requestId);
     activeOrdersRequestContextKey = cacheKey;
     set({
       is_check: true,
@@ -1937,6 +1940,11 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
     try {
       const json = await api<GetOrdersResponse>('orders', data);
+
+      if (latestOrdersRequestByContext.get(cacheKey) !== requestId) {
+        finishRequest();
+        return;
+      }
 
       if (json.st === false) {
         Analytics.log(
@@ -2081,6 +2089,9 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
     try {
       for (const backgroundType of typesToLoad) {
+        const cacheKey = getOrdersCacheKey(backgroundType.id, pointId);
+        const requestId = ++ordersRequestSequence;
+        latestOrdersRequestByContext.set(cacheKey, requestId);
         const json = await api<GetOrdersResponse>('orders', {
           type: 'get_orders',
           type_orders: backgroundType.id,
@@ -2093,6 +2104,8 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
           break;
         }
 
+        if (latestOrdersRequestByContext.get(cacheKey) !== requestId) continue;
+
         if (json.st === false || !json.data?.orders) {
           completed = false;
           set({
@@ -2102,7 +2115,6 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
           break;
         }
 
-        const cacheKey = getOrdersCacheKey(backgroundType.id, pointId);
         const responseOrders = json.data.orders;
         const ordersCache = {
           ...get().ordersCache,
