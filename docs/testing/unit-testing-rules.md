@@ -108,6 +108,25 @@ npm test -- --runInBand --watchman=false
 npm run test:unit
 ```
 
+## Нативные регрессии маркеров
+
+JS-моки не проверяют состояние Fabric/MapKit. Для загрузки изображений и повторного
+использования нативных меток есть отдельные тесты, исполняющие реальные тела
+методов установленного `react-native-yamap-plus` с управляемыми callback:
+
+```bash
+npm run test:native:markers
+npm run test:native:markers:ios-images
+npm run test:native:markers:android
+```
+
+iOS-тестам нужны macOS и Xcode Command Line Tools. Android-тесту нужны Java 17+
+и Kotlin compiler из существующего Gradle cache после обычной сборки Android.
+Тесты работают без телефона, эмулятора, API-запросов и загрузки новых зависимостей.
+Они проверяют recycle, A → B → A → B, устаревшие callbacks, detach/reattach,
+ошибку декодирования и отсутствие бесконечного retry. Проверку отрисовки и точных
+нажатий на экране нужно выполнять отдельно на устройстве или эмуляторе.
+
 ## Связанные документы
 
 - [docs/testing/README.md](./README.md)

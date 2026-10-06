@@ -182,7 +182,7 @@ index 02de75e..77de38b 100644
          const val NAME = "RTNYamapModule"
      }
 diff --git a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/utils/ImageCacheManager.kt b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/utils/ImageCacheManager.kt
-index fef09fb..0a56a90 100644
+index fef09fb..0a48849 100644
 --- a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/utils/ImageCacheManager.kt
 +++ b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/utils/ImageCacheManager.kt
 @@ -3,6 +3,7 @@ package ru.yamap.utils
@@ -204,7 +204,14 @@ index fef09fb..0a56a90 100644
 
          @Throws(IOException::class)
          fun getBitmapSync(context: Context, url: String): Bitmap {
-@@ -60,7 +63,7 @@ class ImageCacheManager {
+@@ -54,13 +57,14 @@ class ImageCacheManager {
+                         Handler(Looper.getMainLooper()).post { cb.invoke(bitmap) }
+                     } catch (e: Exception) {
+                         e.printStackTrace()
++                        Handler(Looper.getMainLooper()).post { cb.invoke(null) }
+                     }
+                 }
+             }.start()
          }
 
          fun getImage(context: Context, source: String, setImage: (image: Bitmap?) -> Unit) {
@@ -213,7 +220,7 @@ index fef09fb..0a56a90 100644
                  setImage(it)
                  return
              }
-@@ -69,7 +72,7 @@ class ImageCacheManager {
+@@ -69,7 +73,7 @@ class ImageCacheManager {
                  override fun invoke(arg: Bitmap?) {
                      try {
                          setImage(arg)
@@ -223,7 +230,7 @@ index fef09fb..0a56a90 100644
                          e.printStackTrace()
                      }
 diff --git a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/MarkerView.kt b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/MarkerView.kt
-index 7d8cbbf..6629d5c 100644
+index 7d8cbbf..6fb129f 100644
 --- a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/MarkerView.kt
 +++ b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/MarkerView.kt
 @@ -10,6 +10,8 @@ import android.view.animation.LinearInterpolator
@@ -264,7 +271,20 @@ index 7d8cbbf..6629d5c 100644
      fun setRotated(rotated: Boolean) {
          _rotated = rotated
          updateMarker()
-@@ -98,6 +115,7 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
+@@ -79,7 +96,11 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
+     }
+
+     fun setIconSource(source: String?) {
+-        _iconSource = source
++        if (_iconSource != source) {
++            _iconSource = source
++            pendingSource = null
++            ++imageRequestId
++        }
+         updateMarker()
+     }
+
+@@ -98,6 +119,7 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
              iconStyle.scale = _scale
              iconStyle.rotationType = if (_rotated) RotationType.ROTATE else RotationType.NO_ROTATION
              iconStyle.visible = _visible
@@ -272,7 +292,7 @@ index 7d8cbbf..6629d5c 100644
              if (_markerAnchor != null) {
                  iconStyle.anchor = _markerAnchor
              }
-@@ -107,6 +125,8 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
+@@ -107,6 +129,8 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
 
              if (_childView != null) {
                  try {
@@ -281,7 +301,7 @@ index 7d8cbbf..6629d5c 100644
                      val b = createBitmap(_childView!!.width, _childView!!.height)
                      val c = Canvas(b)
                      _childView!!.draw(c)
-@@ -116,32 +136,44 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
+@@ -116,32 +140,46 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
                      e.printStackTrace()
                  }
              }
@@ -291,21 +311,24 @@ index 7d8cbbf..6629d5c 100644
 -                        ImageProvider.fromBitmap(image).let {
 -                            (rnMapObject as PlacemarkMapObject).setIcon(it)
 -                            (rnMapObject as PlacemarkMapObject).setIconStyle(iconStyle)
+-                        }
+-                    })
 +            if (_children.isEmpty()) {
 +                _iconSource?.takeIf { it.isNotEmpty() && it != loadedSource && it != pendingSource }?.let { source ->
 +                    val requestedObject = rnMapObject as PlacemarkMapObject
 +                    val requestId = ++imageRequestId
 +                    pendingSource = source
 +                    ImageCacheManager.getImage(context, source) { image ->
-+                        if (image != null && requestId == imageRequestId && rnMapObject === requestedObject && requestedObject.isValid && _iconSource == source) {
-+                            pendingSource = null
-+                            loadedSource = source
-+                            iconWidth = image.width.toFloat()
-+                            iconHeight = image.height.toFloat()
-+                            requestedObject.setIcon(ImageProvider.fromBitmap(image))
-+                            updateMarker()
-                         }
--                    })
++                        if (requestId != imageRequestId || rnMapObject !== requestedObject || !requestedObject.isValid || _iconSource != source) return@getImage
++                        pendingSource = null
++                        // Keep the previous icon on failure. A later update can
++                        // retry; calling updateMarker here would loop on null.
++                        if (image == null) return@getImage
++                        loadedSource = source
++                        iconWidth = image.width.toFloat()
++                        iconHeight = image.height.toFloat()
++                        requestedObject.setIcon(ImageProvider.fromBitmap(image))
++                        updateMarker()
 +                    }
                  }
              }
@@ -335,7 +358,7 @@ index 7d8cbbf..6629d5c 100644
          _childView = view
          _childView!!.addOnLayoutChangeListener(childLayoutListener)
      }
-@@ -203,6 +235,19 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
+@@ -203,6 +241,19 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
      }
 
      override fun onMapObjectTap(mapObject: MapObject, point: Point): Boolean {
@@ -621,7 +644,7 @@ index 2a3bd1f..73a17d0 100644
  @end
 
 diff --git a/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm b/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
-index 8e07f96..fe1acd1 100644
+index 8e07f96..2a6ee1e 100644
 --- a/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
 +++ b/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
 @@ -5,6 +5,7 @@
@@ -652,7 +675,7 @@ index 8e07f96..fe1acd1 100644
 
          zIndex = 1;
          scale = [NSNumber numberWithInt:1];
-@@ -64,34 +71,24 @@ + (ComponentDescriptorProvider)componentDescriptorProvider
+@@ -64,34 +71,31 @@ + (ComponentDescriptorProvider)componentDescriptorProvider
  }
 
  - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps {
@@ -677,12 +700,18 @@ index 8e07f96..fe1acd1 100644
 -
 -    if (oldViewProps.zI != newViewProps.zI) {
 -        zIndex = newViewProps.zI;
--    }
 +    // Fabric retains _props when recycling a view, while prepareForRecycle
 +    // clears the native marker fields. Reapply every value on each update,
 +    // including identical props when the same order gets a recycled view.
 +    _point = [YMKPoint pointWithLatitude:newViewProps.point.lat longitude:newViewProps.point.lon];
-+    source = [NSString stringWithUTF8String:newViewProps.source.c_str()];
++    NSString *newSource = [NSString stringWithUTF8String:newViewProps.source.c_str()];
++    if (![source isEqual:newSource]) {
++        // Abandon in-flight work even when returning to the loaded image. An
++        // ignored callback must not leave this source permanently pending.
++        pendingSource = nil;
++        ++imageRequestId;
+     }
++    source = newSource;
 +    anchor = [NSValue valueWithCGPoint:CGPointMake(newViewProps.anchor.x, newViewProps.anchor.y)];
 +    scale = [NSNumber numberWithFloat:newViewProps.scale];
 +    zIndex = newViewProps.zI;
@@ -697,7 +726,7 @@ index 8e07f96..fe1acd1 100644
      [self updateMarker];
  }
 
-@@ -111,15 +108,21 @@ - (void)handleCommand:(const NSString *)commandName args:(const NSArray *)args {
+@@ -111,15 +115,21 @@ - (void)handleCommand:(const NSString *)commandName args:(const NSArray *)args {
 
  - (void)prepareForRecycle
  {
@@ -721,7 +750,7 @@ index 8e07f96..fe1acd1 100644
      _reactSubviews = [[NSMutableArray alloc] init];
  }
 
-@@ -128,68 +131,82 @@ - (BOOL)excludeFromCluster {
+@@ -128,68 +138,83 @@ - (BOOL)excludeFromCluster {
  }
 
  - (BOOL)onMapObjectTapWithMapObject:(nonnull YMKMapObject*)_mapObject point:(nonnull YMKPoint*)point {
@@ -804,6 +833,7 @@ index 8e07f96..fe1acd1 100644
 +                if (!strongSelf || strongSelf->imageRequestId != requestId || strongSelf->mapObject != requestedObject ||
 +                    ![requestedObject isValid] || ![strongSelf->source isEqual:requestedSource]) return;
 +                strongSelf->pendingSource = nil;
++                if (!image) return;
 +                strongSelf->iconSize = CGSizeMake(CGImageGetWidth(image.CGImage), CGImageGetHeight(image.CGImage));
 +                [requestedObject setIconWithImage:image];
 +                strongSelf->lastSource = requestedSource;
@@ -854,7 +884,7 @@ index 8e07f96..fe1acd1 100644
  }
 
  - (YMKPoint*)getPoint {
-@@ -201,7 +218,11 @@ - (YMKPlacemarkMapObject*)getMapObject {
+@@ -201,7 +226,11 @@ - (YMKPlacemarkMapObject*)getMapObject {
  }
 
  - (void)setMapObject:(YMKPlacemarkMapObject *)_mapObject {
@@ -866,7 +896,7 @@ index 8e07f96..fe1acd1 100644
      if ([mapObject isValid]) {
          [mapObject addTapListenerWithTapListener:self];
      }
-@@ -209,7 +230,11 @@ - (void)setMapObject:(YMKPlacemarkMapObject *)_mapObject {
+@@ -209,7 +238,11 @@ - (void)setMapObject:(YMKPlacemarkMapObject *)_mapObject {
  }
 
  - (void)setClusterMapObject:(YMKPlacemarkMapObject *)_mapObject {
@@ -878,7 +908,7 @@ index 8e07f96..fe1acd1 100644
      if ([mapObject isValid]) {
          [mapObject addTapListenerWithTapListener:self];
      }
-@@ -235,7 +260,9 @@ - (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)childCompone
+@@ -235,7 +268,9 @@ - (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)childCompone
  }
 
  - (void)unmountChildComponentView:(UIView<RCTComponentViewProtocol> *)childComponentView index:(NSInteger)index {

@@ -18,7 +18,9 @@
     "test:ci": "jest --runInBand --watchman=false --ci",
     "typecheck": "tsc --noEmit",
     "postinstall": "patch-package && node scripts/fix-rngh-viewmanager-interfaces.mjs",
-    "test:native:markers": "python3 scripts/test-ios-marker-recycle.py"
+    "test:native:markers": "python3 scripts/test-ios-marker-recycle.py",
+    "test:native:markers:android": "python3 scripts/test-android-marker-image.py",
+    "test:native:markers:ios-images": "python3 scripts/test-ios-marker-image-race.py"
   },
   "dependencies": {
     "@appmetrica/react-native-analytics": "4.2.0",
