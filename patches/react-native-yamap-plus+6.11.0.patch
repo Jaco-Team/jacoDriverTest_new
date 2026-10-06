@@ -621,7 +621,7 @@ index 2a3bd1f..73a17d0 100644
  @end
 
 diff --git a/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm b/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
-index 8e07f96..b4d8436 100644
+index 8e07f96..fe1acd1 100644
 --- a/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
 +++ b/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
 @@ -5,6 +5,7 @@
@@ -652,16 +652,41 @@ index 8e07f96..b4d8436 100644
 
          zIndex = 1;
          scale = [NSNumber numberWithInt:1];
-@@ -75,7 +82,7 @@ - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &
-         source = [NSString stringWithCString:newViewProps.source.c_str() encoding:[NSString defaultCStringEncoding]];
-     }
+@@ -64,34 +71,24 @@ + (ComponentDescriptorProvider)componentDescriptorProvider
+ }
 
+ - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps {
+-    const auto &oldViewProps = *std::static_pointer_cast<MarkerViewProps const>(_props);
+     const auto &newViewProps = *std::static_pointer_cast<MarkerViewProps const>(props);
+
+-    if (oldViewProps.point.lat != newViewProps.point.lat || oldViewProps.point.lon != newViewProps.point.lon) {
+-        _point = [YMKPoint pointWithLatitude:newViewProps.point.lat longitude:newViewProps.point.lon];
+-    }
+-
+-    if (oldViewProps.source != newViewProps.source) {
+-        source = [NSString stringWithCString:newViewProps.source.c_str() encoding:[NSString defaultCStringEncoding]];
+-    }
+-
 -    if (oldViewProps.anchor.x != newViewProps.anchor.x || oldViewProps.anchor.x != newViewProps.anchor.x) {
-+    if (oldViewProps.anchor.x != newViewProps.anchor.x || oldViewProps.anchor.y != newViewProps.anchor.y) {
-         anchor = [NSValue valueWithCGPoint:CGPointMake(newViewProps.anchor.x, newViewProps.anchor.y)];
-     }
+-        anchor = [NSValue valueWithCGPoint:CGPointMake(newViewProps.anchor.x, newViewProps.anchor.y)];
+-    }
+-
+-    if (oldViewProps.scale != newViewProps.scale) {
+-        scale = [NSNumber numberWithFloat:newViewProps.scale];
+-    }
+-
+-    if (oldViewProps.zI != newViewProps.zI) {
+-        zIndex = newViewProps.zI;
+-    }
++    // Fabric retains _props when recycling a view, while prepareForRecycle
++    // clears the native marker fields. Reapply every value on each update,
++    // including identical props when the same order gets a recycled view.
++    _point = [YMKPoint pointWithLatitude:newViewProps.point.lat longitude:newViewProps.point.lon];
++    source = [NSString stringWithUTF8String:newViewProps.source.c_str()];
++    anchor = [NSValue valueWithCGPoint:CGPointMake(newViewProps.anchor.x, newViewProps.anchor.y)];
++    scale = [NSNumber numberWithFloat:newViewProps.scale];
++    zIndex = newViewProps.zI;
 
-@@ -90,8 +97,10 @@ - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &
      visible = newViewProps.visible;
      rotated = newViewProps.rotated;
      handled = newViewProps.handled;
@@ -672,7 +697,7 @@ index 8e07f96..b4d8436 100644
      [self updateMarker];
  }
 
-@@ -111,15 +120,21 @@ - (void)handleCommand:(const NSString *)commandName args:(const NSArray *)args {
+@@ -111,15 +108,21 @@ - (void)handleCommand:(const NSString *)commandName args:(const NSArray *)args {
 
  - (void)prepareForRecycle
  {
@@ -696,7 +721,7 @@ index 8e07f96..b4d8436 100644
      _reactSubviews = [[NSMutableArray alloc] init];
  }
 
-@@ -128,68 +143,82 @@ - (BOOL)excludeFromCluster {
+@@ -128,68 +131,82 @@ - (BOOL)excludeFromCluster {
  }
 
  - (BOOL)onMapObjectTapWithMapObject:(nonnull YMKMapObject*)_mapObject point:(nonnull YMKPoint*)point {
@@ -829,7 +854,7 @@ index 8e07f96..b4d8436 100644
  }
 
  - (YMKPoint*)getPoint {
-@@ -201,7 +230,11 @@ - (YMKPlacemarkMapObject*)getMapObject {
+@@ -201,7 +218,11 @@ - (YMKPlacemarkMapObject*)getMapObject {
  }
 
  - (void)setMapObject:(YMKPlacemarkMapObject *)_mapObject {
@@ -841,7 +866,7 @@ index 8e07f96..b4d8436 100644
      if ([mapObject isValid]) {
          [mapObject addTapListenerWithTapListener:self];
      }
-@@ -209,7 +242,11 @@ - (void)setMapObject:(YMKPlacemarkMapObject *)_mapObject {
+@@ -209,7 +230,11 @@ - (void)setMapObject:(YMKPlacemarkMapObject *)_mapObject {
  }
 
  - (void)setClusterMapObject:(YMKPlacemarkMapObject *)_mapObject {
@@ -853,7 +878,7 @@ index 8e07f96..b4d8436 100644
      if ([mapObject isValid]) {
          [mapObject addTapListenerWithTapListener:self];
      }
-@@ -235,7 +272,9 @@ - (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)childCompone
+@@ -235,7 +260,9 @@ - (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)childCompone
  }
 
  - (void)unmountChildComponentView:(UIView<RCTComponentViewProtocol> *)childComponentView index:(NSInteger)index {

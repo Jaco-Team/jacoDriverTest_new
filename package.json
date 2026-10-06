@@ -17,7 +17,8 @@
     "test:clean": "jest --clearCache && jest",
     "test:ci": "jest --runInBand --watchman=false --ci",
     "typecheck": "tsc --noEmit",
-    "postinstall": "patch-package && node scripts/fix-rngh-viewmanager-interfaces.mjs"
+    "postinstall": "patch-package && node scripts/fix-rngh-viewmanager-interfaces.mjs",
+    "test:native:markers": "python3 scripts/test-ios-marker-recycle.py"
   },
   "dependencies": {
     "@appmetrica/react-native-analytics": "4.2.0",
