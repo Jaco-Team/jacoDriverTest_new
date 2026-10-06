@@ -567,6 +567,66 @@ describe('auth/reset hooks', () => {
     });
   });
 
+  it('useResetPwdLogic: после смены пароля и отказа автоматического входа не подтверждает SMS повторно', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    mockSendSMS.mockResolvedValueOnce({st: true, text: 'sent'});
+    mockSendCode.mockResolvedValueOnce({
+      st: false,
+      text: 'Пройдите CAPTCHA, чтобы продолжить.',
+      password_changed: true,
+    });
+
+    function Probe() {
+      api = useResetPwdLogic();
+      return null as any;
+    }
+
+    await render(<Probe />);
+    await waitFor(() => expect(mockCheckToken).toHaveBeenCalled());
+    await act(async () => {
+      api!.handleLoginChange('79990000000');
+      api!.handlePasswordChange('Password1');
+      api!.handleCaptchaTokenChange('captcha-token');
+    });
+    await act(async () => {
+      await api!.requestRecoveryCode();
+    });
+    await act(async () => {
+      api!.handleCodeChange('123456');
+    });
+    await act(async () => {
+      await api!.confirmRecoveryCode();
+    });
+
+    expect(api!.recoveryComplete).toBe(true);
+    expect(api!.panelTitle).toBe('Пароль изменён');
+    expect(api!.errorText).toBe('');
+    expect(api!.canConfirmCode).toBe(false);
+    expect(api!.myCode).toBe('');
+    expect(api!.myPWD).toBe('');
+    expect(mockReset).not.toHaveBeenCalled();
+
+    await act(async () => {
+      api!.handleCodeChange('123456');
+    });
+    await act(async () => {
+      await api!.confirmRecoveryCode();
+      await api!.requestRecoveryCode();
+      api!.goToAuth();
+    });
+    expect(mockSendCode).toHaveBeenCalledTimes(1);
+    expect(mockSendSMS).toHaveBeenCalledTimes(1);
+    expect(api!.errorText).toBe('');
+    expect(mockNavigate).toHaveBeenCalledWith('Auth');
+
+    await act(async () => {
+      mockFocusCleanup?.();
+    });
+    expect(api!.recoveryComplete).toBe(false);
+    expect(api!.activeStep).toBe(0);
+    expect(api!.myCode).toBe('');
+  });
+
   it('useResetPwdLogic: показывает backend-ошибку неверного SMS-кода без перехода', async () => {
     let api: ReturnType<typeof useResetPwdLogic> | null = null;
     mockSendCode.mockResolvedValueOnce({
@@ -595,6 +655,8 @@ describe('auth/reset hooks', () => {
 
     expect(mockSendCode).toHaveBeenCalledWith('79990000000', '110712', 'Password1');
     expect(api!.errorText).toBe('Код из смс введен не верно');
+    expect(api!.recoveryComplete).toBe(false);
+    expect(api!.canConfirmCode).toBe(true);
     expect(mockReset).not.toHaveBeenCalled();
   });
 });

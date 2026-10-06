@@ -25,6 +25,7 @@ export function useResetPwdLogic() {
   )
 
   const [activeStep, setActiveStep] = useState<RecoveryStep>(0)
+  const [recoveryComplete, setRecoveryComplete] = useState(false)
   const [myCode, setMyCode] = useState('')
   const [myLogin, setMyLogin] = useState('')
   const [myPWD, setMyPWD] = useState('')
@@ -36,10 +37,11 @@ export function useResetPwdLogic() {
   const isPasswordValid = isPasswordStrong(myPWD)
   const canRequestCode =
     myLogin.trim().length > 0 && isPasswordValid && captchaToken.length > 0 && !isLoading
-  const canConfirmCode = myCode.length === 6 && !isLoading
+  const canConfirmCode = myCode.length === 6 && !isLoading && !recoveryComplete
 
   const resetRecoveryState = useCallback(() => {
     setActiveStep(0)
+    setRecoveryComplete(false)
     setMyCode('')
     setMyLogin('')
     setMyPWD('')
@@ -89,6 +91,8 @@ export function useResetPwdLogic() {
   }
 
   async function requestRecoveryCode(): Promise<void> {
+    if (isLoading || recoveryComplete) return
+
     if (!myLogin.trim()) {
       setErrorText('Введите номер телефона.')
       return
@@ -118,6 +122,8 @@ export function useResetPwdLogic() {
   }
 
   async function confirmRecoveryCode(): Promise<void> {
+    if (isLoading || recoveryComplete) return
+
     if (myCode.length !== 6) {
       setErrorText('Введите шестизначный код из SMS.')
       return
@@ -130,6 +136,14 @@ export function useResetPwdLogic() {
       const title = RU_SCREEN_NAMES.List_orders ?? 'Список заказов'
       Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${title}`)
       navigation.reset({ index: 0, routes: [{ name: 'List_orders' }] })
+      return
+    }
+
+    if (result.password_changed === true) {
+      setRecoveryComplete(true)
+      setMyCode('')
+      setMyPWD('')
+      setShowPassword(false)
       return
     }
 
@@ -153,19 +167,25 @@ export function useResetPwdLogic() {
     setErrorText(message)
   }
 
-  const panelTitle =
-    activeStep === 0 ? 'Восстановление доступа' : 'Подтверждение по SMS'
-  const panelText =
-    activeStep === 0
+  const panelTitle = recoveryComplete
+    ? 'Пароль изменён'
+    : activeStep === 0
+      ? 'Восстановление доступа'
+      : 'Подтверждение по SMS'
+  const panelText = recoveryComplete
+    ? 'Пароль успешно изменён. Теперь войдите в аккаунт с новым паролем.'
+    : activeStep === 0
       ? 'Укажите номер телефона и новый пароль. После этого мы отправим код подтверждения.'
       : 'Введите код из SMS, чтобы подтвердить номер и завершить восстановление пароля.'
-  const helperText =
-    activeStep === 0
+  const helperText = recoveryComplete
+    ? 'При входе может потребоваться CAPTCHA. Повторно вводить SMS-код не нужно.'
+    : activeStep === 0
       ? 'Если номер зарегистрирован, отправим SMS с кодом. Пароль должен быть сложным.'
       : 'Если код не пришел, проверьте номер телефона и повторите отправку позже.'
 
   return {
     activeStep,
+    recoveryComplete,
     panelTitle,
     panelText,
     helperText,

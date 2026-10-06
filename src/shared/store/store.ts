@@ -585,6 +585,7 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
     };
 
     const json = await api<LoginResponse>('auth', data);
+    const result: StatusTextType = {st: json.st, text: json?.text ?? ''};
 
     if (json.st === true) {
       try {
@@ -606,8 +607,11 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
         set({currentUser: null});
         useAppThemeStore.getState().clearOwner();
         const errorInfo = getLaravelApiErrorInfo(error);
-        json.st = false;
-        json.text = errorInfo.message;
+        // The password has already changed and the SMS code has been consumed.
+        // A failed automatic login must not let the user confirm that code again.
+        result.st = false;
+        result.text = errorInfo.message;
+        result.password_changed = true;
       }
     }
 
@@ -616,7 +620,7 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
       useGlobalStore.getState().setSpinner(false);
     }, 500);
 
-    return {st: json.st, text: json?.text ?? ''};
+    return result;
   },
 
   check_token: async () => {

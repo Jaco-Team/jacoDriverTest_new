@@ -59,6 +59,17 @@ function withoutInternalFields(data: Record<string, any>): Record<string, any> {
   return payload
 }
 
+function serializeOrderCoordinates(payload: Record<string, any>): Record<string, any> {
+  const result = { ...payload }
+  // Order action endpoints expect strings; the position endpoint accepts numbers.
+  for (const field of ['latitude', 'longitude']) {
+    if (typeof result[field] === 'number' && Number.isFinite(result[field])) {
+      result[field] = String(result[field])
+    }
+  }
+  return result
+}
+
 function deletedOrderPeriod(value: unknown): unknown {
   if (value === 'min') return 30
   if (value === 'max') return 120
@@ -160,11 +171,11 @@ function resolveLaravelRequest(module: string, data: Record<string, any>): Larav
   }
 
   if (module === 'orders' && type === 'actionOrder') {
-    return { method: 'post', path: laravelApiRoutes.orders.actionOrder, payload: { ...payload, type } }
+    return { method: 'post', path: laravelApiRoutes.orders.actionOrder, payload: { ...serializeOrderCoordinates(payload), type } }
   }
 
   if (module === 'orders' && type === 'checkFakeOrder') {
-    return { method: 'post', path: laravelApiRoutes.orders.checkFakeOrder, payload: { ...payload, type } }
+    return { method: 'post', path: laravelApiRoutes.orders.checkFakeOrder, payload: { ...serializeOrderCoordinates(payload), type } }
   }
 
   if (module === 'orders' && type === 'get_pay_qr') {

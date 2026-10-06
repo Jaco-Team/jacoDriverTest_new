@@ -27,6 +27,7 @@ export function ResetPwdScreen(): React.JSX.Element {
   const returnLinkUnderlineOpacity = useRef(new Animated.Value(0.55)).current
   const {
     activeStep,
+    recoveryComplete,
     panelTitle,
     panelText,
     helperText,
@@ -50,7 +51,16 @@ export function ResetPwdScreen(): React.JSX.Element {
     goToAuth,
   } = useResetPwdLogic()
 
-  const canSubmit = activeStep === 0 ? canRequestCode : canConfirmCode
+  const canSubmit = recoveryComplete
+    ? !isLoading
+    : activeStep === 0
+      ? canRequestCode
+      : canConfirmCode
+  const submitLabel = recoveryComplete
+    ? 'Войти'
+    : activeStep === 0
+      ? 'Получить код'
+      : 'Подтвердить'
 
   function animateReturnLinkUnderline(isPressed: boolean): void {
     const textWidth = returnLinkTextWidth.current
@@ -70,6 +80,11 @@ export function ResetPwdScreen(): React.JSX.Element {
   }
 
   function submitCurrentStep(): void {
+    if (recoveryComplete) {
+      goToAuth()
+      return
+    }
+
     if (activeStep === 0) {
       void requestRecoveryCode()
       return
@@ -100,9 +115,9 @@ export function ResetPwdScreen(): React.JSX.Element {
       </Text>
       <Text style={[styles.description, { color: colors.textMuted }]}>{panelText}</Text>
 
-      <RecoveryStepper activeStep={activeStep} />
+      {!recoveryComplete && <RecoveryStepper activeStep={activeStep} />}
 
-      {activeStep === 0 ? (
+      {recoveryComplete ? null : activeStep === 0 ? (
         <>
           <View style={styles.fieldGroup}>
             <AuthTextField
@@ -189,7 +204,7 @@ export function ResetPwdScreen(): React.JSX.Element {
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={activeStep === 0 ? 'Получить код' : 'Подтвердить'}
+        accessibilityLabel={submitLabel}
         accessibilityState={{
           busy: isLoading,
           disabled: !canSubmit,
@@ -216,16 +231,12 @@ export function ResetPwdScreen(): React.JSX.Element {
               !canSubmit && styles.primaryButtonTextDisabled,
             ]}
           >
-            {isLoading
-              ? 'Подождите...'
-              : activeStep === 0
-                ? 'Получить код'
-                : 'Подтвердить'}
+            {isLoading ? 'Подождите...' : submitLabel}
           </Text>
         </View>
       </Pressable>
 
-      <View style={styles.linkRow}>
+      {!recoveryComplete && <View style={styles.linkRow}>
         <Text style={[styles.linkCaption, { color: colors.textMuted }]}>Вспомнили пароль?</Text>
         <Pressable
           accessibilityRole="link"
@@ -258,7 +269,7 @@ export function ResetPwdScreen(): React.JSX.Element {
             ]}
           />
         </Pressable>
-      </View>
+      </View>}
     </AuthScreenLayout>
   )
 }

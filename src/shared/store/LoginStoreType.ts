@@ -16,6 +16,7 @@ export interface StatusTextType {
   st: Status;
   text: string;
   captcha_required?: boolean;
+  password_changed?: boolean;
 };
 
 export interface LoginTypes {

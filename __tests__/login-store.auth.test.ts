@@ -257,6 +257,48 @@ describe('useLoginStore auth flow', () => {
     expect(mockGetSettings).toHaveBeenCalledTimes(1);
   });
 
+  it('sendCode: сохраняет успех смены пароля, если автоматический вход требует CAPTCHA', async () => {
+    mockApi.mockResolvedValueOnce({st: true, text: 'ok'});
+    mockLoginWithLaravel.mockRejectedValueOnce({
+      response: {
+        status: 422,
+        data: {text: 'Пройдите CAPTCHA, чтобы продолжить.', captcha_required: true},
+      },
+    });
+
+    const result = await useLoginStore.getState().sendCode('driver', '123456', 'NewPassword1!');
+
+    expect(result).toEqual({
+      st: false,
+      text: 'Пройдите CAPTCHA, чтобы продолжить.',
+      password_changed: true,
+    });
+    expect(mockApi).toHaveBeenCalledTimes(1);
+    expect(mockSaveLaravelAuthToken).not.toHaveBeenCalled();
+    expect(mockFetchLaravelMe).not.toHaveBeenCalled();
+    expect(mockGetSettings).not.toHaveBeenCalled();
+    expect(useGlobalStore.getState().tokenAuth).toBe('');
+    expect(useLoginStore.getState().currentUser).toBeNull();
+
+    jest.advanceTimersByTime(500);
+    expect(useLoginStore.getState().is_load).toBe(false);
+    expect(useGlobalStore.getState().loadSpinner).toBe(false);
+  });
+
+  it('sendCode: ошибка загрузки профиля после смены пароля очищает сессию, но не отменяет восстановление', async () => {
+    mockApi.mockResolvedValueOnce({st: true, text: 'ok'});
+    mockFetchLaravelMe.mockRejectedValueOnce(new Error('Network Error'));
+
+    const result = await useLoginStore.getState().sendCode('driver', '123456', 'NewPassword1!');
+
+    expect(result).toEqual(expect.objectContaining({st: false, password_changed: true}));
+    expect(mockSaveLaravelAuthToken).toHaveBeenCalledWith('laravel-token');
+    expect(mockClearLaravelAuthToken).toHaveBeenCalledTimes(1);
+    expect(useGlobalStore.getState().tokenAuth).toBe('');
+    expect(useLoginStore.getState().currentUser).toBeNull();
+    expect(mockGetSettings).not.toHaveBeenCalled();
+  });
+
   it('sendCode error: возвращает inline-ошибку и не сохраняет token', async () => {
     mockApi.mockResolvedValueOnce({
       st: false,

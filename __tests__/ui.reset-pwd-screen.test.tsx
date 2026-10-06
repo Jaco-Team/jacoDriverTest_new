@@ -40,6 +40,7 @@ describe('ResetPwdScreen', () => {
     jest.clearAllMocks()
     mockResetState = {
       activeStep: 0,
+      recoveryComplete: false,
       panelTitle: 'Восстановление доступа',
       panelText:
         'Укажите номер телефона и новый пароль. После этого мы отправим код подтверждения.',
@@ -125,6 +126,32 @@ describe('ResetPwdScreen', () => {
     expect(mockHandleCodeChange).toHaveBeenCalledWith('1234')
     expect(mockConfirmRecoveryCode).toHaveBeenCalledTimes(1)
   })
+
+  it('после успешной смены пароля предлагает вход и убирает повторное подтверждение SMS', async () => {
+    mockResetState.activeStep = 1;
+    mockResetState.recoveryComplete = true;
+    mockResetState.panelTitle = 'Пароль изменён';
+    mockResetState.panelText = 'Пароль успешно изменён. Теперь войдите в аккаунт с новым паролем.';
+
+    const screen = await render(<ResetPwdScreen />);
+
+    expect(screen.getByText('Пароль изменён')).toBeTruthy();
+    expect(screen.queryByTestId('reset-code-input')).toBeNull();
+    expect(screen.queryByTestId('reset-phone-input')).toBeNull();
+    expect(screen.queryByTestId('reset-password-input')).toBeNull();
+    expect(screen.queryByTestId('reset-captcha')).toBeNull();
+    expect(screen.queryByTestId('reset-error')).toBeNull();
+    expect(screen.queryByTestId('reset-back-to-auth')).toBeNull();
+    const submit = screen.getByTestId('reset-submit');
+    expect(submit.props.disabled).toBe(false);
+    expect(submit.props.accessibilityLabel).toBe('Войти');
+
+    await fireEvent.press(submit);
+
+    expect(mockGoToAuth).toHaveBeenCalledTimes(1);
+    expect(mockConfirmRecoveryCode).not.toHaveBeenCalled();
+    expect(mockRequestRecoveryCode).not.toHaveBeenCalled();
+  });
 
   it('заменяет подсказку на inline-ошибку и блокирует кнопку во время запроса', async () => {
     mockResetState.errorText = 'Код из смс введен не верно'
