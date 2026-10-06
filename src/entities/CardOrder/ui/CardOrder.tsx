@@ -2,6 +2,7 @@ import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 
 import { toOrderInt } from '@/entities/CardOrder/model/normalizeOrderValue'
+import { getOrderAddress } from '@/entities/CardOrder/model/getOrderAddress'
 import { getOrderNeedTime } from '@/entities/CardOrder/model/getOrderNeedTime'
 import { CardOrderProps } from '@/entities/CardOrder/model/types'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
@@ -97,7 +98,7 @@ export const CardOrderComponent: React.FC<CardOrderProps> = ({
 
       <Text style={styles.infoRow} testID="order-address">
         <Text style={labelTextStyle}>Адрес: </Text>
-        <Text style={valueTextStyle}>{item.addr}</Text>
+        <Text style={valueTextStyle}>{getOrderAddress(item)}</Text>
       </Text>
 
       <PdEtKv

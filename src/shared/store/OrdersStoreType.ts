@@ -83,6 +83,8 @@ export interface GetOrdersResponse {
 
 export type Order = {
   addr: string,
+  street?: string|null,
+  home?: string|number|null,
   comment: string,
   count_drink: number,
   drink_list?: Array<{name?: string, names?: string}>,

@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import { OrderActions } from '@/entities/CardOrder/ui/OrderActions';
 import type { Order } from '@/shared/store/OrdersStoreType';
 
@@ -35,14 +35,22 @@ const makeOrder = (patch: Partial<Order>): Order =>
     ...patch,
   } as Order);
 
-test('закрытый заказ: все action-кнопки скрыты, телефон виден', async () => {
-  const item = makeOrder({});
+test.each([
+  { status_order: 6, is_get: 1 },
+  { status_order: 6, is_get: 0 },
+  { status_order: 6, is_get: undefined },
+  { status_order: '6', is_get: '0' },
+])('закрытый заказ %p: все action-кнопки скрыты, телефон виден', async patch => {
+  const item = makeOrder(patch as Partial<Order>);
+  const dialCall = jest.fn();
+  const actionButtonOrder = jest.fn();
+  const setActiveConfirm = jest.fn();
   await render(
     <OrderActions
       item={item}
-      dialCall={jest.fn()}
-      setActiveConfirm={jest.fn()}
-      actionButtonOrder={jest.fn()}
+      dialCall={dialCall}
+      setActiveConfirm={setActiveConfirm}
+      actionButtonOrder={actionButtonOrder}
       globalFontSize={16}
     />
   );
@@ -61,4 +69,8 @@ test('закрытый заказ: все action-кнопки скрыты, те
 
   // И «Взять» тут быть не должно
   expect(screen.queryByTestId(`order-${item.id}-take`)).toBeNull();
+  await fireEvent.press(screen.getByTestId(`order-${item.id}-phone`));
+  expect(dialCall).toHaveBeenCalledWith(item.number);
+  expect(actionButtonOrder).not.toHaveBeenCalled();
+  expect(setActiveConfirm).not.toHaveBeenCalled();
 });

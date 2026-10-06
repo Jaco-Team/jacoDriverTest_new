@@ -106,13 +106,15 @@ export function OrderActions({
           <ActionText phone>{item.number}</ActionText>
         </ActionButton>
 
-        <ActionButton
-          backgroundColor="#4CAF50"
-          testID={`order-${item.id}-take`}
-          onPress={() => actionButtonOrder(1, item.id)}
-        >
-          <ActionText>ВЗЯТЬ</ActionText>
-        </ActionButton>
+        {statusOrder !== 6 ? (
+          <ActionButton
+            backgroundColor="#4CAF50"
+            testID={`order-${item.id}-take`}
+            onPress={() => actionButtonOrder(1, item.id)}
+          >
+            <ActionText>ВЗЯТЬ</ActionText>
+          </ActionButton>
+        ) : null}
       </View>
     )
   }
