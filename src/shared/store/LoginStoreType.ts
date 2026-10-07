@@ -10,12 +10,18 @@ export type LoginResponse = {
   text?: string;
   token?: string;
   captcha_required?: boolean;
+  retry_after?: number;
+  locked?: boolean;
+  resend_after?: number;
 }
 
 export interface StatusTextType {
   st: Status;
   text: string;
   captcha_required?: boolean;
+  retry_after?: number;
+  locked?: boolean;
+  resend_after?: number;
   password_changed?: boolean;
 };
 

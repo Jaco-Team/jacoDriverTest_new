@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AppState } from 'react-native'
 import { ParamListBase, useFocusEffect, useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useShallow } from 'zustand/react/shallow'
@@ -10,6 +11,7 @@ import {
   stripPasswordSpaces,
 } from '@/shared/lib/passwordRequirements'
 import { useLoginStore } from '@/shared/store/store'
+import { positiveRecoverySeconds } from '@/shared/api/laravel/errors'
 
 type RecoveryStep = 0 | 1
 
@@ -31,15 +33,60 @@ export function useResetPwdLogic() {
   const [myPWD, setMyPWD] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [errorText, setErrorText] = useState('')
+  const [captchaRequired, setCaptchaRequired] = useState(true)
   const [captchaToken, setCaptchaToken] = useState('')
   const [captchaResetKey, setCaptchaResetKey] = useState(0)
+  const [showResendCaptcha, setShowResendCaptcha] = useState(false)
+  const [sendRetryUntil, setSendRetryUntil] = useState(0)
+  const [confirmRetryUntil, setConfirmRetryUntil] = useState(0)
+  const [now, setNow] = useState(Date.now)
+  const sendInFlight = useRef(false)
+  const confirmInFlight = useRef(false)
+  const recoverySession = useRef(0)
+  const recoveryFinished = useRef(false)
+  const sendBlockedUntil = useRef(0)
+  const confirmBlockedUntil = useRef(0)
+
+  const sendRetryAfter = Math.max(0, Math.ceil((sendRetryUntil - now) / 1000))
+  const confirmRetryAfter = Math.max(0, Math.ceil((confirmRetryUntil - now) / 1000))
+  const retryAfter = activeStep === 0 ? sendRetryAfter : confirmRetryAfter
+
+  useEffect(() => {
+    if (Math.max(sendRetryUntil, confirmRetryUntil) <= Date.now()) return
+    const timer = setInterval(() => {
+      const currentTime = Date.now()
+      setNow(currentTime)
+      if (Math.max(sendRetryUntil, confirmRetryUntil) <= currentTime) clearInterval(timer)
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [sendRetryUntil, confirmRetryUntil])
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') setNow(Date.now())
+    })
+    return () => subscription.remove()
+  }, [])
 
   const isPasswordValid = isPasswordStrong(myPWD)
   const canRequestCode =
-    myLogin.trim().length > 0 && isPasswordValid && captchaToken.length > 0 && !isLoading
-  const canConfirmCode = myCode.length === 6 && !isLoading && !recoveryComplete
+    myLogin.trim().length > 0 && isPasswordValid &&
+    (!captchaRequired || captchaToken.length > 0) && !isLoading &&
+    sendRetryAfter === 0 && !recoveryComplete
+  const canConfirmCode = myCode.length === 6 && !isLoading && !recoveryComplete && confirmRetryAfter === 0
 
   const resetRecoveryState = useCallback(() => {
+    recoverySession.current += 1
+    recoveryFinished.current = false
+    sendBlockedUntil.current = 0
+    confirmBlockedUntil.current = 0
+    sendInFlight.current = false
+    confirmInFlight.current = false
+    setSendRetryUntil(0)
+    setConfirmRetryUntil(0)
+    setNow(Date.now())
+    setCaptchaRequired(true)
+    setShowResendCaptcha(false)
     setActiveStep(0)
     setRecoveryComplete(false)
     setMyCode('')
@@ -91,7 +138,8 @@ export function useResetPwdLogic() {
   }
 
   async function requestRecoveryCode(): Promise<void> {
-    if (isLoading || recoveryComplete) return
+    if (isLoading || recoveryFinished.current || recoveryComplete ||
+      sendInFlight.current || confirmInFlight.current || sendBlockedUntil.current > Date.now()) return
 
     if (!myLogin.trim()) {
       setErrorText('Введите номер телефона.')
@@ -103,51 +151,113 @@ export function useResetPwdLogic() {
       return
     }
 
-    if (!captchaToken) {
-      setErrorText('Пройдите CAPTCHA, чтобы продолжить.')
+    if (captchaRequired && !captchaToken) {
+      if (activeStep === 1) {
+        setShowResendCaptcha(true)
+        setErrorText('')
+      } else {
+        setErrorText('Пройдите CAPTCHA, чтобы продолжить.')
+      }
       return
     }
 
+    sendInFlight.current = true
+    const session = recoverySession.current
+    const submittedLogin = myLogin
+    const submittedPassword = myPWD
+    const submittedCaptchaToken = captchaToken
     setErrorText('')
-    const result = await sendSMS(myLogin, myPWD, captchaToken)
-    setCaptchaToken('')
-    setCaptchaResetKey((currentValue) => currentValue + 1)
+    try {
+      const result = await sendSMS(submittedLogin, submittedPassword, submittedCaptchaToken)
+      if (session !== recoverySession.current) return
 
-    if (result.st === true) {
-      setActiveStep(1)
-      return
+      if (typeof result.captcha_required === 'boolean') {
+        setCaptchaRequired(result.captcha_required)
+      }
+      if (submittedCaptchaToken || result.captcha_required === true) {
+        setCaptchaToken('')
+        setCaptchaResetKey((currentValue) => currentValue + 1)
+      }
+      const defaultWait = result.st === true
+        ? positiveRecoverySeconds(result.resend_after) ?? 30
+        : result.locked === true ? 30 : undefined
+      const waitSeconds = positiveRecoverySeconds(result.retry_after) ?? defaultWait
+      if (waitSeconds) {
+        const currentTime = Date.now()
+        setNow(currentTime)
+        sendBlockedUntil.current = currentTime + waitSeconds * 1000
+        setSendRetryUntil(sendBlockedUntil.current)
+      }
+
+      if (result.st === true) {
+        setMyLogin(submittedLogin)
+        setMyPWD(submittedPassword)
+        setMyCode('')
+        setShowResendCaptcha(false)
+        confirmBlockedUntil.current = 0
+        setConfirmRetryUntil(0)
+        setActiveStep(1)
+        return
+      }
+
+      setErrorText(result.text || 'Не удалось отправить код восстановления.')
+    } catch {
+      if (session === recoverySession.current) {
+        setErrorText('Не удалось отправить код восстановления. Повторите позже.')
+      }
+    } finally {
+      if (session === recoverySession.current) sendInFlight.current = false
     }
-
-    setErrorText(result.text || 'Не удалось отправить код восстановления.')
   }
 
   async function confirmRecoveryCode(): Promise<void> {
-    if (isLoading || recoveryComplete) return
+    if (isLoading || recoveryFinished.current || recoveryComplete ||
+      confirmInFlight.current || sendInFlight.current || confirmBlockedUntil.current > Date.now()) return
 
     if (myCode.length !== 6) {
       setErrorText('Введите шестизначный код из SMS.')
       return
     }
 
+    confirmInFlight.current = true
+    const session = recoverySession.current
     setErrorText('')
-    const result = await sendCode(myLogin, myCode, myPWD)
+    try {
+      const result = await sendCode(myLogin, myCode, myPWD)
+      if (session !== recoverySession.current) return
 
-    if (result.st === true) {
-      const title = RU_SCREEN_NAMES.List_orders ?? 'Список заказов'
-      Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${title}`)
-      navigation.reset({ index: 0, routes: [{ name: 'List_orders' }] })
-      return
+      if (result.st === true) {
+        recoveryFinished.current = true
+        const title = RU_SCREEN_NAMES.List_orders ?? 'Список заказов'
+        Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${title}`)
+        navigation.reset({ index: 0, routes: [{ name: 'List_orders' }] })
+        return
+      }
+
+      if (result.password_changed === true) {
+        recoveryFinished.current = true
+        setRecoveryComplete(true)
+        setMyCode('')
+        setMyPWD('')
+        setShowPassword(false)
+        return
+      }
+
+      const waitSeconds = positiveRecoverySeconds(result.retry_after) ?? (result.locked === true ? 30 : undefined)
+      if (waitSeconds) {
+        const currentTime = Date.now()
+        setNow(currentTime)
+        confirmBlockedUntil.current = currentTime + waitSeconds * 1000
+        setConfirmRetryUntil(confirmBlockedUntil.current)
+      }
+      setErrorText(result.text || 'Не удалось подтвердить код восстановления.')
+    } catch {
+      if (session === recoverySession.current) {
+        setErrorText('Не удалось подтвердить код восстановления. Повторите позже.')
+      }
+    } finally {
+      if (session === recoverySession.current) confirmInFlight.current = false
     }
-
-    if (result.password_changed === true) {
-      setRecoveryComplete(true)
-      setMyCode('')
-      setMyPWD('')
-      setShowPassword(false)
-      return
-    }
-
-    setErrorText(result.text || 'Не удалось подтвердить код восстановления.')
   }
 
   function goToAuth(): void {
@@ -180,7 +290,7 @@ export function useResetPwdLogic() {
   const helperText = recoveryComplete
     ? 'При входе может потребоваться CAPTCHA. Повторно вводить SMS-код не нужно.'
     : activeStep === 0
-      ? 'Если номер зарегистрирован, отправим SMS с кодом. Пароль должен быть сложным.'
+      ? 'Если номер зарегистрирован, отправим SMS с кодом. Пароль должен соответствовать требованиям.'
       : 'Если код не пришел, проверьте номер телефона и повторите отправку позже.'
 
   return {
@@ -198,7 +308,14 @@ export function useResetPwdLogic() {
     showPassword,
     handleTogglePassword,
     errorText,
+    captchaRequired,
+    showResendCaptcha,
     captchaResetKey,
+    retryAfter,
+    sendRetryAfter,
+    canResendCode: activeStep === 1 && myLogin.trim().length > 0 && isPasswordValid &&
+      !isLoading && !recoveryComplete && sendRetryAfter === 0 &&
+      (!showResendCaptcha || !captchaRequired || captchaToken.length > 0),
     handleCaptchaTokenChange,
     handleCaptchaError,
     isPasswordValid,

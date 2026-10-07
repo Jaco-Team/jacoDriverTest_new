@@ -2,14 +2,14 @@ import { isAxiosError, type AxiosRequestConfig } from 'axios'
 
 import { bearerHeaders, laravelHttp } from '@/shared/api/laravel/connector'
 import { laravelApiConfig } from '@/shared/api/laravel/config'
-import { getLaravelApiErrorInfo } from '@/shared/api/laravel/errors'
+import { getLaravelApiErrorInfo, getLaravelRecoveryMetadata, type LaravelRecoveryMetadata } from '@/shared/api/laravel/errors'
 import { laravelApiRoutes } from '@/shared/api/laravel/routes'
 import {
   clearLaravelAuthToken,
   getLaravelAuthToken,
 } from '@/shared/lib/laravelAuthTokenStorage'
 
-export type ApiResponse<T = any> = { st: boolean; text: string; data?: T; retryable?: boolean }
+export type ApiResponse<T = any> = LaravelRecoveryMetadata & { st: boolean; text: string; data?: T; retryable?: boolean }
 
 type FakeOrdersMode = 'off' | 'actions'
 
@@ -296,12 +296,22 @@ export async function api<T>(
     const st = response.data?.st ?? response.data?.success ?? true
     const responseText = String(response.data?.text ?? response.data?.message ?? '')
 
-    return { st, text: responseText, data: payload as T }
+    return { st, text: responseText, data: payload as T, ...getLaravelRecoveryMetadata(response.data) }
   } catch (error) {
     const info = getLaravelApiErrorInfo(error)
     if (info.status === 401) {
       await clearLaravelAuthToken().catch(() => undefined)
     }
-    return { st: false, text: info.message, retryable: (info.status !== null && info.status >= 500) || (info.status === null && isAxiosError(error)) }
+    const errorPayload = isAxiosError(error)
+      ? error.response?.data
+      : (error as { response?: { data?: unknown } })?.response?.data
+    return {
+      st: false,
+      text: info.message,
+      ...getLaravelRecoveryMetadata(errorPayload),
+      ...(info.retryAfter ? { retry_after: info.retryAfter } : {}),
+      ...(info.status === 429 ? { locked: true } : {}),
+      retryable: (info.status !== null && info.status >= 500) || (info.status === null && isAxiosError(error)),
+    }
   }
 }

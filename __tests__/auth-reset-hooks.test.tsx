@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, render, waitFor } from '@testing-library/react-native';
-import { Linking } from 'react-native';
+import { AppState, Linking, type AppStateStatus } from 'react-native';
 import { InAppBrowser } from 'react-native-inappbrowser-reborn';
 
 const mockInAppBrowserIsAvailable = InAppBrowser.isAvailable as jest.Mock;
@@ -443,7 +443,7 @@ describe('auth/reset hooks', () => {
     expect(mockNavigate).toHaveBeenCalledWith('ResetPwd');
   });
 
-  it('useResetPwdLogic: валидирует сложный пароль и переводит на шаг кода при успехе', async () => {
+  it('useResetPwdLogic: валидирует пароль и переводит на шаг кода при успехе', async () => {
     let api: ReturnType<typeof useResetPwdLogic> | null = null;
     mockSendSMS.mockResolvedValueOnce({ st: true, text: 'sent' });
 
@@ -659,4 +659,285 @@ describe('auth/reset hooks', () => {
     expect(api!.canConfirmCode).toBe(true);
     expect(mockReset).not.toHaveBeenCalled();
   });
+  it('useResetPwdLogic: сохраняет сложный пароль и CAPTCHA, ожидание SMS не блокирует код', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    mockSendSMS.mockResolvedValueOnce({ st: true, text: 'sent', resend_after: 30, captcha_required: true });
+    function Probe() { api = useResetPwdLogic(); return null; }
+    await render(<Probe />);
+    await act(async () => {
+      api!.handleLoginChange('79990000000');
+      api!.handlePasswordChange('1234567');
+    });
+    await act(async () => { await api!.requestRecoveryCode(); });
+    expect(mockSendSMS).not.toHaveBeenCalled();
+    expect(api!.errorText).toBe('Новый пароль должен соответствовать всем требованиям.');
+    await act(async () => { api!.handlePasswordChange('Password1'); });
+    expect(api!.captchaRequired).toBe(true);
+    expect(api!.canRequestCode).toBe(false);
+    await act(async () => { api!.handleCaptchaTokenChange('captcha-token'); });
+    expect(api!.canRequestCode).toBe(true);
+    await act(async () => { await api!.requestRecoveryCode(); });
+    expect(mockSendSMS).toHaveBeenCalledWith('79990000000', 'Password1', 'captcha-token');
+    expect(api!.activeStep).toBe(1);
+    expect(api!.captchaRequired).toBe(true);
+    await act(async () => { api!.handleCodeChange('123456'); });
+    expect(api!.canConfirmCode).toBe(true);
+    expect(api!.retryAfter).toBe(0);
+  });
+
+  it('useResetPwdLogic: повторный CAPTCHA challenge разрешает отправку только после нового решения', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    mockSendSMS.mockResolvedValueOnce({ st: false, text: 'Пройдите CAPTCHA.', captcha_required: true })
+      .mockResolvedValueOnce({ st: true, text: 'sent', captcha_required: false });
+    function Probe() { api = useResetPwdLogic(); return null; }
+    await render(<Probe />);
+    await act(async () => {
+      api!.handleLoginChange('79990000000');
+      api!.handlePasswordChange('Password1');
+      api!.handleCaptchaTokenChange('initial-token');
+    });
+    await act(async () => { await api!.requestRecoveryCode(); });
+    expect(api!.captchaRequired).toBe(true);
+    expect(api!.canRequestCode).toBe(false);
+    expect(api!.activeStep).toBe(0);
+    await act(async () => { await api!.requestRecoveryCode(); });
+    expect(mockSendSMS).toHaveBeenCalledTimes(1);
+    await act(async () => { api!.handleCaptchaTokenChange('solved-token'); });
+    expect(api!.canRequestCode).toBe(true);
+    await act(async () => { await api!.requestRecoveryCode(); });
+    expect(mockSendSMS).toHaveBeenLastCalledWith('79990000000', 'Password1', 'solved-token');
+    expect(api!.activeStep).toBe(1);
+    expect(api!.captchaRequired).toBe(false);
+  });
+
+  it('useResetPwdLogic: ожидание отправки отсчитывается и не обходится изменением полей', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    mockSendSMS.mockResolvedValue({ st: false, text: 'Подождите.', locked: true, retry_after: 30 });
+    function Probe() { api = useResetPwdLogic(); return null; }
+    await render(<Probe />);
+    jest.useFakeTimers();
+    try {
+      await act(async () => { api!.handleLoginChange('79990000000'); api!.handlePasswordChange('Password1'); api!.handleCaptchaTokenChange('initial-token'); });
+      await act(async () => { await api!.requestRecoveryCode(); });
+      expect(api!.retryAfter).toBe(30);
+      expect(api!.canRequestCode).toBe(false);
+      await act(async () => { api!.handlePasswordChange('Password2'); await api!.requestRecoveryCode(); });
+      expect(mockSendSMS).toHaveBeenCalledTimes(1);
+      await act(async () => { jest.advanceTimersByTime(29_000); });
+      expect(api!.retryAfter).toBe(1);
+      expect(api!.canRequestCode).toBe(false);
+      await act(async () => { jest.advanceTimersByTime(1_000); });
+      expect(api!.retryAfter).toBe(0);
+      expect(api!.captchaRequired).toBe(true);
+      expect(api!.canRequestCode).toBe(false);
+      await act(async () => { api!.handleCaptchaTokenChange('fresh-token'); });
+      expect(api!.canRequestCode).toBe(true);
+      await act(async () => { mockFocusCleanup?.(); });
+      expect(api!.retryAfter).toBe(0);
+      expect(api!.captchaRequired).toBe(true);
+    } finally { jest.useRealTimers(); }
+  });
+
+  it('useResetPwdLogic: собственная блокировка неверных кодов сохраняет поля до истечения ожидания', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    mockSendSMS.mockResolvedValueOnce({ st: true, text: 'sent', resend_after: 30 });
+    mockSendCode.mockResolvedValueOnce({ st: false, text: 'Подождите.', locked: true, retry_after: 5, resend_after: 60 });
+    function Probe() { api = useResetPwdLogic(); return null; }
+    await render(<Probe />);
+    jest.useFakeTimers();
+    try {
+      await act(async () => { api!.handleLoginChange('79990000000'); api!.handlePasswordChange('Password1'); api!.handleCaptchaTokenChange('initial-token'); });
+      await act(async () => { await api!.requestRecoveryCode(); });
+      await act(async () => { api!.handleCodeChange('123456'); });
+      expect(api!.canConfirmCode).toBe(true);
+      await act(async () => { await api!.confirmRecoveryCode(); });
+      expect(api!.retryAfter).toBe(5);
+      expect(api!.canConfirmCode).toBe(false);
+      expect(api!.myPWD).toBe('Password1');
+      expect(api!.myCode).toBe('123456');
+      await act(async () => { await api!.confirmRecoveryCode(); });
+      expect(mockSendCode).toHaveBeenCalledTimes(1);
+      await act(async () => { jest.advanceTimersByTime(5_000); });
+      expect(api!.canConfirmCode).toBe(true);
+      expect(api!.retryAfter).toBe(0);
+    } finally { jest.useRealTimers(); }
+  });
+
+  it('useResetPwdLogic: два синхронных нажатия не дублируют SMS и не сбрасывают активный CAPTCHA token', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    mockSendSMS.mockResolvedValueOnce({ st: false, text: 'Пройдите CAPTCHA.', captcha_required: true });
+    function Probe() { api = useResetPwdLogic(); return null; }
+    await render(<Probe />);
+    await act(async () => { api!.handleLoginChange('79990000000'); api!.handlePasswordChange('Password1'); api!.handleCaptchaTokenChange('initial-token'); });
+    await act(async () => { await api!.requestRecoveryCode(); });
+    await act(async () => { api!.handleCaptchaTokenChange('solved-token'); });
+    let resolve: (value: any) => void = () => {};
+    mockSendSMS.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+    const resetKey = api!.captchaResetKey;
+    await act(async () => {
+      const first = api!.requestRecoveryCode();
+      await api!.requestRecoveryCode();
+      expect(api!.captchaResetKey).toBe(resetKey);
+      expect(mockSendSMS).toHaveBeenCalledTimes(2);
+      resolve({ st: true, text: 'sent' });
+      await first;
+    });
+    expect(api!.activeStep).toBe(1);
+    expect(api!.captchaResetKey).toBe(resetKey + 1);
+  });
+
+  it('useResetPwdLogic: два синхронных подтверждения отправляют один запрос, уход игнорирует поздний ответ', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    function Probe() { api = useResetPwdLogic(); return null; }
+    await render(<Probe />);
+    await act(async () => { api!.handleLoginChange('79990000000'); api!.handlePasswordChange('Password1'); api!.handleCodeChange('123456'); });
+    let resolve: (value: any) => void = () => {};
+    mockSendCode.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+    await act(async () => {
+      const first = api!.confirmRecoveryCode();
+      await api!.confirmRecoveryCode();
+      expect(mockSendCode).toHaveBeenCalledTimes(1);
+      mockFocusCleanup?.();
+      resolve({ st: true, text: 'ok' });
+      await first;
+    });
+    expect(mockReset).not.toHaveBeenCalled();
+    expect(api!.myPWD).toBe('');
+    expect(api!.myCode).toBe('');
+    expect(api!.activeStep).toBe(0);
+  });
+
+  it('useResetPwdLogic: повторная SMS после ожидания очищает прежний код и блокировку подтверждения', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    mockSendSMS.mockResolvedValue({ st: true, text: 'sent', resend_after: 30 });
+    mockSendCode.mockResolvedValueOnce({ st: false, text: 'Подождите.', locked: true, retry_after: 60 });
+    function Probe() { api = useResetPwdLogic(); return null; }
+    await render(<Probe />);
+    jest.useFakeTimers();
+    try {
+      await act(async () => { api!.handleLoginChange('79990000000'); api!.handlePasswordChange('Password1'); api!.handleCaptchaTokenChange('initial-token'); });
+      await act(async () => { await api!.requestRecoveryCode(); });
+      await act(async () => { api!.handleCodeChange('123456'); });
+      expect(api!.canResendCode).toBe(false);
+      expect(api!.sendRetryAfter).toBe(30);
+      await act(async () => { await api!.confirmRecoveryCode(); });
+      await act(async () => { jest.advanceTimersByTime(30_000); });
+      expect(api!.canResendCode).toBe(true);
+      await act(async () => { await api!.requestRecoveryCode(); });
+      expect(api!.showResendCaptcha).toBe(true);
+      expect(mockSendSMS).toHaveBeenCalledTimes(1);
+      expect(api!.canResendCode).toBe(false);
+      await act(async () => { api!.handleCaptchaTokenChange('resend-token'); });
+      expect(api!.canResendCode).toBe(true);
+      expect(api!.canConfirmCode).toBe(false);
+      await act(async () => { await api!.requestRecoveryCode(); });
+      expect(mockSendSMS).toHaveBeenCalledTimes(2);
+      expect(api!.myCode).toBe('');
+      expect(api!.retryAfter).toBe(0);
+      expect(api!.sendRetryAfter).toBe(30);
+      await act(async () => { api!.handleCodeChange('654321'); });
+      expect(api!.canConfirmCode).toBe(true);
+    } finally { jest.useRealTimers(); }
+  });
+
+  it('useResetPwdLogic: старый ответ отправки без resend_after всё равно защищает повторную SMS', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    mockSendSMS.mockResolvedValue({ st: true, text: 'sent' });
+    function Probe() { api = useResetPwdLogic(); return null; }
+    await render(<Probe />);
+    await act(async () => { api!.handleLoginChange('79990000000'); api!.handlePasswordChange('Password1'); api!.handleCaptchaTokenChange('initial-token'); });
+    await act(async () => { await api!.requestRecoveryCode(); await api!.requestRecoveryCode(); });
+    expect(mockSendSMS).toHaveBeenCalledTimes(1);
+    expect(api!.sendRetryAfter).toBe(30);
+  });
+
+  it.each([{ st: true, text: 'ok' }, { st: false, text: 'Требуется вход.', password_changed: true }])(
+    'useResetPwdLogic: завершённое восстановление не допускает последовательного подтверждения из старого callback (%o)',
+    async (result) => {
+      let api: ReturnType<typeof useResetPwdLogic> | null = null;
+      mockSendCode.mockResolvedValue(result);
+      function Probe() { api = useResetPwdLogic(); return null; }
+      await render(<Probe />);
+      await act(async () => { api!.handleLoginChange('79990000000'); api!.handlePasswordChange('Password1'); api!.handleCodeChange('123456'); });
+      await act(async () => { await api!.confirmRecoveryCode(); await api!.confirmRecoveryCode(); });
+      expect(mockSendCode).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('useResetPwdLogic: ошибка повторной SMS не убирает текущий код, подтверждение и CAPTCHA', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    mockSendSMS.mockResolvedValueOnce({ st: true, text: 'sent', resend_after: 30 })
+      .mockResolvedValueOnce({ st: false, text: 'Подождите.', locked: true, retry_after: 30 });
+    function Probe() { api = useResetPwdLogic(); return null; }
+    await render(<Probe />);
+    jest.useFakeTimers();
+    try {
+      await act(async () => { api!.handleLoginChange('79990000000'); api!.handlePasswordChange('Password1'); api!.handleCaptchaTokenChange('initial-token'); });
+      await act(async () => { await api!.requestRecoveryCode(); });
+      await act(async () => { api!.handleCodeChange('123456'); jest.advanceTimersByTime(30_000); });
+      await act(async () => { api!.handleCaptchaTokenChange('resend-token'); });
+      await act(async () => { await api!.requestRecoveryCode(); });
+      expect(api!.activeStep).toBe(1);
+      expect(api!.myCode).toBe('123456');
+      expect(api!.captchaRequired).toBe(true);
+      expect(api!.canConfirmCode).toBe(true);
+      expect(api!.canResendCode).toBe(false);
+      expect(api!.sendRetryAfter).toBe(30);
+      expect(api!.retryAfter).toBe(0);
+    } finally { jest.useRealTimers(); }
+  });
+
+  it('useResetPwdLogic: возвращение из фона пересчитывает ожидание по времени, а не числу тиков', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    let listener: ((state: AppStateStatus) => void) | undefined;
+    const remove = jest.fn();
+    const previousImplementation = (AppState.addEventListener as jest.Mock).getMockImplementation();
+    const spy = jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, callback) => {
+      listener = callback;
+      return { remove };
+    });
+    mockSendSMS.mockResolvedValueOnce({ st: true, text: 'sent', resend_after: 30 });
+    function Probe() { api = useResetPwdLogic(); return null; }
+    const screen = await render(<Probe />);
+    jest.useFakeTimers();
+    try {
+      await act(async () => { api!.handleLoginChange('79990000000'); api!.handlePasswordChange('Password1'); api!.handleCaptchaTokenChange('initial-token'); });
+      await act(async () => { await api!.requestRecoveryCode(); });
+      expect(api!.sendRetryAfter).toBe(30);
+      await act(async () => { listener?.('background'); });
+      jest.setSystemTime(Date.now() + 60_000);
+      await act(async () => { listener?.('active'); });
+      expect(api!.sendRetryAfter).toBe(0);
+      await screen.unmount();
+      expect(remove).toHaveBeenCalledTimes(1);
+    } finally { spy.mockImplementation(previousImplementation as typeof AppState.addEventListener); jest.useRealTimers(); }
+  });
+
+  it('useResetPwdLogic: CAPTCHA скрыта после отправки и появляется только по запросу новой SMS, старый код подтверждается', async () => {
+    let api: ReturnType<typeof useResetPwdLogic> | null = null;
+    mockSendSMS.mockResolvedValue({ st: true, text: 'sent', resend_after: 30 });
+    function Probe() { api = useResetPwdLogic(); return null; }
+    await render(<Probe />);
+    jest.useFakeTimers();
+    try {
+      await act(async () => { api!.handleLoginChange('79990000000'); api!.handlePasswordChange('Password1'); api!.handleCaptchaTokenChange('initial-token'); });
+      await act(async () => { await api!.requestRecoveryCode(); });
+      await act(async () => { api!.handleCodeChange('123456'); });
+      expect(api!.showResendCaptcha).toBe(false);
+      expect(api!.canConfirmCode).toBe(true);
+      await act(async () => { jest.advanceTimersByTime(30_000); });
+      expect(api!.canResendCode).toBe(true);
+      await act(async () => { await api!.requestRecoveryCode(); });
+      expect(mockSendSMS).toHaveBeenCalledTimes(1);
+      expect(api!.showResendCaptcha).toBe(true);
+      expect(api!.myCode).toBe('123456');
+      expect(api!.canConfirmCode).toBe(true);
+      await act(async () => { api!.handleCaptchaTokenChange('resend-token'); });
+      await act(async () => { await api!.requestRecoveryCode(); });
+      expect(mockSendSMS).toHaveBeenCalledTimes(2);
+      expect(api!.showResendCaptcha).toBe(false);
+      expect(api!.myCode).toBe('');
+    } finally { jest.useRealTimers(); }
+  });
+
 });
