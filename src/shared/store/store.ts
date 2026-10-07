@@ -23,7 +23,7 @@ import {
   logoutFromLaravel,
   type LaravelAuthUser,
 } from '@/shared/api/laravel/auth';
-import {getLaravelApiErrorInfo} from '@/shared/api/laravel/errors';
+import {getLaravelApiErrorInfo, getLaravelRecoveryMetadata} from '@/shared/api/laravel/errors';
 import {
   createLaravelFeedback,
   fetchLaravelFeedbacks,
@@ -561,7 +561,7 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
       useGlobalStore.getState().setSpinner(false);
     }, 500);
 
-    return {st: json.st, text: json?.text ?? ''};
+    return {st: json.st, text: json?.text ?? '', ...getLaravelRecoveryMetadata(json)};
   },
 
   sendCode: async (
@@ -584,7 +584,7 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
     };
 
     const json = await api<LoginResponse>('auth', data);
-    const result: StatusTextType = {st: json.st, text: json?.text ?? ''};
+    const result: StatusTextType = {st: json.st, text: json?.text ?? '', ...getLaravelRecoveryMetadata(json)};
 
     if (json.st === true) {
       try {

@@ -235,6 +235,23 @@ describe('useLoginStore auth flow', () => {
     expect(useGlobalStore.getState().modal_text).toBe('');
   });
 
+  it('sendSMS передаёт требование CAPTCHA и ожидание UI без потери полей', async () => {
+    mockApi.mockResolvedValueOnce({ st: false, text: 'Подождите.', captcha_required: true, locked: true, retry_after: 30 });
+    expect(await useLoginStore.getState().sendSMS('driver', 'Password1'))
+      .toEqual({ st: false, text: 'Подождите.', captcha_required: true, locked: true, retry_after: 30 });
+    jest.advanceTimersByTime(500);
+    mockApi.mockResolvedValueOnce({ st: true, text: 'sent', captcha_required: false, resend_after: 30 });
+    expect(await useLoginStore.getState().sendSMS('driver', 'Password1'))
+      .toEqual({ st: true, text: 'sent', captcha_required: false, resend_after: 30 });
+  });
+
+  it('sendCode передаёт отдельное ожидание подтверждения', async () => {
+    mockApi.mockResolvedValueOnce({ st: false, text: 'Подождите.', locked: true, retry_after: 60 });
+    expect(await useLoginStore.getState().sendCode('driver', '123456', 'Password1'))
+      .toEqual({ st: false, text: 'Подождите.', locked: true, retry_after: 60 });
+    expect(mockLoginWithLaravel).not.toHaveBeenCalled();
+  });
+
   it('sendCode success: подтверждает код и выполняет Laravel-вход с новым паролем', async () => {
     mockApi.mockResolvedValueOnce({
       st: true,

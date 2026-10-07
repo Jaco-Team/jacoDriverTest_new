@@ -40,7 +40,12 @@ export function ResetPwdScreen(): React.JSX.Element {
     showPassword,
     handleTogglePassword,
     errorText,
+    captchaRequired,
+    showResendCaptcha,
     captchaResetKey,
+    retryAfter,
+    sendRetryAfter,
+    canResendCode,
     handleCaptchaTokenChange,
     handleCaptchaError,
     isLoading,
@@ -58,9 +63,11 @@ export function ResetPwdScreen(): React.JSX.Element {
       : canConfirmCode
   const submitLabel = recoveryComplete
     ? 'Войти'
-    : activeStep === 0
-      ? 'Получить код'
-      : 'Подтвердить'
+    : retryAfter > 0
+      ? `Повторить через ${retryAfter} с`
+      : activeStep === 0
+        ? 'Получить код'
+        : 'Подтвердить'
 
   function animateReturnLinkUnderline(isPressed: boolean): void {
     const textWidth = returnLinkTextWidth.current
@@ -125,6 +132,7 @@ export function ResetPwdScreen(): React.JSX.Element {
               autoComplete="tel"
               autoCorrect={false}
               keyboardType="phone-pad"
+              editable={!isLoading}
               label="Номер телефона"
               returnKeyType="next"
               testID="reset-phone-input"
@@ -139,6 +147,7 @@ export function ResetPwdScreen(): React.JSX.Element {
               autoComplete="new-password"
               autoCorrect={false}
               keyboardType="default"
+              editable={!isLoading}
               label="Новый пароль"
               passwordVisible={showPassword}
               returnKeyType="done"
@@ -158,12 +167,6 @@ export function ResetPwdScreen(): React.JSX.Element {
             <PasswordRequirements password={myPWD} />
           </View>
 
-          <AuthSmartCaptcha
-            onError={handleCaptchaError}
-            onTokenChange={handleCaptchaTokenChange}
-            resetKey={captchaResetKey}
-            testID="reset-captcha"
-          />
         </>
       ) : (
         <View style={styles.fieldGroup}>
@@ -174,6 +177,7 @@ export function ResetPwdScreen(): React.JSX.Element {
             }
             inputMode="numeric"
             keyboardType="number-pad"
+            editable={!isLoading}
             label="Код из смс"
             maxLength={6}
             returnKeyType="done"
@@ -188,6 +192,33 @@ export function ResetPwdScreen(): React.JSX.Element {
             }}
           />
         </View>
+      )}
+
+      {!recoveryComplete && captchaRequired && (activeStep === 0 || showResendCaptcha) && (
+        <>
+          {activeStep === 1 && <Text style={[styles.hintText, { color: colors.textMuted }]} testID="reset-resend-captcha-title">Проверка для повторной отправки</Text>}
+          <AuthSmartCaptcha
+            onError={handleCaptchaError}
+            onTokenChange={handleCaptchaTokenChange}
+            resetKey={captchaResetKey}
+            testID="reset-captcha"
+          />
+        </>
+      )}
+
+      {!recoveryComplete && activeStep === 1 && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canResendCode }}
+          disabled={!canResendCode}
+          style={styles.resendButton}
+          testID="reset-resend"
+          onPress={() => { void requestRecoveryCode() }}
+        >
+          <Text style={[styles.resendText, { color: canResendCode ? colors.brand : colors.textMuted }]}>
+            {sendRetryAfter > 0 ? `Отправить снова через ${sendRetryAfter} с` : 'Отправить код ещё раз'}
+          </Text>
+        </Pressable>
       )}
 
       {errorText ? (
@@ -384,6 +415,16 @@ const styles = StyleSheet.create({
   },
   primaryButtonTextDisabled: {
     color: 'rgba(0, 0, 0, 0.38)',
+  },
+  resendButton: {
+    alignSelf: 'flex-start',
+    marginTop: 14,
+    paddingVertical: 8,
+  },
+  resendText: {
+    fontFamily: 'Roboto-Medium',
+    fontSize: 15,
+    lineHeight: 22,
   },
   linkRow: {
     gap: 8,

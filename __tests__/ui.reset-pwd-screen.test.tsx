@@ -55,7 +55,12 @@ describe('ResetPwdScreen', () => {
       showPassword: false,
       handleTogglePassword: mockHandleTogglePassword,
       errorText: '',
+      captchaRequired: true,
+      showResendCaptcha: false,
       captchaResetKey: 0,
+      retryAfter: 0,
+      sendRetryAfter: 0,
+      canResendCode: false,
       handleCaptchaTokenChange: jest.fn(),
       handleCaptchaError: jest.fn(),
       isLoading: false,
@@ -71,7 +76,7 @@ describe('ResetPwdScreen', () => {
     await cleanup()
   })
 
-  it('показывает первый шаг с требованиями пароля и CAPTCHA', async () => {
+  it('показывает первый шаг с прежними требованиями пароля и обязательной CAPTCHA', async () => {
     const screen = await render(<ResetPwdScreen />)
 
     expect(screen.getByText('ВОССТАНОВЛЕНИЕ ПАРОЛЯ')).toBeTruthy()
@@ -82,8 +87,27 @@ describe('ResetPwdScreen', () => {
     expect(screen.getByTestId('reset-password-input').props.secureTextEntry).toBe(true)
     expect(screen.getByTestId('reset-password-requirements')).toBeTruthy()
     expect(screen.getByTestId('reset-captcha')).toBeTruthy()
+    expect(screen.getByText('Не менее 8 символов')).toBeTruthy()
+    expect(screen.getByText('Хотя бы одна цифра')).toBeTruthy()
+    expect(screen.getByText('Строчная латинская буква')).toBeTruthy()
+    expect(screen.getByText('Заглавная латинская буква')).toBeTruthy()
     expect(screen.getByTestId('reset-hint')).toBeTruthy()
     expect(screen.getByTestId('reset-submit').props.disabled).toBe(true)
+  })
+
+  it('скрывает CAPTCHA только по явному отказу сервера от проверки', async () => {
+    mockResetState.captchaRequired = false
+    const screen = await render(<ResetPwdScreen />)
+    expect(screen.queryByTestId('reset-captcha')).toBeNull()
+    expect(screen.getByTestId('reset-submit').props.disabled).toBe(true)
+  })
+
+  it('показывает оставшееся ожидание на заблокированной кнопке', async () => {
+    mockResetState.retryAfter = 25
+    const screen = await render(<ResetPwdScreen />)
+    const submit = screen.getByTestId('reset-submit')
+    expect(submit.props.accessibilityLabel).toBe('Повторить через 25 с')
+    expect(submit.props.disabled).toBe(true)
   })
 
   it('передаёт ввод первого шага и переход к авторизации', async () => {
@@ -127,6 +151,50 @@ describe('ResetPwdScreen', () => {
     expect(mockConfirmRecoveryCode).toHaveBeenCalledTimes(1)
   })
 
+  it('ожидание повторного SMS не блокирует подтверждение и повторная отправка доступна отдельно', async () => {
+    mockResetState.activeStep = 1
+    mockResetState.canConfirmCode = true
+    mockResetState.sendRetryAfter = 20
+    const screen = await render(<ResetPwdScreen />)
+    expect(screen.getByText('Отправить снова через 20 с')).toBeTruthy()
+    expect(screen.getByTestId('reset-resend').props.disabled).toBe(true)
+    expect(screen.getByTestId('reset-submit').props.disabled).toBe(false)
+    mockResetState.sendRetryAfter = 0
+    mockResetState.canResendCode = true
+    await screen.rerender(<ResetPwdScreen />)
+    await fireEvent.press(screen.getByTestId('reset-resend'))
+    expect(mockRequestRecoveryCode).toHaveBeenCalledTimes(1)
+    expect(mockConfirmRecoveryCode).not.toHaveBeenCalled()
+  })
+
+  it('на шаге SMS CAPTCHA требуется только для повторной отправки', async () => {
+    mockResetState.activeStep = 1
+    mockResetState.captchaRequired = true
+    mockResetState.showResendCaptcha = true
+    mockResetState.canConfirmCode = true
+    const screen = await render(<ResetPwdScreen />)
+    expect(screen.getByTestId('reset-captcha')).toBeTruthy()
+    expect(screen.getByTestId('reset-resend').props.disabled).toBe(true)
+    expect(screen.getByText('Проверка для повторной отправки')).toBeTruthy()
+    expect(screen.getByTestId('reset-submit').props.disabled).toBe(false)
+  })
+
+  it('полученный SMS подтверждается без новой CAPTCHA, открытая проверка относится только к повтору', async () => {
+    mockResetState.activeStep = 1
+    mockResetState.myCode = '123456'
+    mockResetState.canConfirmCode = true
+    mockResetState.canResendCode = true
+    const screen = await render(<ResetPwdScreen />)
+    expect(screen.queryByTestId('reset-captcha')).toBeNull()
+    expect(screen.getByTestId('reset-submit').props.disabled).toBe(false)
+    mockResetState.showResendCaptcha = true
+    mockResetState.canResendCode = false
+    await screen.rerender(<ResetPwdScreen />)
+    expect(screen.getByText('Проверка для повторной отправки')).toBeTruthy()
+    expect(screen.getByTestId('reset-code-input').props.value).toBe('123456')
+    expect(screen.getByTestId('reset-submit').props.disabled).toBe(false)
+  })
+
   it('после успешной смены пароля предлагает вход и убирает повторное подтверждение SMS', async () => {
     mockResetState.activeStep = 1;
     mockResetState.recoveryComplete = true;
@@ -141,6 +209,7 @@ describe('ResetPwdScreen', () => {
     expect(screen.queryByTestId('reset-password-input')).toBeNull();
     expect(screen.queryByTestId('reset-captcha')).toBeNull();
     expect(screen.queryByTestId('reset-error')).toBeNull();
+    expect(screen.queryByTestId('reset-resend')).toBeNull();
     expect(screen.queryByTestId('reset-back-to-auth')).toBeNull();
     const submit = screen.getByTestId('reset-submit');
     expect(submit.props.disabled).toBe(false);
