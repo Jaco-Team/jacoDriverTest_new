@@ -48,6 +48,22 @@ describe('индикаторы заказов за пределами карты
     ]);
   });
 
+  it('для заказов других курьеров использует цвет курьера, а не статуса', () => {
+    const orders = [
+      {
+        ...order(1, 55, 50, '#b5e737'),
+        color: '#a9203e',
+      },
+    ];
+
+    expect(groupOrdersByMapLocation(orders, true)[0].statusColors).toEqual([
+      '#a9203e',
+    ]);
+    expect(getMapEdgeIndicators(orders, viewport, true)[0].statusColors).toEqual([
+      '#a9203e',
+    ]);
+  });
+
   it('учитывает поворот карты при выборе направления', () => {
     const [indicator] = getMapEdgeIndicators([order(1, 55, 50)], {
       ...viewport,

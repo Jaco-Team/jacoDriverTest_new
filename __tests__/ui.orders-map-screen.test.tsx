@@ -27,11 +27,19 @@ const mockMapLogic = {
 }
 const mockMapMount = jest.fn()
 const mockMapUnmount = jest.fn()
+const mockHomeMarkerMount = jest.fn()
+const mockHomeMarkerUnmount = jest.fn()
 
 const mockTheme = {
   colors: {
     surface: '#F4F7FA',
+    surfaceRaised: '#FFFFFF',
+    softStrong: 'rgba(66, 98, 125, 0.14)',
+    border: 'rgba(66, 98, 125, 0.16)',
+    primary: '#42627D',
     text: '#1F2D38',
+    textMuted: '#6B7883',
+    shadowStrong: 'rgba(17, 27, 36, 0.18)',
   },
   isDark: false,
 }
@@ -87,10 +95,18 @@ jest.mock('@/features/orders-map/ui/ListOrders', () => ({
 }))
 jest.mock('@/features/orders-map/ui/HomeMarker', () => ({
   HomeMarkerImage: () => null,
-  HomeMarker: ({ point }: any) => {
+  HomeMarker: ({ point, refreshKey }: any) => {
     const React = require('react')
     const { View } = require('react-native')
-    return React.createElement(View, { testID: 'orders-map-home-marker', point })
+    React.useEffect(() => {
+      mockHomeMarkerMount()
+      return mockHomeMarkerUnmount
+    }, [refreshKey])
+    return React.createElement(View, {
+      testID: 'orders-map-home-marker',
+      point,
+      refreshKey,
+    })
   },
 }))
 jest.mock('@/features/orders-map/ui/ModalOrder', () => ({
@@ -109,6 +125,8 @@ jest.mock('@/features/orders-map/ui/OrdersMapCompass', () => ({
 
 import { MapScreen } from '@/features/orders-map/ui/MapScreen'
 import {ConnectivityContext} from '@/shared/lib/connectivityContext'
+import {useOfflineMapStore} from '@/features/offline-map/model/offlineMap.store'
+import {useOrdersStore} from '@/shared/store/store'
 
 describe('экран карты заказов', () => {
   beforeEach(() => {
@@ -118,8 +136,11 @@ describe('экран карты заказов', () => {
     mockMapLogic.set_type_location.mockClear()
     mockTheme.isDark = false
     mockMapLogic.isOffline = false
+    useOfflineMapStore.setState({hydrated: false, cities: {}})
     mockMapMount.mockClear()
     mockMapUnmount.mockClear()
+    mockHomeMarkerMount.mockClear()
+    mockHomeMarkerUnmount.mockClear()
   })
 
   it('занимает всю доступную область и сохраняет собственные элементы карты', async () => {
@@ -256,5 +277,91 @@ describe('экран карты заказов', () => {
     }
     expect(mockMapMount).toHaveBeenCalledTimes(1)
     expect(mockMapUnmount).not.toHaveBeenCalled()
+    expect(mockHomeMarkerMount).toHaveBeenCalledTimes(7)
+    expect(mockHomeMarkerUnmount).toHaveBeenCalledTimes(6)
+  })
+
+  it('без скачанной карты показывает сохранённые заказы списком и не монтирует MapKit', async () => {
+    const showOrdersMap = jest.fn()
+    useOfflineMapStore.setState({hydrated: true, cities: {}})
+    useOrdersStore.setState({
+      type: {id: 5, text: 'У других курьеров'},
+      orders: [
+        {
+          id: 71,
+          addr: 'улица Мира, 82',
+          id_text: '#71',
+          status: 'В пути',
+          point_color: '#b5e737',
+          color: '#a9203e',
+          xy: {lat: 53.2, lon: 50.1},
+        } as any,
+      ],
+      showOrdersMap,
+    })
+    mockMapLogic.isOffline = true
+
+    await render(
+      <ConnectivityContext.Provider value>
+        <MapScreen />
+      </ConnectivityContext.Provider>,
+    )
+
+    expect(screen.getByText('Карта недоступна')).toBeTruthy()
+    expect(screen.getByText('улица Мира, 82')).toBeTruthy()
+    expect(screen.queryByTestId('native-yandex-map')).toBeNull()
+    expect(screen.queryByTestId('orders-map-rotation-lock')).toBeNull()
+
+    fireEvent.press(screen.getByTestId('orders-map-offline-order-71'))
+    expect(showOrdersMap).toHaveBeenCalledWith(71)
+  })
+
+  it('без скачанной карты и заказов показывает единое пустое состояние', async () => {
+    useOfflineMapStore.setState({hydrated: true, cities: {}})
+    useOrdersStore.setState({
+      type: {id: 3, text: 'Активные'},
+      orders: [],
+    })
+    mockMapLogic.isOffline = true
+
+    await render(
+      <ConnectivityContext.Provider value>
+        <MapScreen />
+      </ConnectivityContext.Provider>,
+    )
+
+    expect(screen.getByText('Карта недоступна')).toBeTruthy()
+    expect(screen.getByText('Сохранённых заказов нет.')).toBeTruthy()
+    expect(screen.queryByTestId('native-yandex-map')).toBeNull()
+  })
+
+  it('со скачанной картой текущего города оставляет MapKit доступным офлайн', async () => {
+    useOfflineMapStore.setState({
+      hydrated: true,
+      cities: {
+        samara: {
+          regionId: 51,
+          status: 'ready',
+          progress: 1,
+          managed: true,
+          autoResume: false,
+        },
+      },
+    })
+    mockMapLogic.isOffline = true
+
+    await render(
+      <ConnectivityContext.Provider value>
+        <MapScreen />
+      </ConnectivityContext.Provider>,
+    )
+    await act(async () => {
+      fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
+        nativeEvent: {layout: {width: 390, height: 700}},
+      })
+    })
+
+    expect(screen.getByTestId('native-yandex-map')).toBeTruthy()
+    expect(screen.queryByText('Карта недоступна')).toBeNull()
   })
 })

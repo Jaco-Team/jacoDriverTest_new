@@ -295,7 +295,6 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
     return refreshing;
   },
   download: async (id, refresh = false) => {
-    await get().hydrate();
     if (
       !getOfflineMapCity(id) ||
       get().busyCityId ||
@@ -303,7 +302,18 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
       !canDownload()
     )
       return;
+
+    // Reserve the single download slot before the first await. Otherwise two
+    // quick taps for different cities can both pass the guard while hydrate()
+    // yields to the microtask queue.
     set({busyCityId: id, error: ''});
+    await get().hydrate();
+
+    if (!canDownload()) {
+      if (get().busyCityId === id) set({busyCityId: null});
+      return;
+    }
+
     updateCity(id, {
       status: 'downloading',
       managed: true,

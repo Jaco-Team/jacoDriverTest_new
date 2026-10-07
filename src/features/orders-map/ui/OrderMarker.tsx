@@ -4,6 +4,7 @@ import {faDotCircle, faMapMarkerAlt} from '@fortawesome/free-solid-svg-icons';
 import {Marker} from 'react-native-yamap-plus';
 import {useAppTheme} from '@/shared/theme/AppThemeProvider';
 import type {MapPointProps} from '../model/types';
+import {getOrderMarkerColor} from '../model/orderMarkerColor';
 import {MeasuredMarkerImage, type MarkerBitmap} from './MeasuredMarkerImage';
 
 const FALLBACK_SOURCE = {
@@ -18,12 +19,12 @@ const CLASSIC_PATH =
 const CLASSIC_ANCHOR = {x: 75.66 / 183, y: 283.39 / 285};
 
 export function getOrderMarkerSignature(
-  {item, theme, globalFontSize}: MapPointProps,
+  {item, theme, globalFontSize, preferDriverColor}: MapPointProps,
   isDark: boolean,
 ): string {
   return JSON.stringify([
     item.point_text,
-    item.point_color || item.color || 'blue',
+    getOrderMarkerColor(item, preferDriverColor),
     Boolean(item.close_time_),
     theme,
     globalFontSize,
@@ -34,7 +35,7 @@ export function getOrderMarkerSignature(
 export const OrderMarkerImage = memo(function OrderMarkerImage(
   props: MapPointProps & {onImage: (image: MarkerBitmap) => void},
 ) {
-  const {item, theme, globalFontSize, onImage} = props;
+  const {item, theme, globalFontSize, preferDriverColor, onImage} = props;
   const {isDark} = useAppTheme();
   const [viewBoxWidth, viewBoxHeight, , , path] = (
     !item.close_time_ ? faDotCircle : faMapMarkerAlt
@@ -53,7 +54,7 @@ export const OrderMarkerImage = memo(function OrderMarkerImage(
         viewBoxHeight: classic ? 285 : viewBoxHeight,
         width: 20,
         height: classic ? 28 : 20,
-        color: item.point_color || item.color || 'blue',
+        color: getOrderMarkerColor(item, preferDriverColor),
         anchor: classic
           ? CLASSIC_ANCHOR
           : {x: 0.5, y: item.close_time_ ? 1 : 0.5},

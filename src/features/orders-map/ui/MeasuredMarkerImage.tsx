@@ -34,15 +34,37 @@ export interface MarkerIcon {
   anchor?: {x: number; y: number};
 }
 
+export function getMarkerIconLayout(icon: MarkerIcon) {
+  const scale = Math.min(
+    icon.width / icon.viewBoxWidth,
+    icon.height / icon.viewBoxHeight,
+  );
+  const width = icon.viewBoxWidth * scale;
+  const height = icon.viewBoxHeight * scale;
+
+  return {
+    scale,
+    width,
+    height,
+    offsetX: (icon.width - width) / 2,
+    offsetY: (icon.height - height) / 2,
+  };
+}
+
 export function getMarkerAnchor(
   width: number,
   height: number,
   icon: MarkerIcon,
 ) {
   const anchor = icon.anchor ?? {x: 0.5, y: 0.5};
+  const layout = getMarkerIconLayout(icon);
   return {
-    x: (icon.width * anchor.x) / width,
-    y: ((height - icon.height) / 2 + icon.height * anchor.y) / height,
+    x: (layout.offsetX + layout.width * anchor.x) / width,
+    y:
+      ((height - icon.height) / 2 +
+        layout.offsetY +
+        layout.height * anchor.y) /
+      height,
   };
 }
 
@@ -163,6 +185,7 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
     ),
   );
   const width = icon.width + gap + labelWidth;
+  const iconLayout = getMarkerIconLayout(icon);
   const captureKey = `${signature}:${width}:${height}`;
   const latestCaptureKey = useRef(captureKey);
   latestCaptureKey.current = captureKey;
@@ -309,7 +332,7 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
             />
           ) : null}
           <G
-            transform={`translate(0 ${(height - icon.height) / 2}) scale(${icon.width / icon.viewBoxWidth} ${icon.height / icon.viewBoxHeight})`}>
+            transform={`translate(${iconLayout.offsetX} ${(height - icon.height) / 2 + iconLayout.offsetY}) scale(${iconLayout.scale})`}>
             <Path d={icon.path} fill={icon.color} />
           </G>
           {hasText ? (

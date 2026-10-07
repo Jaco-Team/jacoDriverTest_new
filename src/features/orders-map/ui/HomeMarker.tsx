@@ -37,17 +37,29 @@ export const HomeMarkerImage = memo(function HomeMarkerImage({
 export const HomeMarker = memo(function HomeMarker({
   point,
   getHome,
+  isDark,
   image,
-}: MapPointHouse & {isDark: boolean; image?: MarkerBitmap | null}) {
+  refreshKey,
+}: MapPointHouse & {
+  isDark: boolean;
+  image?: MarkerBitmap | null;
+  refreshKey?: string;
+}) {
+  const expectedSignature = `home:${isDark}`;
+  const currentImage =
+    image?.signature === expectedSignature ? image : null;
+
   return (
     <Marker
+      key={`${refreshKey ?? 'initial'}:${expectedSignature}`}
       handled
       strictTapBounds
       point={point}
       onPress={getHome}
-      source={image?.source}
-      anchor={image?.anchor}
-      visible={Boolean(image)}
+      scale={1}
+      source={currentImage?.source}
+      anchor={currentImage?.anchor}
+      visible={Boolean(currentImage)}
       testID="orders-map-home-marker"
     />
   );

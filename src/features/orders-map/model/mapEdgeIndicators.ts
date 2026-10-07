@@ -6,11 +6,11 @@ import type {
 
 import type {Order} from '@/shared/store/OrdersStoreType';
 import {isValidMapPoint} from './mapPoint';
+import {getOrderMarkerColor} from './orderMarkerColor';
 
 const LOCATION_PRECISION = 5;
 const SECTOR_COUNT = 8;
 const INDICATOR_RADIUS_PERCENT = 43;
-const DEFAULT_STATUS_COLOR = '#42627D';
 
 export interface MapViewport {
   center: Point;
@@ -19,7 +19,10 @@ export interface MapViewport {
 }
 
 export interface OrderMapGroup {
+  key: string;
   coordinate: Point;
+  representative: Order;
+  orders: Order[];
   count: number;
   statusColors: string[];
 }
@@ -75,14 +78,10 @@ function isInsideVisibleRegion(point: Point, viewport: MapViewport): boolean {
   return true;
 }
 
-function getStatusColor(order: Order): string {
-  const color = order.point_color || order.color;
-  return typeof color === 'string' && color.trim()
-    ? color.trim()
-    : DEFAULT_STATUS_COLOR;
-}
-
-export function groupOrdersByMapLocation(orders: Order[]): OrderMapGroup[] {
+export function groupOrdersByMapLocation(
+  orders: Order[],
+  preferDriverColor = false,
+): OrderMapGroup[] {
   const groups = new Map<string, OrderMapGroup>();
 
   for (const order of orders) {
@@ -90,10 +89,11 @@ export function groupOrdersByMapLocation(orders: Order[]): OrderMapGroup[] {
 
     const coordinate = {lat: order.xy.lat, lon: order.xy.lon};
     const key = `${coordinate.lat.toFixed(LOCATION_PRECISION)}:${coordinate.lon.toFixed(LOCATION_PRECISION)}`;
-    const statusColor = getStatusColor(order);
+    const statusColor = getOrderMarkerColor(order, preferDriverColor);
     const existing = groups.get(key);
 
     if (existing) {
+      existing.orders.push(order);
       existing.count += 1;
       if (!existing.statusColors.includes(statusColor)) {
         existing.statusColors.push(statusColor);
@@ -102,7 +102,10 @@ export function groupOrdersByMapLocation(orders: Order[]): OrderMapGroup[] {
     }
 
     groups.set(key, {
+      key,
       coordinate,
+      representative: order,
+      orders: [order],
       count: 1,
       statusColors: [statusColor],
     });
@@ -130,12 +133,13 @@ function getDirection(group: OrderMapGroup, viewport: MapViewport) {
 export function getMapEdgeIndicators(
   orders: Order[],
   viewport: MapViewport | null,
+  preferDriverColor = false,
 ): MapEdgeIndicator[] {
   if (!viewport) return [];
 
   const indicators = new Map<number, MapEdgeIndicator>();
 
-  for (const group of groupOrdersByMapLocation(orders)) {
+  for (const group of groupOrdersByMapLocation(orders, preferDriverColor)) {
     if (isInsideVisibleRegion(group.coordinate, viewport)) continue;
 
     const direction = getDirection(group, viewport);

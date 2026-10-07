@@ -21,13 +21,81 @@ it.each([[false, '#000000'], [true, '#FFFFFF']] as const)('создаёт дом
   expect(props.text).toBe('');
 });
 
-it('обновляет изображение и координаты без пересоздания нативного домика', async () => {
-  const getHome = jest.fn(); const probe = await render(<HomeMarker point={point} getHome={getHome} isDark={false} image={image} />);
-  await probe.rerender(<HomeMarker point={{...point, lon: 50.2}} getHome={getHome} isDark image={{...image, signature: 'home:true', source: {uri: 'dark'}}} />);
+it('показывает единый сгенерированный домик и пересоздаёт его после смены сети', async () => {
+  const getHome = jest.fn();
+  const probe = await render(
+    <HomeMarker
+      point={point}
+      getHome={getHome}
+      isDark={false}
+      image={image}
+      refreshKey="online"
+    />,
+  );
+  const initialMarker = probe.getByTestId('orders-map-home-marker');
+  expect(initialMarker.props.visible).toBe(true);
+  expect(initialMarker.props.scale).toBe(1);
+  expect(initialMarker.props.source).toEqual(image.source);
+  expect(initialMarker.props.anchor).toEqual({x: 0.5, y: 0.5});
+
+  await probe.rerender(
+    <HomeMarker
+      point={{...point, lon: 50.2}}
+      getHome={getHome}
+      isDark={false}
+      image={image}
+      refreshKey="online"
+    />,
+  );
   const marker = probe.getByTestId('orders-map-home-marker');
-  expect(mockMount).toHaveBeenCalledTimes(1); expect(mockUnmount).not.toHaveBeenCalled();
-  expect(marker.props.source).toEqual({uri: 'dark'}); expect(marker.props.point.lon).toBe(50.2);
+  expect(mockMount).toHaveBeenCalledTimes(1);
+  expect(mockUnmount).not.toHaveBeenCalled();
+  expect(marker.props.source).toEqual(initialMarker.props.source); expect(marker.props.point.lon).toBe(50.2);
+  expect(marker.props.visible).toBe(true);
   expect(marker.props.handled).toBe(true);expect(marker.props.strictTapBounds).toBe(true);
   expect(marker.props.anchor).toEqual({x: 0.5, y: 0.5});
   await fireEvent.press(marker);expect(getHome).toHaveBeenCalledTimes(1);
+
+  await probe.rerender(
+    <HomeMarker
+      point={{...point, lon: 50.2}}
+      getHome={getHome}
+      isDark={false}
+      image={image}
+      refreshKey="offline"
+    />,
+  );
+  expect(mockMount).toHaveBeenCalledTimes(2);
+  expect(mockUnmount).toHaveBeenCalledTimes(1);
+});
+
+it('меняет сгенерированное изображение домика вместе с темой', async () => {
+  const getHome = jest.fn();
+  const probe = await render(
+    <HomeMarker point={point} getHome={getHome} isDark={false} image={image} />,
+  );
+  const lightSource = probe.getByTestId('orders-map-home-marker').props.source;
+  const darkImage = {
+    ...image,
+    signature: 'home:true',
+    source: {uri: 'dark'},
+  };
+
+  await probe.rerender(
+    <HomeMarker point={point} getHome={getHome} isDark image={darkImage} />,
+  );
+  const darkSource = probe.getByTestId('orders-map-home-marker').props.source;
+  expect(darkSource).not.toEqual(lightSource);
+  expect(darkSource).toEqual(darkImage.source);
+  expect(mockMount).toHaveBeenCalledTimes(2);
+  expect(mockUnmount).toHaveBeenCalledTimes(1);
+});
+
+it('не показывает домик от предыдущей темы до готовности нового изображения', async () => {
+  const probe = await render(
+    <HomeMarker point={point} getHome={jest.fn()} isDark image={image} />,
+  );
+  const marker = probe.getByTestId('orders-map-home-marker');
+  expect(marker.props.visible).toBe(false);
+  expect(marker.props.source).toBeUndefined();
 });

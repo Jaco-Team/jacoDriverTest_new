@@ -68,8 +68,10 @@ import {
 } from '@/features/orders-map/ui/ListOrders';
 import {
   getMarkerCaptureSize,
+  getMarkerIconLayout,
   type MarkerBitmap,
 } from '@/features/orders-map/ui/MeasuredMarkerImage';
+import {getOrderMarkerColor} from '@/features/orders-map/model/orderMarkerColor';
 
 const bitmap: MarkerBitmap = {
   signature: 'initial',
@@ -340,13 +342,22 @@ it.each(
       const marker = probe.getByTestId('order-marker-1');
       const iconHeight = theme === 'classic' ? 28 : 20;
       const pin = theme === 'classic' || Boolean(closeTime);
-      const iconX = theme === 'classic' ? (20 * 75.66) / 183 : 10;
-      const iconY =
+      const iconAnchor =
         theme === 'classic'
-          ? (28 * 283.39) / 285
-          : pin
-            ? iconHeight
-            : iconHeight / 2;
+          ? {x: 75.66 / 183, y: 283.39 / 285}
+          : {x: 0.5, y: pin ? 1 : 0.5};
+      const iconLayout = getMarkerIconLayout({
+        path: '',
+        viewBoxWidth: theme === 'classic' ? 183 : pin ? 448 : 512,
+        viewBoxHeight: theme === 'classic' ? 285 : 512,
+        width: 20,
+        height: iconHeight,
+        color: '',
+      });
+      const iconX =
+        iconLayout.offsetX + iconLayout.width * iconAnchor.x;
+      const iconY =
+        iconLayout.offsetY + iconLayout.height * iconAnchor.y;
       expect(marker.props.point).toEqual(baseItem.xy);
       // The address must coincide with the icon, regardless of the label box or scale.
       expect(marker.props.anchor.x * image.width).toBeCloseTo(iconX);
@@ -356,6 +367,34 @@ it.each(
     }
   },
 );
+
+it('сохраняет пропорции неквадратных значков маркеров', () => {
+  const pin = getMarkerIconLayout({
+    path: '',
+    viewBoxWidth: 448,
+    viewBoxHeight: 512,
+    width: 20,
+    height: 20,
+    color: '',
+  });
+  expect(pin.width / pin.height).toBeCloseTo(448 / 512);
+  expect(pin.height).toBeCloseTo(20);
+  expect(pin.offsetX).toBeGreaterThan(0);
+  expect(pin.offsetY).toBeCloseTo(0);
+
+  const truck = getMarkerIconLayout({
+    path: '',
+    viewBoxWidth: 640,
+    viewBoxHeight: 512,
+    width: 24,
+    height: 24,
+    color: '',
+  });
+  expect(truck.width / truck.height).toBeCloseTo(640 / 512);
+  expect(truck.width).toBeCloseTo(24);
+  expect(truck.offsetX).toBeCloseTo(0);
+  expect(truck.offsetY).toBeGreaterThan(0);
+});
 
 it('при смене темы до первого layout использует актуальную палитру и исходное измерение того же текста', async () => {
   const onImage = jest.fn();
@@ -439,6 +478,13 @@ it('держит резервный значок одного размера н�
   expect(getOrderMarkerNativeScale(1, false, 'ios', 3) * 60).toBe(20);
   expect((getOrderMarkerNativeScale(1, false, 'android', 3) * 60) / 3).toBe(20);
   expect(getOrderMarkerNativeScale(1.8, true, 'android', 3)).toBe(1.8);
+});
+
+it('для раздела других курьеров выбирает цвет курьера', () => {
+  const item = {...baseItem, point_color: '#b5e737', color: '#a9203e'};
+
+  expect(getOrderMarkerColor(item, false)).toBe('#b5e737');
+  expect(getOrderMarkerColor(item, true)).toBe('#a9203e');
 });
 
 it('ограничивает число попыток и игнорирует старый ответ после повтора', async () => {

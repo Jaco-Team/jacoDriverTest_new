@@ -36,6 +36,7 @@ import {
 } from './DriverMarker';
 import {ModalFilterOrders} from './ModalFilterOrders';
 import {OrdersMapCompass} from './OrdersMapCompass';
+import {OrdersMapOfflineList} from './OrdersMapOfflineList';
 
 const MAP_CONTROL_RIGHT = 20;
 
@@ -51,6 +52,8 @@ import {Center} from '@/components/ui/center';
 import {Spinner} from '@/components/ui/spinner';
 import {useAppTheme} from '@/shared/theme/AppThemeProvider';
 import {ConnectivityLocationIndicator} from '@/shared/ui/ConnectivityLocationIndicator';
+import {useOfflineMapStore} from '@/features/offline-map/model/offlineMap.store';
+import {findOfflineMapCity} from '@/features/offline-map/model/offlineMapCities';
 
 export function MapScreen() {
   const {colors, isDark} = useAppTheme();
@@ -87,6 +90,14 @@ export function MapScreen() {
   const [mapViewport, setMapViewport] = useState<MapViewport | null>(null);
   const viewportRequestRef = useRef(0);
   const validHome = isValidMapPoint(home) ? home : null;
+  const offlineMapsHydrated = useOfflineMapStore(state => state.hydrated);
+  const offlineMapCities = useOfflineMapStore(state => state.cities);
+  const offlineCity = validHome ? findOfflineMapCity(validHome) : undefined;
+  const hasReadyOfflineMap = Boolean(
+    offlineCity && offlineMapCities[offlineCity.id]?.status === 'ready',
+  );
+  const showOfflineFallback =
+    isOffline && offlineMapsHydrated && !hasReadyOfflineMap;
 
   const updateMapViewport = useCallback(() => {
     const map = mapRef.current;
@@ -148,7 +159,9 @@ export function MapScreen() {
           <ConnectivityLocationIndicator />
         </View>
       ) : null}
-      {!(is_showModalTypeDop || isOpenOrderMap) && is_scaleMap == 1 && (
+      {!showOfflineFallback &&
+        !(is_showModalTypeDop || isOpenOrderMap) &&
+        is_scaleMap == 1 && (
         <Slider
           value={zoom}
           onChange={v => updateZoom(v)}
@@ -172,11 +185,18 @@ export function MapScreen() {
         </Slider>
       )}
 
-      <HomeMarkerImage isDark={isDark} onImage={setHomeMarkerImage} />
-      <DriverMarkerImage onImage={setDriverMarkerImage} />
-      <OrderMarkerImageSources onImage={orderMarkerImages.onImage} setImages={orderMarkerImages.setImages} />
+      {!showOfflineFallback ? (
+        <>
+          <HomeMarkerImage isDark={isDark} onImage={setHomeMarkerImage} />
+          <DriverMarkerImage onImage={setDriverMarkerImage} />
+          <OrderMarkerImageSources
+            onImage={orderMarkerImages.onImage}
+            setImages={orderMarkerImages.setImages}
+          />
+        </>
+      ) : null}
 
-      <TouchableOpacity
+      {!showOfflineFallback ? <TouchableOpacity
         accessibilityLabel={
           rotate_map
             ? 'Заблокировать поворот карты'
@@ -199,10 +219,10 @@ export function MapScreen() {
           style={{zIndex: 22}}
           icon={rotate_map === true ? faLockOpen : faLock}
         />
-      </TouchableOpacity>
+      </TouchableOpacity> : null}
 
       {/* Геолокацию показываем только при наличии интернета. */}
-      {!isOffline ? (
+      {!showOfflineFallback && !isOffline ? (
         <TouchableOpacity
           accessibilityLabel={
             type_location === 'none'
@@ -240,7 +260,7 @@ export function MapScreen() {
       ) : null}
 
       {/* Пробки требуют сети. */}
-      {!isOffline ? (
+      {!showOfflineFallback && !isOffline ? (
         <TouchableOpacity
           style={{
             backgroundColor: 'transparent',
@@ -268,7 +288,11 @@ export function MapScreen() {
       ) : null}
 
       {/* Яндекс-карта */}
-      <View
+      {showOfflineFallback ? (
+        <View style={styles1.ymap} testID="orders-map-viewport">
+          <OrdersMapOfflineList topInset={offlineBannerHeight} />
+        </View>
+      ) : <View
         style={styles1.ymap}
         collapsable={false}
         testID="orders-map-viewport"
@@ -296,7 +320,15 @@ export function MapScreen() {
             onMapLoaded={handleLoadedMap}
             onCameraPositionChangeEnd={updateMapViewport}
             collapsable={false}>
-            {validHome && <HomeMarker point={validHome} getHome={getHome} isDark={isDark} image={homeMarkerImage} />}
+            {validHome && (
+              <HomeMarker
+                point={validHome}
+                getHome={getHome}
+                isDark={isDark}
+                image={homeMarkerImage}
+                refreshKey={isOffline ? 'offline' : 'online'}
+              />
+            )}
             <DriverMarker image={driverMarkerImage} />
             <ListOrders images={orderMarkerImages.images} />
           </YaMap>
@@ -313,9 +345,11 @@ export function MapScreen() {
             )}
           </Center>
         )}
-      </View>
+      </View>}
 
-      <OrdersMapCompass viewport={mapViewport} onCenter={centerOnIndicator} />
+      {!showOfflineFallback ? (
+        <OrdersMapCompass viewport={mapViewport} onCenter={centerOnIndicator} />
+      ) : null}
 
       <TypeLimit />
       <ModalOrder />

@@ -13,6 +13,7 @@ import {
   Play,
   RefreshCw,
   Trash2,
+  CircleX,
 } from 'lucide-react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
@@ -37,6 +38,10 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024).toLocaleString('ru-RU', {maximumFractionDigits: 1})} МБ`;
 }
 
+function clampFontSize(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
 export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
   const state = useOfflineMapStore();
   const {hydrated, selectedCityId, selectCity} = state;
@@ -50,6 +55,9 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
   const [deleteCityId, setDeleteCityId] = useState<string | null>(null);
   const textSize = Math.min(22, Math.max(14, fontSize));
   const metaSize = Math.min(20, Math.max(12, textSize - 1));
+  const deleteTitleSize = clampFontSize(fontSize + 4, 18, 24);
+  const deleteBodySize = clampFontSize(fontSize, 14, 18);
+  const deleteActionSize = clampFontSize(fontSize + 1, 14, 18);
   const city = getOfflineMapCity(state.selectedCityId);
   const entry = city ? state.cities[city.id] : undefined;
   const downloading = entry?.status === 'downloading';
@@ -280,10 +288,10 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
               testID="offline-city-delete"
               style={[
                 styles.deleteButton,
-                {backgroundColor: colors.surfaceAlt},
+                {borderColor: colors.border},
                 (deleting || !!state.busyCityId) && styles.disabled,
               ]}>
-              <Trash2 color={colors.textMuted} size={22} />
+              <Trash2 color={colors.text} size={22} />
             </Pressable>
           ) : null}
         </View>
@@ -293,58 +301,118 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
         onClose={() => {
           if (!deleting) setDeleteCityId(null);
         }}>
-        <ActionsheetBackdrop />
+        <ActionsheetBackdrop testID="offline-city-delete-backdrop" />
         <ActionsheetContent
           style={[
-            styles.sheet,
+            styles.deleteSheet,
             {
+              borderColor: colors.border,
               backgroundColor: colors.surfaceRaised,
-              paddingBottom: Math.max(insets.bottom, 16),
+              paddingBottom: insets.bottom + 28,
             },
-          ]}>
+          ]}
+          testID="offline-city-delete-sheet">
           <ActionsheetDragIndicatorWrapper>
-            <ActionsheetDragIndicator />
+            <ActionsheetDragIndicator style={styles.handleArea}>
+              <Pressable
+                accessibilityLabel="Закрыть подтверждение удаления карты"
+                accessibilityRole="button"
+                disabled={deleting}
+                onPress={() => setDeleteCityId(null)}
+                style={styles.handlePressable}
+                testID="offline-city-delete-handle">
+                <View
+                  style={[styles.handle, {backgroundColor: colors.border}]}
+                />
+              </Pressable>
+            </ActionsheetDragIndicator>
           </ActionsheetDragIndicatorWrapper>
+
+          <View style={styles.deleteHeading}>
+            <View
+              style={[
+                styles.deleteIcon,
+                {backgroundColor: colors.brandSoftStrong},
+              ]}>
+              <CircleX color={colors.brand} size={24} />
+            </View>
+            <Text
+              style={[
+                styles.deleteTitle,
+                {
+                  color: colors.text,
+                  fontSize: deleteTitleSize,
+                  lineHeight: Math.round(deleteTitleSize * 1.2),
+                },
+              ]}
+              testID="offline-city-delete-title">
+              Удалить карту?
+            </Text>
+          </View>
+
           <Text
-            style={{
-              fontSize: textSize + 4,
-              fontWeight: '800',
-              color: colors.text,
-            }}>
-            Удалить карту?
-          </Text>
-          <Text
-            style={{
-              fontSize: textSize,
-              color: colors.textMuted,
-              marginTop: 12,
-            }}>
+            style={[
+              styles.deleteMessage,
+              {
+                color: colors.textMuted,
+                fontSize: deleteBodySize,
+                lineHeight: Math.round(deleteBodySize * 1.45),
+              },
+            ]}
+            testID="offline-city-delete-message">
             Карта «{deleteCity?.name}» будет удалена с этого устройства. Её
             можно скачать снова.
           </Text>
-          <View style={[styles.actions, {marginTop: 24}]}>
-            {button(
-              'Отмена',
-              () => setDeleteCityId(null),
-              deleting,
-              false,
-              null,
-              'offline-city-delete-cancel',
-            )}
-            {button(
-              deleting ? 'Удаляем...' : 'Удалить',
-              () => {
+
+          <View style={styles.deleteActions}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={deleting}
+              onPress={() => setDeleteCityId(null)}
+              style={[
+                styles.deleteAction,
+                {
+                  backgroundColor: colors.surfaceAlt,
+                  borderColor: colors.border,
+                },
+              ]}
+              testID="offline-city-delete-cancel">
+              <Text
+                style={[
+                  styles.deleteActionText,
+                  {color: colors.text, fontSize: deleteActionSize},
+                ]}>
+                Нет
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Удалить"
+              accessibilityRole="button"
+              disabled={deleting}
+              onPress={() => {
                 if (deleteCity)
                   void state.remove(deleteCity.id).then(() => {
                     if (!useOfflineMapStore.getState().error)
                       setDeleteCityId(null);
                   });
-              },
-              deleting,
-              true,
-              deleting ? <ActivityIndicator color="#ffffff" /> : null,
-              'offline-city-delete-confirm',
-            )}
+              }}
+              style={[
+                styles.deleteAction,
+                {backgroundColor: colors.brand},
+              ]}
+              testID="offline-city-delete-confirm">
+              {deleting ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <Text
+                  style={[
+                    styles.deleteActionText,
+                    {color: '#ffffff', fontSize: deleteActionSize},
+                  ]}>
+                  Удалить
+                </Text>
+              )}
+            </Pressable>
           </View>
           {state.error ? (
             <Text
@@ -393,7 +461,9 @@ const styles = StyleSheet.create({
   deleteButton: {
     width: 48,
     height: 48,
+    borderWidth: 1,
     borderRadius: 14,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -404,11 +474,76 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   progress: {height: 5, borderRadius: 3, overflow: 'hidden'},
-  sheet: {
+  deleteSheet: {
+    maxHeight: '75%',
+    overflow: 'hidden',
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 9,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    borderWidth: 0,
+    borderWidth: 1,
+  },
+  handleArea: {
+    width: '100%',
+    height: 22,
+    backgroundColor: 'transparent',
+  },
+  handlePressable: {
+    width: '100%',
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  handle: {
+    width: 62,
+    height: 6,
+    borderRadius: 999,
+  },
+  deleteHeading: {
+    width: '100%',
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  deleteIcon: {
+    width: 44,
+    height: 44,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  deleteTitle: {
+    flex: 1,
+    fontFamily: 'Roboto-Bold',
+  },
+  deleteMessage: {
+    width: '100%',
+    alignSelf: 'stretch',
+    textAlign: 'left',
+    marginBottom: 20,
+    fontFamily: 'Roboto-Regular',
+  },
+  deleteActions: {
+    width: '100%',
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  deleteAction: {
+    height: 44,
+    minHeight: 44,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    borderRadius: 12,
+  },
+  deleteActionText: {
+    fontFamily: 'Roboto-Bold',
+    lineHeight: 21,
   },
 });

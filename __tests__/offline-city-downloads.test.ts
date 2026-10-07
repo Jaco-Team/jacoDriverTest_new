@@ -257,6 +257,30 @@ it('blocks new downloads offline and blocks another city while one is downloadin
   expect(native.startOfflineRegionDownload).toHaveBeenCalledTimes(1);
 });
 
+it('reserves the download slot before async hydration on rapid city taps', async () => {
+  useOfflineMapStore.setState({hydrated: false});
+  let completeHydration!: (value: string | null) => void;
+  storage.getItem.mockImplementationOnce(
+    () =>
+      new Promise(resolve => {
+        completeHydration = resolve;
+      }),
+  );
+
+  const samaraDownload = useOfflineMapStore.getState().download('samara');
+  const tolyattiDownload = useOfflineMapStore.getState().download('tolyatti');
+
+  expect(useOfflineMapStore.getState().busyCityId).toBe('samara');
+  expect(useOfflineMapStore.getState().cities.tolyatti).toBeUndefined();
+
+  completeHydration(null);
+  await Promise.all([samaraDownload, tolyattiDownload]);
+
+  expect(native.startOfflineRegionDownload).toHaveBeenCalledTimes(1);
+  expect(native.startOfflineRegionDownload).toHaveBeenCalledWith(51);
+  expect(useOfflineMapStore.getState().cities.tolyatti).toBeUndefined();
+});
+
 it('manual pause during catalog preparation never starts the native download', async () => {
   let completeCatalog!: (value: string) => void;
   native.getOfflineRegionsAtPoint.mockImplementationOnce(

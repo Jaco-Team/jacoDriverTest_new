@@ -43,7 +43,6 @@ import {
   writeDriverOfflineCache,
   type DriverOfflineCache,
 } from '@/shared/lib/driverOfflineCache';
-import {scheduleMapKitOfflineSync} from '@/features/orders-map/model/mapKitOfflineSync';
 import {isAppOffline} from '@/shared/lib/connectivityState';
 import {OFFLINE_ORDER_ACTION_MESSAGE} from '@/shared/lib/offlineOrderAction';
 import {Theme, ShowType} from '@/shared/types/globalTypes';
@@ -2016,11 +2015,6 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
           if (nextHome && !homeUnchanged) {
             get().requestMapHomeCenter(true);
           }
-          void scheduleMapKitOfflineSync({
-            pointId: selectedPointId,
-            home: effectiveHome,
-            orders: getOrdersForCurrentScope(ordersCache),
-          });
         }
       } else {
         Analytics.log(
@@ -2181,12 +2175,6 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
       if (completed && getOrdersCacheScopeKey() === scopeKey) {
         void persistDriverOfflineState().catch(() => undefined);
-        const currentState = get();
-        void scheduleMapKitOfflineSync({
-          pointId,
-          home: currentState.home,
-          orders: getOrdersForCurrentScope(currentState.ordersCache),
-        });
       }
     }
   },

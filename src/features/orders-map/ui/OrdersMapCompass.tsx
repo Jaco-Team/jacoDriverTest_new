@@ -1,5 +1,6 @@
 import React, {memo, useMemo} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {useShallow} from 'zustand/react/shallow';
 import {useOrdersStore, useGlobalStore} from '@/shared/store/store';
 import {useAppTheme} from '@/shared/theme/AppThemeProvider';
 import {
@@ -36,12 +37,17 @@ export const OrdersMapCompass = memo(function OrdersMapCompass({
   viewport: MapViewport | null;
   onCenter: (target: OrderMapGroup) => void;
 }) {
-  const orders = useOrdersStore(state => state.orders);
+  const {orders, preferDriverColor} = useOrdersStore(
+    useShallow(state => ({
+      orders: state.orders,
+      preferDriverColor: state.type.id === 5,
+    })),
+  );
   const globalFontSize = useGlobalStore(state => state.globalFontSize);
   const {colors} = useAppTheme();
   const indicators = useMemo(
-    () => getMapEdgeIndicators(orders, viewport),
-    [orders, viewport],
+    () => getMapEdgeIndicators(orders, viewport, preferDriverColor),
+    [orders, preferDriverColor, viewport],
   );
   const countFontSize = Math.min(18, Math.max(12, globalFontSize - 2));
 

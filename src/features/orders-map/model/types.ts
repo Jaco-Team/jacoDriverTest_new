@@ -7,6 +7,7 @@ export interface MapPointProps {
   showOrdersMap: (id: number) => void, 
   mapScale: number, 
   globalFontSize: number,
+  preferDriverColor?: boolean,
 }
 
 export interface MapPointHouse {

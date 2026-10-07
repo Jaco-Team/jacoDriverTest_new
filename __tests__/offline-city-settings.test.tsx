@@ -81,11 +81,47 @@ it('completed map can be updated or deleted with explicit confirmation', async (
   });
   const screen = await render(<OfflineCityMapsSettings fontSize={16} />);
   expect(screen.getByText('Доступна офлайн')).toBeTruthy();
+  expect(screen.getByTestId('offline-city-delete')).toHaveStyle({
+    width: 48,
+    height: 48,
+    borderWidth: 1,
+    backgroundColor: 'transparent',
+  });
   await fireEvent.press(screen.getByTestId('offline-city-download'));
   expect(mockDownload).toHaveBeenCalledWith('samara', true);
   await fireEvent.press(screen.getByTestId('offline-city-delete'));
   expect(mockRemove).not.toHaveBeenCalled();
   expect(screen.getByText('Удалить карту?')).toBeTruthy();
+  expect(screen.getByTestId('offline-city-delete-sheet')).toHaveStyle({
+    maxHeight: '75%',
+    paddingHorizontal: 20,
+    paddingTop: 9,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+  });
+  expect(screen.getByTestId('offline-city-delete-message')).toHaveStyle({
+    width: '100%',
+    alignSelf: 'stretch',
+    textAlign: 'left',
+    marginBottom: 20,
+  });
+  expect(screen.getByTestId('offline-city-delete-message')).toHaveTextContent(
+    'Карта «Самара» будет удалена с этого устройства. Её можно скачать снова.',
+  );
+  expect(screen.getByText('Нет')).toBeTruthy();
+  expect(screen.getByTestId('offline-city-delete-cancel')).toHaveStyle({
+    height: 44,
+    minHeight: 44,
+    flex: 1,
+    borderRadius: 12,
+  });
+  expect(screen.getByTestId('offline-city-delete-confirm')).toHaveStyle({
+    height: 44,
+    minHeight: 44,
+    flex: 1,
+    borderRadius: 12,
+  });
   await fireEvent.press(screen.getByTestId('offline-city-delete-cancel'));
   expect(mockRemove).not.toHaveBeenCalled();
   await fireEvent.press(screen.getByTestId('offline-city-delete'));
