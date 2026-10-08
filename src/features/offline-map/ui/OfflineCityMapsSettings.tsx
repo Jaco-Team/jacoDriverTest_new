@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Trash2,
   CircleX,
+  CircleAlert,
 } from 'lucide-react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
@@ -42,6 +43,11 @@ function clampFontSize(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+const OFFLINE_MAP_ERROR_PREVIEW =
+  __DEV__ && process.env.JACO_OFFLINE_MAP_ERROR_PREVIEW === '1';
+const OFFLINE_MAP_ERROR_PREVIEW_MESSAGE =
+  'Не удалось скачать карту. Повторите попытку.';
+
 export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
   const state = useOfflineMapStore();
   const {hydrated, selectedCityId, selectCity} = state;
@@ -59,7 +65,18 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
   const deleteBodySize = clampFontSize(fontSize, 14, 18);
   const deleteActionSize = clampFontSize(fontSize + 1, 14, 18);
   const city = getOfflineMapCity(state.selectedCityId);
-  const entry = city ? state.cities[city.id] : undefined;
+  const storedEntry = city ? state.cities[city.id] : undefined;
+  const entry =
+    OFFLINE_MAP_ERROR_PREVIEW && city
+      ? {
+          ...storedEntry,
+          status: 'error' as const,
+          progress: storedEntry?.progress ?? 0,
+          error: OFFLINE_MAP_ERROR_PREVIEW_MESSAGE,
+          autoResume: false,
+          managed: true,
+        }
+      : storedEntry;
   const downloading = entry?.status === 'downloading';
   const preparing = downloading && !entry.regionId;
   const ready = entry?.status === 'ready';
@@ -224,11 +241,35 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
           </>
         )}
         {error ? (
-          <Text
+          <View
             accessibilityRole="alert"
-            style={{fontSize: metaSize, color: colors.dangerText}}>
-            {error}
-          </Text>
+            accessibilityLiveRegion="assertive"
+            style={[
+              styles.errorAlert,
+              {
+                backgroundColor: colors.alertErrorSurface,
+              },
+            ]}
+            testID="offline-city-error">
+            <CircleAlert
+              aria-hidden
+              color={colors.alertErrorIcon}
+              size={20}
+              strokeWidth={2}
+              testID="offline-city-error-icon"
+            />
+            <Text
+              style={[
+                styles.errorText,
+                {
+                  color: colors.alertErrorText,
+                  fontSize: metaSize,
+                  lineHeight: Math.round(metaSize * 1.4),
+                },
+              ]}>
+              {error}
+            </Text>
+          </View>
         ) : null}
         {isOffline ? (
           <Text style={{fontSize: metaSize, color: colors.textMuted}}>
@@ -259,6 +300,7 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
                     ? 'Обновить'
                     : 'Скачать',
                 () => {
+                  if (OFFLINE_MAP_ERROR_PREVIEW) return;
                   if (city)
                     void state.download(
                       city.id,
@@ -390,16 +432,17 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
               accessibilityRole="button"
               disabled={deleting}
               onPress={() => {
+                if (OFFLINE_MAP_ERROR_PREVIEW) {
+                  setDeleteCityId(null);
+                  return;
+                }
                 if (deleteCity)
                   void state.remove(deleteCity.id).then(() => {
                     if (!useOfflineMapStore.getState().error)
                       setDeleteCityId(null);
                   });
               }}
-              style={[
-                styles.deleteAction,
-                {backgroundColor: colors.brand},
-              ]}
+              style={[styles.deleteAction, {backgroundColor: colors.brand}]}
               testID="offline-city-delete-confirm">
               {deleting ? (
                 <ActivityIndicator color="#ffffff" size="small" />
@@ -474,6 +517,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   progress: {height: 5, borderRadius: 3, overflow: 'hidden'},
+  errorAlert: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 0,
+    borderRadius: 16,
+  },
+  errorText: {
+    flex: 1,
+    fontFamily: 'Roboto-Regular',
+  },
   deleteSheet: {
     maxHeight: '75%',
     overflow: 'hidden',

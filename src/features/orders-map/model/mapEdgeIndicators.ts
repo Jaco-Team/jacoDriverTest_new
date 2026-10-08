@@ -5,10 +5,10 @@ import type {
 } from 'react-native-yamap-plus';
 
 import type {Order} from '@/shared/store/OrdersStoreType';
+import {getOrderMapLocationKey} from '@/shared/lib/orderMapLocation';
 import {isValidMapPoint} from './mapPoint';
 import {getOrderMarkerColor} from './orderMarkerColor';
 
-const LOCATION_PRECISION = 5;
 const SECTOR_COUNT = 8;
 const INDICATOR_RADIUS_PERCENT = 43;
 
@@ -32,6 +32,14 @@ export interface MapEdgeIndicator extends OrderMapGroup {
   angle: number;
   left: number;
   top: number;
+}
+
+export function getOrderUrgency(order: Order): number {
+  const seconds = Number(order.to_time_sec);
+  if (Number.isFinite(seconds)) return seconds;
+
+  const minutes = Number(order.to_time_sec_min);
+  return Number.isFinite(minutes) ? minutes * 60 : Number.POSITIVE_INFINITY;
 }
 
 function normalizeLongitudeDelta(delta: number): number {
@@ -88,16 +96,19 @@ export function groupOrdersByMapLocation(
     if (!isValidMapPoint(order.xy)) continue;
 
     const coordinate = {lat: order.xy.lat, lon: order.xy.lon};
-    const key = `${coordinate.lat.toFixed(LOCATION_PRECISION)}:${coordinate.lon.toFixed(LOCATION_PRECISION)}`;
+    const key = getOrderMapLocationKey(order);
+
+    if (!key) continue;
     const statusColor = getOrderMarkerColor(order, preferDriverColor);
     const existing = groups.get(key);
 
     if (existing) {
       existing.orders.push(order);
       existing.count += 1;
-      if (!existing.statusColors.includes(statusColor)) {
-        existing.statusColors.push(statusColor);
+      if (getOrderUrgency(order) < getOrderUrgency(existing.representative)) {
+        existing.representative = order;
       }
+      existing.statusColors.push(statusColor);
       continue;
     }
 
@@ -147,11 +158,7 @@ export function getMapEdgeIndicators(
 
     if (existing) {
       existing.count += group.count;
-      for (const color of group.statusColors) {
-        if (!existing.statusColors.includes(color)) {
-          existing.statusColors.push(color);
-        }
-      }
+      existing.statusColors.push(...group.statusColors);
       continue;
     }
 

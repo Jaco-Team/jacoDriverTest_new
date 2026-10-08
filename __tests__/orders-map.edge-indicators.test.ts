@@ -43,9 +43,32 @@ describe('индикаторы заказов за пределами карты
         sector: 0,
         angle: 0,
         count: 3,
-        statusColors: ['#CC0033', '#42627D'],
+        statusColors: ['#CC0033', '#42627D', '#CC0033'],
       }),
     ]);
+  });
+
+  it('сохраняет отдельный цвет для каждого заказа в группе', () => {
+    const sameColor = [
+      order(1, 55, 50, '#CC0033'),
+      order(2, 55.000001, 50.000001, '#CC0033'),
+      order(3, 55.000002, 50.000002, '#42627D'),
+    ];
+
+    expect(groupOrdersByMapLocation(sameColor)[0].statusColors).toEqual([
+      '#CC0033',
+      '#CC0033',
+      '#42627D',
+    ]);
+  });
+
+  it('использует самый срочный заказ для подписи групповой метки', () => {
+    const later = {...order(1, 55, 50), to_time_sec_min: 45};
+    const urgent = {...order(2, 55.000001, 50.000001), to_time_sec_min: 20};
+
+    expect(groupOrdersByMapLocation([later, urgent])[0].representative.id).toBe(
+      2,
+    );
   });
 
   it('для заказов других курьеров использует цвет курьера, а не статуса', () => {
@@ -59,9 +82,9 @@ describe('индикаторы заказов за пределами карты
     expect(groupOrdersByMapLocation(orders, true)[0].statusColors).toEqual([
       '#a9203e',
     ]);
-    expect(getMapEdgeIndicators(orders, viewport, true)[0].statusColors).toEqual([
-      '#a9203e',
-    ]);
+    expect(
+      getMapEdgeIndicators(orders, viewport, true)[0].statusColors,
+    ).toEqual(['#a9203e']);
   });
 
   it('учитывает поворот карты при выборе направления', () => {

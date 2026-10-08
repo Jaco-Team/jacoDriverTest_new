@@ -4,6 +4,18 @@ import {OfflineCityMapsSettings} from '@/features/offline-map/ui/OfflineCityMaps
 import {useOfflineMapStore} from '@/features/offline-map/model/offlineMap.store';
 import {ConnectivityContext} from '@/shared/lib/connectivityContext';
 
+let mockDarkTheme = false;
+
+jest.mock('@/shared/theme/AppThemeProvider', () => {
+  const {appPalettes} = require('@/shared/styles/appPalette');
+  return {
+    useAppTheme: () => ({
+      colors: mockDarkTheme ? appPalettes.dark : appPalettes.light,
+      isDark: mockDarkTheme,
+    }),
+  };
+});
+
 jest.mock('@/components/ui/actionsheet', () => {
   const {View} = require('react-native');
   return {
@@ -20,6 +32,7 @@ const mockPause = jest.fn();
 const mockRemove = jest.fn(async () => undefined);
 beforeEach(() => {
   jest.clearAllMocks();
+  mockDarkTheme = false;
   useOfflineMapStore.setState({
     hydrated: true,
     selectedCityId: 'samara',
@@ -146,4 +159,60 @@ it('manual pause exposes Continue and selecting another city preserves the downl
   expect(mockDownload).toHaveBeenCalledWith('samara', false);
   await fireEvent.press(screen.getByTestId('offline-city-tolyatti'));
   expect(useOfflineMapStore.getState().cities.samara?.status).toBe('paused');
+});
+
+it('shows a themed alert and retry actions when a download fails', async () => {
+  useOfflineMapStore.setState({
+    cities: {
+      samara: {
+        regionId: 51,
+        status: 'error',
+        progress: 0.17,
+        error: 'Не удалось скачать карту. Повторите попытку.',
+        managed: true,
+        autoResume: false,
+      },
+    },
+  });
+
+  const screen = await render(<OfflineCityMapsSettings fontSize={16} />);
+
+  expect(screen.getByText('Загрузка прервана')).toBeTruthy();
+  expect(
+    screen.getByTestId('offline-city-progress').props.accessibilityValue.now,
+  ).toBe(17);
+  expect(screen.getByTestId('offline-city-error')).toHaveStyle({
+    minHeight: 52,
+    borderWidth: 0,
+    borderRadius: 16,
+    backgroundColor: '#F7F0EF',
+  });
+  expect(
+    screen.getByText('Не удалось скачать карту. Повторите попытку.'),
+  ).toHaveStyle({color: '#462C27'});
+  expect(screen.getByText('Продолжить')).toBeTruthy();
+  expect(screen.getByTestId('offline-city-delete')).toBeTruthy();
+});
+
+it('uses dark theme colors for the download error alert', async () => {
+  mockDarkTheme = true;
+  useOfflineMapStore.setState({
+    cities: {
+      samara: {
+        status: 'error',
+        progress: 0,
+        error: 'Ошибка MapKit',
+        managed: true,
+        autoResume: false,
+      },
+    },
+  });
+
+  const screen = await render(<OfflineCityMapsSettings fontSize={16} />);
+
+  expect(screen.getByTestId('offline-city-error')).toHaveStyle({
+    backgroundColor: '#110A09',
+    borderWidth: 0,
+  });
+  expect(screen.getByText('Ошибка MapKit')).toHaveStyle({color: '#DFC5C0'});
 });

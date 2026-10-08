@@ -27,7 +27,10 @@ export const lightAppPalette = {
   success: '#22A33A',
   dangerSurface: '#FFF6F7',
   dangerText: '#8F0024',
-} as const
+  alertErrorSurface: '#F7F0EF',
+  alertErrorText: '#462C27',
+  alertErrorIcon: '#9C4A3D',
+} as const;
 
 export const darkAppPalette = {
   brand: '#B52A48',
@@ -58,18 +61,21 @@ export const darkAppPalette = {
   success: '#45C264',
   dangerSurface: '#2A151C',
   dangerText: '#FF91A8',
-} as const
+  alertErrorSurface: '#110A09',
+  alertErrorText: '#DFC5C0',
+  alertErrorIcon: '#9C4A3D',
+} as const;
 
 export type AppPalette = {
-  [Key in keyof typeof lightAppPalette]: string
-}
+  [Key in keyof typeof lightAppPalette]: string;
+};
 
 export const appPalettes: Record<'light' | 'dark', AppPalette> = {
   light: lightAppPalette,
   dark: darkAppPalette,
-}
+};
 
 // Совместимость для компонентов, которые ещё используют статическую светлую
 // палитру. Новые и переведённые на темы компоненты получают цвета через
 // useAppTheme().
-export const appPalette = lightAppPalette
+export const appPalette = lightAppPalette;

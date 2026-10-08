@@ -19,35 +19,56 @@ const CLASSIC_PATH =
 const CLASSIC_ANCHOR = {x: 75.66 / 183, y: 283.39 / 285};
 
 export function getOrderMarkerSignature(
-  {item, theme, globalFontSize, preferDriverColor}: MapPointProps,
+  {
+    item,
+    theme,
+    globalFontSize,
+    preferDriverColor,
+    groupCount = 1,
+    statusColors = [],
+  }: MapPointProps,
   isDark: boolean,
 ): string {
   return JSON.stringify([
     item.point_text,
+    item.to_time_sec_min,
     getOrderMarkerColor(item, preferDriverColor),
     Boolean(item.close_time_),
     theme,
     globalFontSize,
     isDark,
+    groupCount,
+    statusColors,
   ]);
 }
 
 export const OrderMarkerImage = memo(function OrderMarkerImage(
   props: MapPointProps & {onImage: (image: MarkerBitmap) => void},
 ) {
-  const {item, theme, globalFontSize, preferDriverColor, onImage} = props;
+  const {
+    item,
+    theme,
+    globalFontSize,
+    preferDriverColor,
+    groupCount = 1,
+    statusColors = [],
+    onImage,
+  } = props;
   const {isDark} = useAppTheme();
   const [viewBoxWidth, viewBoxHeight, , , path] = (
     !item.close_time_ ? faDotCircle : faMapMarkerAlt
   ).icon;
   const classic = theme === 'classic';
+  const markerText = getOrderMarkerText(item, groupCount);
   return (
     <MeasuredMarkerImage
       signature={getOrderMarkerSignature(props, isDark)}
-      text={String(item.point_text ?? '')}
+      text={markerText}
       fontSize={globalFontSize}
       theme={theme}
       isDark={isDark}
+      groupCount={groupCount}
+      statusColors={statusColors}
       icon={{
         path: classic ? CLASSIC_PATH : Array.isArray(path) ? path[0] : path,
         viewBoxWidth: classic ? 183 : viewBoxWidth,
@@ -64,6 +85,14 @@ export const OrderMarkerImage = memo(function OrderMarkerImage(
     />
   );
 });
+
+function getOrderMarkerText(
+  item: MapPointProps['item'],
+  groupCount: number,
+): string {
+  const ordinaryText = String(item.point_text ?? '');
+  return groupCount > 1 ? '' : ordinaryText;
+}
 
 export function getOrderMarkerNativeScale(
   mapScale: number,

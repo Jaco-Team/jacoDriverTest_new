@@ -8,6 +8,8 @@ export interface MapPointProps {
   mapScale: number, 
   globalFontSize: number,
   preferDriverColor?: boolean,
+  groupCount?: number,
+  statusColors?: string[],
 }
 
 export interface MapPointHouse {

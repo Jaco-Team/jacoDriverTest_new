@@ -13,7 +13,7 @@ import {
   View,
   type ImageSourcePropType,
 } from 'react-native';
-import Svg, {G, Path, Rect, Text as SvgText} from 'react-native-svg';
+import Svg, {Circle, G, Path, Rect, Text as SvgText} from 'react-native-svg';
 import type {Theme} from '@/shared/types/globalTypes';
 
 export interface MarkerBitmap {
@@ -55,16 +55,17 @@ export function getMarkerAnchor(
   width: number,
   height: number,
   icon: MarkerIcon,
+  origin?: {x: number; y: number},
 ) {
   const anchor = icon.anchor ?? {x: 0.5, y: 0.5};
   const layout = getMarkerIconLayout(icon);
+  const iconOrigin = origin ?? {
+    x: 0,
+    y: (height - icon.height) / 2,
+  };
   return {
-    x: (layout.offsetX + layout.width * anchor.x) / width,
-    y:
-      ((height - icon.height) / 2 +
-        layout.offsetY +
-        layout.height * anchor.y) /
-      height,
+    x: (iconOrigin.x + layout.offsetX + layout.width * anchor.x) / width,
+    y: (iconOrigin.y + layout.offsetY + layout.height * anchor.y) / height,
   };
 }
 
@@ -121,6 +122,8 @@ interface Props {
   isDark: boolean;
   icon: MarkerIcon;
   minHeight?: number;
+  groupCount?: number;
+  statusColors?: string[];
   testID: string;
   onImage: (image: MarkerBitmap) => void;
 }
@@ -135,6 +138,8 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
   isDark,
   icon,
   minHeight = 0,
+  groupCount = 1,
+  statusColors = [],
   testID,
   onImage,
 }: Props) {
@@ -172,27 +177,83 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
     [hasText, measurement, measurementKey],
   );
   const palette = getMarkerPalette(theme, isDark);
-  const gap = !hasText || theme === 'classic' ? 0 : 4;
+  const isGroup = groupCount > 1;
+  const visualIconWidth = isGroup ? 26 : icon.width;
+  const visualIconHeight = isGroup ? 26 : icon.height;
+  const groupTopInset = 0;
+  const groupBottomInset = isGroup ? 18 : 0;
+  const gap = !hasText ? 0 : isGroup ? 7 : theme === 'classic' ? 0 : 4;
+  const visibleStatusColors = statusColors.slice(0, 3);
+  const hiddenStatusCount = Math.max(
+    0,
+    statusColors.length - visibleStatusColors.length,
+  );
+  const statusOverflowLabel =
+    hiddenStatusCount > 0 ? `+${hiddenStatusCount}` : '';
+  const statusDotsWidth =
+    visibleStatusColors.length * 6 +
+    Math.max(0, visibleStatusColors.length - 1) * 2;
+  const statusOverflowGap =
+    statusOverflowLabel && visibleStatusColors.length ? 2 : 0;
+  const statusOverflowWidth = statusOverflowLabel
+    ? statusOverflowLabel.length * 5
+    : 0;
+  const statusPillWidth = Math.max(
+    14,
+    statusDotsWidth + statusOverflowGap + statusOverflowWidth + 8,
+  );
+  // Keep antialiasing and the pill stroke inside the exported PNG bounds.
+  // Without this inset, grouped markers touch x=0/the right edge and iOS
+  // visibly clips both sides in the light theme.
+  const groupSideInset = isGroup ? 2 : 0;
+  const groupVisualWidth = isGroup
+    ? Math.max(visualIconWidth, statusPillWidth)
+    : visualIconWidth;
+  const groupLeftInset = isGroup
+    ? groupSideInset + (groupVisualWidth - visualIconWidth) / 2
+    : 0;
+  const statusPillLeft =
+    groupLeftInset + visualIconWidth / 2 - statusPillWidth / 2;
   const labelWidth =
     hasText && measured
       ? Math.ceil(measured.width) + 16 + 2 * palette.borderWidth
       : 0;
-  const height = Math.ceil(
+  const contentHeight = Math.ceil(
     Math.max(
-      icon.height,
+      visualIconHeight,
       minHeight,
       hasText ? (measured?.height ?? 0) + 8 + 2 * palette.borderWidth : 0,
     ),
   );
-  const width = icon.width + gap + labelWidth;
+  const height = groupTopInset + contentHeight + groupBottomInset;
+  const labelX = groupSideInset + groupVisualWidth + gap;
+  const width = labelX + labelWidth + groupSideInset;
   const iconLayout = getMarkerIconLayout(icon);
   const captureKey = `${signature}:${width}:${height}`;
   const latestCaptureKey = useRef(captureKey);
   latestCaptureKey.current = captureKey;
 
   const anchor = useMemo(
-    () => getMarkerAnchor(width, height, icon),
-    [width, height, icon],
+    () =>
+      isGroup
+        ? {
+            x: (groupLeftInset + visualIconWidth / 2) / width,
+            y: (groupTopInset + contentHeight / 2) / height,
+          }
+        : getMarkerAnchor(width, height, icon, {
+            x: groupLeftInset,
+            y: groupTopInset + (contentHeight - icon.height) / 2,
+          }),
+    [
+      contentHeight,
+      groupLeftInset,
+      groupTopInset,
+      height,
+      icon,
+      isGroup,
+      visualIconWidth,
+      width,
+    ],
   );
   const ready = Boolean(measured);
   const capture = useCallback(() => {
@@ -320,10 +381,10 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
           testID={`${testID}-svg`}>
           {hasText ? (
             <Rect
-              x={icon.width + gap + palette.borderWidth / 2}
-              y={palette.borderWidth / 2}
+              x={labelX + palette.borderWidth / 2}
+              y={groupTopInset + palette.borderWidth / 2}
               width={labelWidth - palette.borderWidth}
-              height={height - palette.borderWidth}
+              height={contentHeight - palette.borderWidth}
               rx={6}
               fill={palette.background}
               fillOpacity={palette.opacity}
@@ -331,20 +392,109 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
               strokeWidth={palette.borderWidth}
             />
           ) : null}
-          <G
-            transform={`translate(${iconLayout.offsetX} ${(height - icon.height) / 2 + iconLayout.offsetY}) scale(${iconLayout.scale})`}>
-            <Path d={icon.path} fill={icon.color} />
-          </G>
+          {isGroup ? (
+            <>
+              <Circle
+                cx={groupLeftInset + visualIconWidth / 2}
+                cy={groupTopInset + contentHeight / 2 + 1.5}
+                r={13}
+                fill="#000000"
+                fillOpacity={isDark ? 0.42 : 0.2}
+                testID={`${testID}-group-count-shadow`}
+              />
+              <Circle
+                cx={groupLeftInset + visualIconWidth / 2}
+                cy={groupTopInset + contentHeight / 2}
+                r={13}
+                fill="#FFFFFF"
+                testID={`${testID}-group-count-background`}
+              />
+              <Circle
+                cx={groupLeftInset + visualIconWidth / 2}
+                cy={groupTopInset + contentHeight / 2}
+                r={11}
+                fill={isDark ? '#D53656' : '#CC0033'}
+              />
+              <SvgText
+                x={groupLeftInset + visualIconWidth / 2}
+                y={groupTopInset + contentHeight / 2 + 4}
+                fill="#FFFFFF"
+                fontFamily="Roboto-Bold"
+                fontSize={
+                  groupCount > 99 ? 9 : Math.min(14, Math.max(12, fontSize - 4))
+                }
+                fontWeight="700"
+                textAnchor="middle"
+                testID={`${testID}-group-count`}>
+                {groupCount > 99 ? '99+' : String(groupCount)}
+              </SvgText>
+            </>
+          ) : (
+            <G
+              transform={`translate(${groupLeftInset + iconLayout.offsetX} ${groupTopInset + (contentHeight - icon.height) / 2 + iconLayout.offsetY}) scale(${iconLayout.scale})`}>
+              <Path d={icon.path} fill={icon.color} />
+            </G>
+          )}
           {hasText ? (
             <SvgText
-              x={icon.width + gap + 8 + palette.borderWidth}
-              y={(height - measured.height) / 2 + measured.baseline}
+              x={labelX + 8 + palette.borderWidth}
+              y={
+                groupTopInset +
+                (contentHeight - measured.height) / 2 +
+                measured.baseline
+              }
               fill={palette.text}
               fontFamily="Roboto-Regular"
               fontSize={fontSize}
               fontWeight="400">
               {text}
             </SvgText>
+          ) : null}
+          {isGroup ? (
+            <>
+              <Rect
+                x={statusPillLeft}
+                y={groupTopInset + contentHeight + 3}
+                width={statusPillWidth}
+                height={12}
+                rx={6}
+                fill={isDark ? '#161F28' : '#E9EEF3'}
+                stroke={isDark ? '#66849D' : '#42627D'}
+                strokeOpacity={0.72}
+                strokeWidth={1}
+                testID={`${testID}-group-statuses-background`}
+              />
+              {visibleStatusColors.map((color, index) => (
+                <Circle
+                  key={`${color}:${index}`}
+                  cx={statusPillLeft + 4 + 3 + index * 8}
+                  cy={groupTopInset + contentHeight + 9}
+                  r={3}
+                  fill={color}
+                  stroke={isDark ? '#F2F5F7' : '#FFFFFF'}
+                  strokeWidth={0.75}
+                />
+              ))}
+              {statusOverflowLabel ? (
+                <SvgText
+                  x={
+                    statusPillLeft +
+                    4 +
+                    statusDotsWidth +
+                    statusOverflowGap +
+                    statusOverflowWidth / 2
+                  }
+                  y={groupTopInset + contentHeight + 12}
+                  fill={isDark ? '#F2F5F7' : '#42627D'}
+                  fontFamily="Roboto-Bold"
+                  fontSize={8}
+                  fontWeight="700"
+                  textAnchor="middle"
+                  testID={`${testID}-group-statuses-overflow`}>
+                  {statusOverflowLabel}
+                </SvgText>
+              ) : null}
+            </>
           ) : null}
         </Svg>
       ) : null}

@@ -1,7 +1,7 @@
 // __tests__/orders-map.grouping.test.ts
 /**
  * showOrdersMap:
- * - открывает карту и кладёт в showOrders все заказы с тем же (addr, pd), что и выбранный
+ * - открывает карту и кладёт в showOrders все заказы с теми же координатами
  * - если заказа с таким id нет (или orders пуст), карта не открывается
  */
 
@@ -17,16 +17,30 @@ describe('showOrdersMap: группировка и пустые списки', (
     jest.clearAllMocks();
   });
 
-  it('группирует по (addr, pd) и открывает карту', () => {
+  it('группирует по координатам независимо от адреса и подъезда', () => {
     const { useOrdersStore } = require('@/shared/store/store');
 
     // наполняем стораж
     useOrdersStore.setState({
       orders: [
-        { id: 10, addr: 'ул. Ленина, 1', pd: '2' },
-        { id: 11, addr: 'ул. Ленина, 1', pd: '2' }, // та же группа
-        { id: 12, addr: 'ул. Ленина, 2', pd: '2' }, // другой адрес
-        { id: 13, addr: 'ул. Ленина, 1', pd: '3' }, // другой подъезд
+        {
+          id: 10,
+          addr: 'ул. Ленина, 1',
+          pd: '1',
+          xy: {lat: 53.5321, lon: 49.3214},
+        },
+        {
+          id: 11,
+          addr: 'другое написание адреса',
+          pd: '2',
+          xy: {lat: 53.532101, lon: 49.321401},
+        },
+        {
+          id: 12,
+          addr: 'ул. Ленина, 1',
+          pd: '1',
+          xy: {lat: 53.5322, lon: 49.3214},
+        },
       ],
       isOpenOrderMap: false,
       showOrders: [],
@@ -38,7 +52,7 @@ describe('showOrdersMap: группировка и пустые списки', (
     const s = useOrdersStore.getState();
     expect(s.isOpenOrderMap).toBe(true);
     const ids = s.showOrders.map((o: any) => o.id).sort();
-    expect(ids).toEqual([10, 11]); // только та же (addr, pd)
+    expect(ids).toEqual([10, 11]);
   });
 
   it('если id не найден / orders пуст — карта не открывается', () => {

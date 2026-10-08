@@ -12,9 +12,10 @@ jest.mock('@/features/orders-map/ui/OrderMarker', () => {
   const { Pressable } = require('react-native')
 
   return {
-    OrderMarker: ({ item, showOrdersMap }: any) =>
+    OrderMarker: ({ item, showOrdersMap, groupCount, statusColors }: any) =>
       React.createElement(Pressable, {
         testID: `orders-map-order-${item.id}`,
+        accessibilityLabel: `${groupCount}:${statusColors.join(',')}`,
         onPress: () => showOrdersMap(item.id),
       }),
   }
@@ -31,6 +32,7 @@ describe('координаты маркеров карты заказов', () =
       globalFontSize: 16,
       mapScale: 1,
       theme: 'white',
+      preferDriverColor: false,
     }
   })
 
@@ -66,6 +68,40 @@ describe('координаты маркеров карты заказов', () =
     const screen = await render(<ListOrders />)
     fireEvent.press(screen.getByTestId('orders-map-order-1'))
 
+    expect(mockListOrdersState.showOrdersMap).toHaveBeenCalledWith(1)
+  })
+
+  it('рисует одну общую метку для заказов с одинаковыми координатами', async () => {
+    mockListOrdersState.orders = [
+      {
+        id: 1,
+        to_time_sec_min: 1,
+        point_color: '#00aa00',
+        xy: { lat: 53.5321, lon: 49.3214 },
+      },
+      {
+        id: 2,
+        to_time_sec_min: 2,
+        point_color: '#cc0033',
+        xy: { lat: 53.532101, lon: 49.321401 },
+      },
+      {
+        id: 3,
+        to_time_sec_min: 3,
+        point_color: '#0088cc',
+        xy: { lat: 53.54, lon: 49.33 },
+      },
+    ]
+
+    const screen = await render(<ListOrders />)
+
+    expect(screen.getByTestId('orders-map-order-1').props.accessibilityLabel).toBe(
+      '2:#00aa00,#cc0033',
+    )
+    expect(screen.queryByTestId('orders-map-order-2')).toBeNull()
+    expect(screen.getByTestId('orders-map-order-3')).toBeTruthy()
+
+    fireEvent.press(screen.getByTestId('orders-map-order-1'))
     expect(mockListOrdersState.showOrdersMap).toHaveBeenCalledWith(1)
   })
 })

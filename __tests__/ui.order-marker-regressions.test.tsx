@@ -50,6 +50,7 @@ jest.mock('react-native-svg', () => {
     __esModule: true,
     default: Svg,
     G: View,
+    Circle: View,
     Path: View,
     Rect: View,
     Text,
@@ -158,6 +159,68 @@ it.each([
         source: {uri: 'data:image/png;base64,new'},
       }),
     );
+  },
+);
+
+it.each([
+  {isDark: false, shadowOpacity: 0.2},
+  {isDark: true, shadowOpacity: 0.42},
+])(
+  'заменяет подпись счётчиком группы в теме $isDark',
+  async ({isDark, shadowOpacity}) => {
+    mockIsDark = isDark;
+    const probe = await render(
+      <OrderMarkerImage
+        {...base}
+        groupCount={2}
+        statusColors={['#22A33A', '#CC0033']}
+        onImage={jest.fn()}
+      />,
+    );
+
+    expect(probe.queryByTestId('order-marker-image-1-measure')).toBeNull();
+    expect(
+      probe.getByTestId('order-marker-image-1-group-count'),
+    ).toHaveTextContent('2');
+    expect(
+      probe.getByTestId('order-marker-image-1-group-count-background'),
+    ).toHaveProp('fill', '#FFFFFF');
+    expect(
+      probe.getByTestId('order-marker-image-1-group-count-shadow'),
+    ).toHaveProp('fillOpacity', shadowOpacity);
+    expect(probe.getByTestId('order-marker-image-1-svg').props.width).toBe(30);
+  },
+);
+
+it.each([
+  {isDark: false, overflowColor: '#42627D'},
+  {isDark: true, overflowColor: '#F2F5F7'},
+])(
+  'вмещает три цвета и остаток в теме $isDark',
+  async ({isDark, overflowColor}) => {
+    mockIsDark = isDark;
+    const probe = await render(
+      <OrderMarkerImage
+        {...base}
+        groupCount={5}
+        statusColors={['#1', '#2', '#3', '#4', '#5']}
+        onImage={jest.fn()}
+      />,
+    );
+
+    const overflow = probe.getByTestId(
+      'order-marker-image-1-group-statuses-overflow',
+    );
+    expect(overflow).toHaveTextContent('+2');
+    expect(overflow).toHaveProp('fill', overflowColor);
+    expect(overflow).toHaveProp('textAnchor', 'middle');
+    expect(probe.getByTestId('order-marker-image-1-svg')).toHaveProp(
+      'width',
+      46,
+    );
+    expect(
+      probe.getByTestId('order-marker-image-1-group-statuses-background'),
+    ).toHaveProp('x', 2);
   },
 );
 
@@ -354,10 +417,8 @@ it.each(
         height: iconHeight,
         color: '',
       });
-      const iconX =
-        iconLayout.offsetX + iconLayout.width * iconAnchor.x;
-      const iconY =
-        iconLayout.offsetY + iconLayout.height * iconAnchor.y;
+      const iconX = iconLayout.offsetX + iconLayout.width * iconAnchor.x;
+      const iconY = iconLayout.offsetY + iconLayout.height * iconAnchor.y;
       expect(marker.props.point).toEqual(baseItem.xy);
       // The address must coincide with the icon, regardless of the label box or scale.
       expect(marker.props.anchor.x * image.width).toBeCloseTo(iconX);

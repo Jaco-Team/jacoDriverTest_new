@@ -45,6 +45,7 @@ import {
 } from '@/shared/lib/driverOfflineCache';
 import {isAppOffline} from '@/shared/lib/connectivityState';
 import {OFFLINE_ORDER_ACTION_MESSAGE} from '@/shared/lib/offlineOrderAction';
+import {getOrderMapLocationKey} from '@/shared/lib/orderMapLocation';
 import {Theme, ShowType} from '@/shared/types/globalTypes';
 import {
   migrateAppThemeFromNightMap,
@@ -2475,9 +2476,12 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
     if (order) {
       if (get().isOpenOrderMap && get().showOrders.some(item => item.id === id)) return;
-      const new_orders = get().orders.filter(
-        item => item.addr === order.addr && item.pd === order.pd,
-      );
+      const locationKey = getOrderMapLocationKey(order);
+      const new_orders = locationKey
+        ? get().orders.filter(
+            item => getOrderMapLocationKey(item) === locationKey,
+          )
+        : [order];
 
       Analytics.log(AnalyticsEvent.OrderMapOpen, 'Открытие заказа на карте');
 

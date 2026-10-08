@@ -1,8 +1,9 @@
-import React, {memo, useCallback, useEffect, useState} from 'react';
+import React, {memo, useCallback, useEffect, useMemo, useState} from 'react';
 import {OrderMarker, OrderMarkerImage} from './OrderMarker';
 import type {MarkerBitmap} from './MeasuredMarkerImage';
 import {useListOrdersLogic} from '../model/useListOrdersLogic';
 import {isValidMapPoint} from '../model/mapPoint';
+import {groupOrdersByMapLocation} from '../model/mapEdgeIndicators';
 
 export type OrderMarkerImages = Record<number, MarkerBitmap>;
 
@@ -37,9 +38,13 @@ export function OrderMarkerImageSources({
   setImages,
 }: Pick<ReturnType<typeof useOrderMarkerImages>, 'onImage' | 'setImages'>) {
   const logic = useListOrdersLogic();
-  const {orders} = logic;
+  const {orders, preferDriverColor} = logic;
+  const groups = useMemo(
+    () => groupOrdersByMapLocation(orders, preferDriverColor),
+    [orders, preferDriverColor],
+  );
   useEffect(() => {
-    const ids = new Set(orders.map(order => order.id));
+    const ids = new Set(groups.map(group => group.representative.id));
     setImages(current => {
       const entries = Object.entries(current).filter(([id]) =>
         ids.has(Number(id)),
@@ -48,19 +53,22 @@ export function OrderMarkerImageSources({
         ? current
         : Object.fromEntries(entries);
     });
-  }, [orders, setImages]);
+  }, [groups, setImages]);
   return (
     <>
-      {orders
-        .filter(item => isValidMapPoint(item.xy))
-        .map(item => (
+      {groups.map(group => {
+        const item = group.representative;
+        return (
           <ImageForOrder
             key={item.id}
             {...logic}
             item={item}
+            groupCount={group.count}
+            statusColors={group.statusColors}
             onImage={onImage}
           />
-        ))}
+        );
+      })}
     </>
   );
 }
@@ -71,18 +79,29 @@ export const ListOrders = memo(function ListOrders({
   images?: OrderMarkerImages;
 }) {
   const logic = useListOrdersLogic();
+  const groups = useMemo(
+    () =>
+      groupOrdersByMapLocation(
+        logic.orders.filter(item => isValidMapPoint(item.xy)),
+        logic.preferDriverColor,
+      ),
+    [logic.orders, logic.preferDriverColor],
+  );
   return (
     <>
-      {logic.orders
-        .filter(item => isValidMapPoint(item.xy))
-        .map(item => (
+      {groups.map(group => {
+        const item = group.representative;
+        return (
           <OrderMarker
             key={item.id}
             {...logic}
             item={item}
+            groupCount={group.count}
+            statusColors={group.statusColors}
             image={images[item.id]}
           />
-        ))}
+        );
+      })}
     </>
   );
 });
