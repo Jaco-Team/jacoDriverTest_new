@@ -56,6 +56,8 @@ describe('useSettingsStore.saveSettings', () => {
       ['is_night'],
       [],
       'dark',
+      false,
+      true,
     );
 
     expect(mockApi).toHaveBeenCalledWith('settings', {
@@ -70,6 +72,8 @@ describe('useSettingsStore.saveSettings', () => {
       dark_theme: 1,
       app_theme: 'dark',
       is_scaleMap: 0,
+      map_hints: 0,
+      ai_recommend: 1,
       fontSize: 20,
       theme: 'black',
       mapScale: 1.5,
@@ -94,6 +98,8 @@ describe('useSettingsStore.saveSettings', () => {
       update_interval: 45,
       night_map: 1,
       is_scaleMap: 0,
+      map_hints: 0,
+      ai_recommend: 1,
     });
     expect(useSettingsStore.getState().isClick).toBe(true);
     expect(useGlobalStore.getState().loadSpinner).toBe(true);

@@ -100,7 +100,7 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
     jest.useRealTimers();
   });
 
-  it('toggles Yandex traffic layer through map ref and exposes current state', async () => {
+  it('exposes controlled Yandex traffic state', async () => {
     const view = await renderProbe();
     attachMapRef();
 
@@ -110,14 +110,12 @@ describe('useMapLogic: traffic layer and refresh behavior', () => {
       api!.toggleTrafficVisible();
     });
 
-    expect(setTrafficVisible).toHaveBeenCalledWith(true);
     expect(api!.trafficVisible).toBe(true);
 
     await act(async () => {
       api!.toggleTrafficVisible();
     });
 
-    expect(setTrafficVisible).toHaveBeenCalledWith(false);
     expect(api!.trafficVisible).toBe(false);
     await view.unmount();
   });

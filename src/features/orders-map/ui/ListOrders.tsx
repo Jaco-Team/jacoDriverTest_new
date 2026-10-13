@@ -36,12 +36,20 @@ const ImageForOrder = memo(function ImageForOrder({
 export function OrderMarkerImageSources({
   onImage,
   setImages,
-}: Pick<ReturnType<typeof useOrderMarkerImages>, 'onImage' | 'setImages'>) {
+  hiddenOrderIds = [],
+}: Pick<ReturnType<typeof useOrderMarkerImages>, 'onImage' | 'setImages'> & {
+  hiddenOrderIds?: number[];
+}) {
   const logic = useListOrdersLogic();
   const {orders, preferDriverColor} = logic;
+  const hiddenIds = useMemo(() => new Set(hiddenOrderIds), [hiddenOrderIds]);
+  const visibleOrders = useMemo(
+    () => orders.filter(order => !hiddenIds.has(order.id)),
+    [hiddenIds, orders],
+  );
   const groups = useMemo(
-    () => groupOrdersByMapLocation(orders, preferDriverColor),
-    [orders, preferDriverColor],
+    () => groupOrdersByMapLocation(visibleOrders, preferDriverColor),
+    [preferDriverColor, visibleOrders],
   );
   useEffect(() => {
     const ids = new Set(groups.map(group => group.representative.id));
@@ -75,17 +83,22 @@ export function OrderMarkerImageSources({
 
 export const ListOrders = memo(function ListOrders({
   images = {},
+  hiddenOrderIds = [],
 }: {
   images?: OrderMarkerImages;
+  hiddenOrderIds?: number[];
 }) {
   const logic = useListOrdersLogic();
+  const hiddenIds = useMemo(() => new Set(hiddenOrderIds), [hiddenOrderIds]);
   const groups = useMemo(
     () =>
       groupOrdersByMapLocation(
-        logic.orders.filter(item => isValidMapPoint(item.xy)),
+        logic.orders.filter(
+          item => isValidMapPoint(item.xy) && !hiddenIds.has(item.id),
+        ),
         logic.preferDriverColor,
       ),
-    [logic.orders, logic.preferDriverColor],
+    [hiddenIds, logic.orders, logic.preferDriverColor],
   );
   return (
     <>

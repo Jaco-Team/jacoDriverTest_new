@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -26,6 +26,7 @@ import {getOrderAddress} from '@/entities/CardOrder/model/getOrderAddress';
 import {toOrderInt} from '@/entities/CardOrder/model/normalizeOrderValue';
 import {appPalette} from '@/shared/styles/appPalette';
 import type {Order} from '@/shared/store/OrdersStoreType';
+import {subscribeSuccessfulOrderAction} from '@/shared/lib/orderActionEvents';
 
 import {getOrderUrgency} from '../model/mapEdgeIndicators';
 import {useModalOrderLogic} from '../model/useModalOrderLogic';
@@ -54,6 +55,16 @@ export const ModalOrder = (): React.JSX.Element | null => {
     session: number;
     orderId: number | null;
   }>({session: mapOrderSession, orderId: null});
+  const [forceHidden, setForceHidden] = useState(false);
+
+  useEffect(
+    () => subscribeSuccessfulOrderAction(() => setForceHidden(true)),
+    [],
+  );
+
+  useEffect(() => {
+    if (isOpenOrderMap) setForceHidden(false);
+  }, [isOpenOrderMap, mapOrderSession]);
   const selectedOrderId =
     selection.session === mapOrderSession ? selection.orderId : null;
   const isGroup = showOrders.length > 1;
@@ -76,7 +87,7 @@ export const ModalOrder = (): React.JSX.Element | null => {
   // Unmount the overlay immediately; a cancelled exit animation must not
   // leave an invisible touch interceptor over the map. Sessions also isolate
   // rapid close/open updates that React batches into one render.
-  if (!isOpenOrderMap) return null;
+  if (!isOpenOrderMap || forceHidden) return null;
 
   return (
     <Actionsheet key={mapOrderSession} isOpen={isOpenOrderMap} onClose={close}>

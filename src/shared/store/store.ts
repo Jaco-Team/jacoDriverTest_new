@@ -78,6 +78,10 @@ import {
   TypeOrder,
   actionOrderType,
 } from './OrdersStoreType';
+import {
+  emitOrderTakeStarted,
+  emitSuccessfulOrderAction,
+} from '@/shared/lib/orderActionEvents';
 import {FeedbackStatus, FeedbackState} from './FeedbackStoreType';
 
 import {GEOStore} from './GEOStoreType';
@@ -250,6 +254,8 @@ function resetDriverOfflineState(): void {
     night_map: 0,
     app_theme: undefined,
     is_scaleMap: 0,
+    map_hints: 1,
+    ai_recommend: 0,
     rotate_map: false,
     points: [],
     point_id: null,
@@ -309,6 +315,8 @@ async function hydrateDriverOfflineState(cache: DriverOfflineCache): Promise<voi
     night_map: settings.night_map,
     app_theme: settings.app_theme,
     is_scaleMap: settings.is_scaleMap,
+    map_hints: settings.map_hints ?? 1,
+    ai_recommend: settings.ai_recommend ?? 0,
     rotate_map: settings.rotate_map,
     points: settings.points,
     point_id: settings.point_id,
@@ -401,6 +409,8 @@ async function persistDriverOfflineState(): Promise<void> {
       night_map: settings.night_map ?? 0,
       app_theme: settings.app_theme,
       is_scaleMap: settings.is_scaleMap ?? 0,
+      map_hints: settings.map_hints ?? 1,
+      ai_recommend: settings.ai_recommend ?? 0,
       point_id: settings.point_id ?? null,
       all_points: settings.points ?? [],
       points: settings.points ?? [],
@@ -1095,6 +1105,8 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
   night_map: 0,
   app_theme: undefined,
   is_scaleMap: 0,
+  map_hints: 1,
+  ai_recommend: 0,
 
   rotate_map: false,
   points: [],
@@ -1206,6 +1218,8 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
       night_map: res.data?.night_map,
       app_theme: res.data?.app_theme,
       is_scaleMap: res.data?.is_scaleMap,
+      map_hints: res.data?.map_hints ?? 1,
+      ai_recommend: res.data?.ai_recommend ?? 0,
     });
 
     if (res.data?.app_theme) {
@@ -1239,7 +1253,9 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
     theme: Theme,
     night_map: string[],
     is_scaleMap: string[],
-    app_theme: AppThemePreference = useAppThemeStore.getState().preference,
+    app_theme: AppThemePreference | undefined = useAppThemeStore.getState().preference,
+    map_hints = true,
+    ai_recommend = false,
   ) => {
     if (isAppOffline()) return;
 
@@ -1265,6 +1281,8 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
       dark_theme: night_map.length == 1 ? 1 : 0,
       app_theme,
       is_scaleMap: is_scaleMap.length == 1 ? 1 : 0,
+      map_hints: map_hints ? 1 : 0,
+      ai_recommend: ai_recommend ? 1 : 0,
       fontSize: fontSize,
       theme,
       mapScale,
@@ -1294,6 +1312,8 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
         night_map: data.night_map,
         app_theme: data.app_theme,
         is_scaleMap: data.is_scaleMap,
+        map_hints: data.map_hints,
+        ai_recommend: data.ai_recommend,
       });
 
       useGlobalStore.getState().showAlertText(true, 'Настройки сохранены');
@@ -2290,6 +2310,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
         callWithGeo(get().actionOrderFake, {order_id, type});
       } else {
         // обычное "Взять" — игнорируем залипший type_confirm
+        emitOrderTakeStarted(order_id);
         useGEOStore
           .getState()
           .check_pos_fake(get().actionOrder, {order_id, type});
@@ -2299,9 +2320,11 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
       callWithGeo(get().actionOrder, {order_id, type});
     }
 
-    setTimeout(() => {
-      set({isClick: false});
-    }, 300);
+    if (type !== 1) {
+      setTimeout(() => {
+        set({isClick: false});
+      }, 300);
+    }
   },
 
   actionOrder: async ({
@@ -2348,10 +2371,23 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
       if (get().isOpenOrderMap) {
         get().showOrdersMap(-1); // свернуть/закрыть карту/модалку
       }
+      // Демо-аккаунт сразу возвращает тот же заказ при обновлении списка.
+      // Принудительно размонтируем старую нативную шторку и инвалидируем её
+      // callbacks, даже если её isOpen уже успел измениться во время запроса.
+      set({
+        isOpenOrderMap: false,
+        showOrders: [],
+        mapOrderSession: get().mapOrderSession + 1,
+      });
 
       if (type === 1 || type === 2) {
         get().requestMapHomeCenter();
       }
+
+      emitSuccessfulOrderAction({
+        orderId: order_id,
+        type: type === 1 ? 'take' : type === 2 ? 'cancel' : 'finish',
+      });
 
       get().getOrders(); // ручной рефреш списка
 
@@ -2407,6 +2443,11 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
       if (get().isOpenOrderMap) {
         get().showOrdersMap(-1); // свернуть/закрыть карту/модалку
       }
+      set({
+        isOpenOrderMap: false,
+        showOrders: [],
+        mapOrderSession: get().mapOrderSession + 1,
+      });
 
       get().getOrders();
     } finally {

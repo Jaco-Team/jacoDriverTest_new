@@ -260,6 +260,10 @@ jest.mock('@react-navigation/native', () => {
   const ThemeProvider = ({children}: any) => children;
   const useTheme = () => ({colors: {}});
   const useIsFocused = () => true;
+  const useNavigation = () => ({
+    navigate: () => {},
+    addListener: () => () => {},
+  });
   const createNavigationContainerRef = () => ({current: null});
 
   return {
@@ -271,6 +275,7 @@ jest.mock('@react-navigation/native', () => {
     ThemeProvider,
     useTheme,
     useIsFocused,
+    useNavigation,
     createNavigationContainerRef,
   };
 });
@@ -490,6 +495,13 @@ jest.mock('react-native-yamap-plus', () => {
   (YaMap as any).setCenter = jest.fn();
   (YaMap as any).setZoom = jest.fn();
   const Animation = {SMOOTH: 0};
+  const Transport = {
+    findDrivingRoutes: jest.fn(async () => ({
+      id: 'test-route',
+      status: 'success',
+      routes: [],
+    })),
+  };
   const YamapInstance = {
     init: jest.fn(() => Promise.resolve()),
     setLocale: jest.fn(() => Promise.resolve()),
@@ -507,8 +519,10 @@ jest.mock('react-native-yamap-plus', () => {
     __esModule: true,
     default: YaMap,
     Animation,
+    Transport,
     YamapInstance,
     Marker: YaMap,
+    Polyline: YaMap,
   };
 });
 

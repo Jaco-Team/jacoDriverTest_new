@@ -9,6 +9,7 @@ import {
   type AppThemePreference,
 } from '@/shared/theme/AppThemeProvider'
 import {useIsOffline} from '@/shared/ui/ConnectivityLocationIndicator'
+import {useOrderRecommendationStore} from '@/features/order-recommendation/model/orderRecommendation.store'
 
 function normalizeNumber(value: unknown, fallback: number): number {
   const parsed = Number.parseFloat(String(value))
@@ -41,6 +42,8 @@ export function useSettingsLogic() {
       typeShowDel: state.type_show_del,
       updateInterval: state.update_interval,
       isScaleMap: state.is_scaleMap,
+      mapHints: state.map_hints,
+      aiRecommend: state.ai_recommend,
       points: state.points,
       pointId: state.point_id,
       setPointId: state.setPointId,
@@ -59,6 +62,8 @@ export function useSettingsLogic() {
     typeShowDel: storedTypeShowDel,
     updateInterval: storedUpdateInterval,
     isScaleMap,
+    mapHints: storedMapHints,
+    aiRecommend: storedAiRecommend,
     points,
     pointId,
     setPointId,
@@ -75,6 +80,8 @@ export function useSettingsLogic() {
     storedAppThemePreference,
   )
   const [showMapScale, setShowMapScale] = useState(normalizeFlag(isScaleMap))
+  const [showMapHints, setShowMapHints] = useState(normalizeFlag(storedMapHints))
+  const [aiRecommend, setAiRecommend] = useState(normalizeFlag(storedAiRecommend))
   const [fontSize, setFontSize] = useState(normalizeNumber(storedFontSize, 16))
   const [updateInterval, setUpdateInterval] = useState(normalizeNumber(storedUpdateInterval, 30))
   const [color, setColor] = useState(storedColor || '#000000')
@@ -97,6 +104,8 @@ export function useSettingsLogic() {
     setTypeShowDel(storedTypeShowDel)
     setCenteredMap(normalizeFlag(actionCenteredMap))
     setShowMapScale(normalizeFlag(isScaleMap))
+    setShowMapHints(normalizeFlag(storedMapHints))
+    setAiRecommend(normalizeFlag(storedAiRecommend))
     setFontSize(normalizeNumber(storedFontSize, 16))
     setUpdateInterval(normalizeNumber(storedUpdateInterval, 30))
     setColor(storedColor || '#000000')
@@ -106,6 +115,8 @@ export function useSettingsLogic() {
   }, [
     actionCenteredMap,
     isScaleMap,
+    storedMapHints,
+    storedAiRecommend,
     storedColor,
     storedFontSize,
     storedMapScale,
@@ -140,7 +151,13 @@ export function useSettingsLogic() {
       useDarkMap ? ['is_night'] : [],
       showMapScale ? ['is_scaleMap'] : [],
       appThemePreference,
+      showMapHints,
+      aiRecommend,
     )
+
+    if (Number(useSettingsStore.getState().ai_recommend) !== 1) {
+      useOrderRecommendationStore.getState().reset()
+    }
   }
 
   const deleteDemoAccount = async (): Promise<boolean> => {
@@ -177,6 +194,10 @@ export function useSettingsLogic() {
     setAppThemePreference: selectAppThemePreference,
     showMapScale,
     setShowMapScale,
+    showMapHints,
+    setShowMapHints,
+    aiRecommend,
+    setAiRecommend,
     isSaving,
     saveSettings,
     points,

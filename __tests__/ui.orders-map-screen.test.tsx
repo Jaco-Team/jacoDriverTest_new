@@ -120,19 +120,24 @@ jest.mock('@/features/orders-map/ui/ModalFilterOrders', () => ({
   ModalFilterOrders: () => null,
 }))
 jest.mock('@/features/orders-map/ui/OrdersMapCompass', () => ({
-  OrdersMapCompass: () => null,
+  OrdersMapCompass: () => {
+    const React = require('react')
+    const {View} = require('react-native')
+    return React.createElement(View, {testID: 'orders-map-compass'})
+  },
 }))
 
 import { MapScreen } from '@/features/orders-map/ui/MapScreen'
 import {ConnectivityContext} from '@/shared/lib/connectivityContext'
 import {useOfflineMapStore} from '@/features/offline-map/model/offlineMap.store'
-import {useOrdersStore} from '@/shared/store/store'
+import {useOrdersStore, useSettingsStore} from '@/shared/store/store'
 
 describe('экран карты заказов', () => {
   beforeEach(() => {
     mockMapLogic.home = { lat: 53.2, lon: 50.1 }
     mockMapLogic.type_location = 'none'
     mockMapLogic.driver_location_requesting = false
+    mockMapLogic.trafficVisible = false
     mockMapLogic.set_type_location.mockClear()
     mockTheme.isDark = false
     mockMapLogic.isOffline = false
@@ -141,6 +146,7 @@ describe('экран карты заказов', () => {
     mockMapUnmount.mockClear()
     mockHomeMarkerMount.mockClear()
     mockHomeMarkerUnmount.mockClear()
+    useSettingsStore.setState({map_hints: 1, ai_recommend: 0})
   })
 
   it('занимает всю доступную область и сохраняет собственные элементы карты', async () => {
@@ -157,6 +163,7 @@ describe('экран карты заказов', () => {
     })
     expect(screen.getByTestId('native-yandex-map')).toBeTruthy()
     expect(screen.getByTestId('native-yandex-map').props.nightMode).toBe(false)
+    expect(screen.getByTestId('native-yandex-map').props.trafficVisible).toBe(false)
     expect(screen.getByTestId('map-zoom-slider')).toBeTruthy()
     expect(screen.getByTestId('orders-map-rotation-lock')).toBeTruthy()
     expect(screen.getByTestId('orders-map-driver-location')).toBeTruthy()
@@ -164,6 +171,19 @@ describe('экран карты заказов', () => {
     expect(typeof screen.getByTestId('native-yandex-map').props.onCameraPositionChangeEnd).toBe(
       'function',
     )
+  })
+
+  it('передаёт состояние пробок непосредственно нативной карте', async () => {
+    mockMapLogic.trafficVisible = true
+
+    await render(<MapScreen />)
+    await act(async () => {
+      fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
+        nativeEvent: {layout: {width: 390, height: 700}},
+      })
+    })
+
+    expect(screen.getByTestId('native-yandex-map').props.trafficVisible).toBe(true)
   })
 
   it('использует тот же трёхрежимный обработчик геолокации, что и сайт', async () => {
@@ -208,6 +228,14 @@ describe('экран карты заказов', () => {
 
     expect(screen.queryByTestId('orders-map-filter')).toBeNull()
     expect(screen.queryByTestId('orders-map-refresh')).toBeNull()
+  })
+
+  it('скрывает круги-подсказки за границей карты по настройке курьера', async () => {
+    useSettingsStore.setState({map_hints: 0})
+
+    await render(<MapScreen />)
+
+    expect(screen.queryByTestId('orders-map-compass')).toBeNull()
   })
 
   it('не передаёт карте некорректную домашнюю координату', async () => {

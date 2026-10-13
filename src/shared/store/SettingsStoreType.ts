@@ -22,6 +22,8 @@ export interface MySettingsResponse {
   night_map: number,
   app_theme?: AppThemePreference,
   is_scaleMap: number,
+  map_hints: number,
+  ai_recommend: number,
   point_id?: number | null,
   all_points?: SettingsPoint[]
 }
@@ -71,6 +73,6 @@ export interface SettingsStore extends MySettingsResponse {
 
   getSettings: (silent?: boolean) => Promise<void>,
 
-  saveSettings: (type_show_del: string, centered_map: string[], fontSize: number, update_interval: number, color: string, mapScale: number, groupTypeTime: string, theme: Theme, night_map: string[], is_scaleMap: string[], app_theme?: AppThemePreference) => Promise<void>,
+  saveSettings: (type_show_del: string, centered_map: string[], fontSize: number, update_interval: number, color: string, mapScale: number, groupTypeTime: string, theme: Theme, night_map: string[], is_scaleMap: string[], app_theme?: AppThemePreference, map_hints?: boolean, ai_recommend?: boolean) => Promise<void>,
   getPhoneCafe: () => Promise<void>,
 }

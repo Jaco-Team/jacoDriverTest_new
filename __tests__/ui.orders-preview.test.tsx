@@ -138,4 +138,22 @@ describe('временный DEV-предпросмотр заказов', () =>
       [{ text: 'Понятно' }],
     )
   })
+
+  it('открывает модалку пустого результата рекомендаций', async () => {
+    await render(<OrdersUiPreviewScreen />)
+
+    await fireEvent.press(screen.getByTestId('preview-no-suitable-orders'))
+
+    expect(screen.getByTestId('order-recommendation-empty-sheet')).toBeTruthy()
+    expect(screen.getByTestId('order-recommendation-empty-handle')).toHaveStyle({
+      width: '100%',
+      height: 34,
+      backgroundColor: 'transparent',
+    })
+    expect(screen.getByText('Подходящих заказов для Вас сейчас нет.')).toBeTruthy()
+    expect(screen.getByTestId('order-recommendation-empty-close')).toHaveStyle({
+      minHeight: 48,
+      alignSelf: 'stretch',
+    })
+  })
 })

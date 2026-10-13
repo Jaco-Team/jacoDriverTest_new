@@ -1,5 +1,6 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import { TriangleAlert } from 'lucide-react-native'
 
 import { toOrderInt } from '@/entities/CardOrder/model/normalizeOrderValue'
 import { getOrderAddress } from '@/entities/CardOrder/model/getOrderAddress'
@@ -30,7 +31,6 @@ export const CardOrderComponent: React.FC<CardOrderProps> = ({
   const onlinePay = toOrderInt(item.online_pay)
   const needTime = getOrderNeedTime(item)
   const textColor = colors.text
-  const mutedColor = colors.textMuted
   const bodyTextStyle = {
     color: textColor,
     fontSize: globalFontSize,
@@ -108,20 +108,36 @@ export const CardOrderComponent: React.FC<CardOrderProps> = ({
       />
 
       {toOrderInt(item.fake_dom) === 0 ? (
-        <Text
+        <View
+          accessible
+          accessibilityLabel="Домофон не работает"
           style={[
-            styles.infoRow,
-            styles.value,
+            styles.intercomWarning,
             {
-              color: mutedColor,
-              fontSize: globalFontSize,
-              lineHeight: globalFontSize + 6,
+              backgroundColor: colors.warningSurface,
+              borderColor: colors.warningBorder,
             },
           ]}
           testID="order-intercom"
         >
-          Домофон не работает
-        </Text>
+          <TriangleAlert
+            color={colors.warningIcon}
+            size={Math.max(18, Math.min(globalFontSize + 3, 22))}
+            strokeWidth={2.2}
+          />
+          <Text
+            style={[
+              styles.intercomWarningText,
+              {
+                color: colors.warningText,
+                fontSize: globalFontSize,
+                lineHeight: globalFontSize + 5,
+              },
+            ]}
+          >
+            Домофон не работает
+          </Text>
+        </View>
       ) : null}
 
       <Text style={styles.infoRow} testID="order-need-time">
@@ -244,6 +260,21 @@ const styles = StyleSheet.create({
   },
   value: {
     fontFamily: 'Roboto-Regular',
+  },
+  intercomWarning: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+  },
+  intercomWarningText: {
+    flex: 1,
+    fontFamily: 'Roboto-Medium',
   },
   paid: {
     color: '#4CAF50',

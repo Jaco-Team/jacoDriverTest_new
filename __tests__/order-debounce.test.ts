@@ -1,8 +1,8 @@
 // __tests__/order-debounce.test.ts
 /**
  * Анти-дребезг:
- * - второй клик до таймаута isClick не запускает ни GEO, ни api
- * - после таймаута (300ms) клик снова работает
+ * - повторные клики не запускают ни GEO, ни api, пока запрос не завершён
+ * - после ответа сервера действие снова доступно
  *
  * Важно: первый api() — "подвешенный", чтобы isClick оставался true до второго клика.
  */
@@ -33,7 +33,7 @@ describe('Анти-дребезг actionButtonOrder', () => {
     jest.useRealTimers();
   });
 
-  it('второй клик до 300ms игнорируется; после 300ms — снова работает', async () => {
+  it('повторные клики игнорируются до завершения запроса', async () => {
     const { useOrdersStore, useGEOStore, useGlobalStore } = require('@/shared/store/store');
 
     const check_pos_fake = jest.fn((cb: any, payload: any) => cb({ data: payload }));
@@ -71,15 +71,21 @@ describe('Анти-дребезг actionButtonOrder', () => {
     expect(apiSpy).toHaveBeenCalledTimes(1);
     expect(check_pos_fake).toHaveBeenCalledTimes(1);
 
-    // через 300ms внутренний таймер снимет isClick=false
+    // Даже после старого 300-мс порога запрос ещё выполняется: кнопка должна
+    // оставаться заблокированной, а спиннер — видимым.
     jest.advanceTimersByTime(300);
 
-    // 3-й клик → снова проходит
+    // 3-й клик во время того же запроса тоже игнорируется.
+    useOrdersStore.getState().actionButtonOrder(1, 555);
+    expect(apiSpy).toHaveBeenCalledTimes(1);
+    expect(check_pos_fake).toHaveBeenCalledTimes(1);
+
+    // После ответа сервера блокировка снимается и новое действие проходит.
+    d1.resolve({ st: true, text: '' });
+    await waitFor(() => expect(useOrdersStore.getState().isClick).toBe(false));
+
     useOrdersStore.getState().actionButtonOrder(1, 555);
     await waitFor(() => expect(apiSpy).toHaveBeenCalledTimes(2));
     expect(check_pos_fake).toHaveBeenCalledTimes(2);
-
-    // завершаем первый подвешенный промис, чтобы не было утечек
-    d1.resolve({ st: true, text: '' });
   });
 });

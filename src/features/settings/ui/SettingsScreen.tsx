@@ -194,6 +194,10 @@ export function SettingsScreen(): React.JSX.Element {
     setAppThemePreference,
     showMapScale,
     setShowMapScale,
+    showMapHints,
+    setShowMapHints,
+    aiRecommend,
+    setAiRecommend,
     isSaving,
     saveSettings,
     points = [],
@@ -396,6 +400,14 @@ export function SettingsScreen(): React.JSX.Element {
           <SectionTitle fontSize={normalizedFontSize}>Карта</SectionTitle>
           <CheckboxChoice label="Ползунок масштабирования карты" selected={showMapScale} onPress={() => setShowMapScale(!showMapScale)} fontSize={normalizedFontSize} testID="settings-map-scale-control" />
           <CheckboxChoice label="При взятии, отмене заказа, центрировать карту" selected={centeredMap} onPress={() => setCenteredMap(!centeredMap)} fontSize={normalizedFontSize} testID="settings-center-map" />
+          <CheckboxChoice label="Подсказки о заказах за пределами карты" selected={showMapHints} onPress={() => setShowMapHints(!showMapHints)} fontSize={normalizedFontSize} testID="settings-map-hints" />
+          <Text style={[styles.helperText, { fontSize: helperFontSize }]}>Показывать направление и количество заказов за границами карты.</Text>
+        </SettingsCard>
+
+        <SettingsCard testID="settings-ai-recommend-card">
+          <SectionTitle fontSize={normalizedFontSize}>Помощь с выбором</SectionTitle>
+          <CheckboxChoice label="ИИ-подбор заказов" selected={aiRecommend} onPress={() => setAiRecommend(!aiRecommend)} fontSize={normalizedFontSize} testID="settings-ai-recommend" />
+          <Text style={[styles.helperText, { fontSize: helperFontSize }]}>Показывать кнопку «Помочь с выбором» в списке заказов и на карте.</Text>
         </SettingsCard>
 
         <SettingsCard testID="settings-font-size-card">

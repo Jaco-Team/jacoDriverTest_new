@@ -394,10 +394,60 @@ index 870251e..4fd70ef 100644
          view.setRotated(rotated)
      }
 diff --git a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapView.kt b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapView.kt
-index 29bf132..79560f7 100644
+index 29bf132..115197f 100644
 --- a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapView.kt
 +++ b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapView.kt
-@@ -488,6 +488,7 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
+@@ -67,6 +67,10 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
+     private var userLocationAccuracyStrokeColor = 0
+     private var userLocationAccuracyStrokeWidth = 0f
+     private var trafficLayer: TrafficLayer? = null
++    private val trafficListener = WeakReference<TrafficListener>(this)
++    private var trafficListenerAttached = false
++    private var trafficVisibleRequested = false
++    private var mapLoaded = false
+     private var initializedRegion = false
+     private var userLocationView: UserLocationView? = null
+
+@@ -430,17 +434,30 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
+     }
+
+     fun setTrafficVisible(isVisible: Boolean) {
+-        if (trafficLayer == null) {
+-            trafficLayer = MapKitFactory.getInstance().createTrafficLayer(mapWindow)
++        trafficVisibleRequested = isVisible
++
++        if (!isVisible) {
++            trafficLayer?.isTrafficVisible = false
++            if (trafficListenerAttached) {
++                trafficLayer?.removeTrafficListener(trafficListener)
++                trafficListenerAttached = false
++            }
++            return
+         }
+
+-        if (isVisible) {
+-            trafficLayer!!.addTrafficListener(WeakReference(this))
+-            trafficLayer!!.isTrafficVisible = true
+-        } else {
+-            trafficLayer!!.isTrafficVisible = false
+-            trafficLayer!!.removeTrafficListener(WeakReference(this))
++        // A layer created for the initial `false` prop before the map finished
++        // loading never started receiving traffic data on recent MapKit builds.
++        if (!mapLoaded) return
++
++        val layer = trafficLayer
++            ?: MapKitFactory.getInstance().createTrafficLayer(mapWindow).also {
++                trafficLayer = it
++            }
++        if (!trafficListenerAttached) {
++            layer.addTrafficListener(trafficListener)
++            trafficListenerAttached = true
+         }
++        layer.isTrafficVisible = true
+     }
+
+     fun setShowUserPosition(show: Boolean) {
+@@ -488,6 +505,7 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
              val obj = mapWindow.map.mapObjects.addPlacemark()
              obj.setIcon(ImageProvider.fromBitmap(createBitmap(1, 1)))
              obj.geometry = child.point!!
@@ -405,7 +455,7 @@ index 29bf132..79560f7 100644
              child.setMarkerMapObject(obj)
          } else if (child is CircleView) {
              val obj = mapWindow.map.mapObjects.addCircle(child.circle)
-@@ -501,6 +502,10 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
+@@ -501,6 +519,10 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
              val mapObject = child.rnMapObject
              if (mapObject == null || !mapObject.isValid) return
 
@@ -416,6 +466,101 @@ index 29bf132..79560f7 100644
              mapWindow.map.mapObjects.remove(mapObject)
          }
      }
+@@ -591,6 +613,9 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
+     }
+
+     override fun onMapLoaded(statistics: MapLoadStatistics) {
++        mapLoaded = true
++        if (trafficVisibleRequested) setTrafficVisible(true)
++
+         val eventDispatcher = UIManagerHelper.getEventDispatcherForReactTag(context as ThemedReactContext, id)
+         eventDispatcher?.dispatchEvent(MapLoadedEvent(
+             getSurfaceId(context),
+diff --git a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapViewManager.kt b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapViewManager.kt
+index 8ee7f70..278cd37 100644
+--- a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapViewManager.kt
++++ b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapViewManager.kt
+@@ -81,6 +81,10 @@ class YamapViewManager : ViewGroupManager<YamapView>(), YamapViewManagerInterfac
+         implementation.setFastTapDisabled(view, value)
+     }
+
++    override fun setTrafficVisible(view: YamapView, value: Boolean) {
++        view.setTrafficVisible(value)
++    }
++
+     override fun setMapStyle(view: YamapView, style: String?) {
+         implementation.setMapStyle(view, style)
+     }
+diff --git a/node_modules/react-native-yamap-plus/android/src/mapkit/full/TransportModuleImpl.kt b/node_modules/react-native-yamap-plus/android/src/mapkit/full/TransportModuleImpl.kt
+index 5c74845..70871a2 100644
+--- a/node_modules/react-native-yamap-plus/android/src/mapkit/full/TransportModuleImpl.kt
++++ b/node_modules/react-native-yamap-plus/android/src/mapkit/full/TransportModuleImpl.kt
+@@ -15,6 +15,7 @@ import com.yandex.mapkit.directions.driving.DrivingOptions
+ import com.yandex.mapkit.directions.driving.DrivingRoute
+ import com.yandex.mapkit.directions.driving.DrivingRouterType
+ import com.yandex.mapkit.directions.driving.DrivingSection
++import com.yandex.mapkit.directions.driving.DrivingSession
+ import com.yandex.mapkit.directions.driving.DrivingSession.DrivingRouteListener
+ import com.yandex.mapkit.directions.driving.VehicleOptions
+ import com.yandex.mapkit.geometry.SubpolylineHelper
+@@ -33,6 +34,10 @@ import ru.yamap.utils.PointUtil
+
+ class TransportModuleImpl {
+
++    // MapKit cancels an in-flight route when its session is released. Several
++    // React map lifecycles may overlap briefly, so retain every active request.
++    private val drivingSessions = mutableSetOf<DrivingSession>()
++
+     fun findRoutes(jsPoints: ReadableArray, jsVehicles: ReadableArray?, promise: Promise?) {
+         val points = PointUtil.jsPointsToPoints(jsPoints)
+
+@@ -45,8 +50,10 @@ class TransportModuleImpl {
+         }
+
+         if (vehicles.size == 1 && vehicles[0] == "car") {
++            lateinit var drivingSession: DrivingSession
+             val listener: DrivingRouteListener = object : DrivingRouteListener {
+                 override fun onDrivingRoutes(routes: List<DrivingRoute>) {
++                    drivingSessions.remove(drivingSession)
+                     val jsonRoutes = Arguments.createArray()
+                     for (i in routes.indices) {
+                         val _route = routes[i]
+@@ -67,6 +74,7 @@ class TransportModuleImpl {
+                 }
+
+                 override fun onDrivingRoutesError(error: Error) {
++                    drivingSessions.remove(drivingSession)
+                     promise?.reject("onDrivingRoutesError", error.toString())
+                 }
+             }
+@@ -79,12 +87,13 @@ class TransportModuleImpl {
+
+             runOnUiThread {
+                 val drivingRouter = DirectionsFactory.getInstance().createDrivingRouter(DrivingRouterType.ONLINE)
+-                drivingRouter.requestRoutes(
++                drivingSession = drivingRouter.requestRoutes(
+                     _points,
+                     DrivingOptions().setRoutesCount(1),
+                     VehicleOptions(),
+                     listener
+                 )
++                drivingSessions.add(drivingSession)
+             }
+             return
+         }
+diff --git a/node_modules/react-native-yamap-plus/ios/Module/RTNTransportModule.mm b/node_modules/react-native-yamap-plus/ios/Module/RTNTransportModule.mm
+index bf01868..b10ae56 100644
+--- a/node_modules/react-native-yamap-plus/ios/Module/RTNTransportModule.mm
++++ b/node_modules/react-native-yamap-plus/ios/Module/RTNTransportModule.mm
+@@ -74,7 +74,7 @@ - (void)findRoutesImpl:(nonnull NSArray *)points vehicles:(nonnull NSArray *)veh
+             }
+
+             NSMutableDictionary* response = [[NSMutableDictionary alloc] init];
+-            [response setValue:@"status" forKey:@"success"];
++            [response setValue:@"success" forKey:@"status"];
+             NSMutableArray* jsonRoutes = [[NSMutableArray alloc] init];
+
+             for (int i = 0; i < [routes count]; ++i) {
 diff --git a/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm b/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm
 index b8e9491..9ca0bc6 100644
 --- a/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm
@@ -919,18 +1064,30 @@ index 8e07f96..2a6ee1e 100644
 
  - (void)moveAnimationLoop:(NSInteger)frame withTotalFrames:(NSInteger)totalFrames withDeltaLat:(double)deltaLat withDeltaLon:(double)deltaLon {
 diff --git a/node_modules/react-native-yamap-plus/ios/View/YamapView.mm b/node_modules/react-native-yamap-plus/ios/View/YamapView.mm
-index 6cca002..7a7e0f1 100644
+index 6cca002..1bbb3d0 100644
 --- a/node_modules/react-native-yamap-plus/ios/View/YamapView.mm
 +++ b/node_modules/react-native-yamap-plus/ios/View/YamapView.mm
-@@ -63,6 +63,7 @@ @implementation YamapView {
+@@ -63,6 +63,10 @@ @implementation YamapView {
      NSMutableArray<YMKPlacemarkMapObject *> *clusterPlacemarks;
      YMKClusterizedPlacemarkCollection *clusterCollection;
      BOOL mapLoaded;
 +    BOOL nightModeConfigured;
++    BOOL trafficVisibleConfigured;
++    BOOL trafficVisibleRequested;
++    BOOL trafficListenerAttached;
      BOOL hasImperativePlacemarks;
      NSMutableDictionary<NSValue *, NSNumber *> *imperativeIndexMap;
      NSInteger imperativePlacemarkCounter;
-@@ -129,8 +130,11 @@ - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &
+@@ -96,6 +100,8 @@ - (instancetype)initWithFrame:(CGRect)frame {
+         clusterCollection = [mapView.mapWindow.map.mapObjects addClusterizedPlacemarkCollectionWithClusterListener:self];
+         clusterColor = UIColor.redColor;
+         mapLoaded = NO;
++        trafficVisibleRequested = NO;
++        trafficListenerAttached = NO;
+         clusterWidth = 32;
+         clusterHeight = 32;
+         clusterTextColor = UIColor.blackColor;
+@@ -129,8 +135,16 @@ - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &
          mapView.mapWindow.map.mapType = [self mapTypeWithJsEnum:newViewProps.mapType];
      }
 
@@ -940,18 +1097,74 @@ index 6cca002..7a7e0f1 100644
 +    if (!nightModeConfigured || oldViewProps.nightMode != newViewProps.nightMode) {
          [self setNightMode:newViewProps.nightMode];
 +        nightModeConfigured = YES;
++    }
++
++    if (!trafficVisibleConfigured || oldViewProps.trafficVisible != newViewProps.trafficVisible) {
++        [self setTrafficVisible:newViewProps.trafficVisible];
++        trafficVisibleConfigured = YES;
      }
 
      if (oldViewProps.showUserPosition != newViewProps.showUserPosition) {
-@@ -423,6 +427,7 @@ - (void)prepareForRecycle
+@@ -423,6 +437,16 @@ - (void)prepareForRecycle
  {
      [super prepareForRecycle];
 
 +    nightModeConfigured = NO;
++    trafficVisibleConfigured = NO;
++    trafficVisibleRequested = NO;
++    trafficListenerAttached = NO;
++    mapLoaded = NO;
++    if (trafficLayer != nil) {
++        [trafficLayer setTrafficVisibleWithOn:NO];
++        [trafficLayer removeTrafficListenerWithTrafficListener:self];
++        trafficLayer = nil;
++    }
      [self removeAllSections];
      [clusterPlacemarks removeAllObjects];
      [imperativeIndexMap removeAllObjects];
-@@ -766,6 +771,7 @@ - (void)insertSubview:(UIView *)subview atIndex:(NSInteger)index {
+@@ -474,19 +498,35 @@ - (void)setMapType:(NSString *)type {
+ }
+
+ - (void)setTrafficVisible:(BOOL)isVisible {
+-    YMKMapKit *inst = [YMKMapKit sharedInstance];
++    trafficVisibleRequested = isVisible;
++
++    if (!isVisible) {
++        if (trafficLayer != nil) {
++            [trafficLayer setTrafficVisibleWithOn:NO];
++            if (trafficListenerAttached) {
++                [trafficLayer removeTrafficListenerWithTrafficListener:self];
++                trafficListenerAttached = NO;
++            }
++        }
++        return;
++    }
++
++    // Do not create the layer for the initial `false` prop, and defer `true`
++    // until MapKit reports that this map window has loaded.
++    if (!mapLoaded) {
++        return;
++    }
+
+     if (trafficLayer == nil) {
++        YMKMapKit *inst = [YMKMapKit sharedInstance];
+         trafficLayer = [inst createTrafficLayerWithMapWindow:mapView.mapWindow];
+     }
+
+-    if (isVisible) {
+-        [trafficLayer setTrafficVisibleWithOn:YES];
++    if (!trafficListenerAttached) {
+         [trafficLayer addTrafficListenerWithTrafficListener:self];
+-    } else {
+-        [trafficLayer setTrafficVisibleWithOn:NO];
+-        [trafficLayer removeTrafficListenerWithTrafficListener:self];
++        trafficListenerAttached = YES;
+     }
++    [trafficLayer setTrafficVisibleWithOn:YES];
+ }
+
+ - (void)onCameraPositionChangedWithMap:(nonnull YMKMap*)map
+@@ -766,6 +806,7 @@ - (void)insertSubview:(UIView *)subview atIndex:(NSInteger)index {
              YMKPlacemarkMapObject *obj = [objects addPlacemark];
              [obj setIconWithImage:[[UIImage alloc] init]];
              [obj setGeometry:[marker getPoint]];
@@ -959,7 +1172,7 @@ index 6cca002..7a7e0f1 100644
              [marker setMapObject:obj];
          }
      } else if ([subview isKindOfClass:[CircleView class]]) {
-@@ -798,6 +804,7 @@ - (void)removeReactSubview:(UIView *)subview {
+@@ -798,6 +839,7 @@ - (void)removeReactSubview:(UIView *)subview {
          MarkerView *marker = (MarkerView *) subview;
          YMKPlacemarkMapObject *mapObject = [marker getMapObject];
          BOOL inClusterHost = [self isKindOfClass:[ClusteredYamapView class]];
@@ -967,6 +1180,26 @@ index 6cca002..7a7e0f1 100644
          if (inClusterHost && ![marker excludeFromCluster]) {
              [clusterPlacemarks removeObject:mapObject];
          } else if (mapObject != nil && [mapObject isValid]) {
+@@ -984,6 +1026,11 @@ - (void) clusterPlacemarks {
+ }
+
+ - (void)onMapLoadedWithStatistics:(YMKMapLoadStatistics*)statistics {
++    mapLoaded = YES;
++    if (trafficVisibleRequested) {
++        [self setTrafficVisible:YES];
++    }
++
+     if (!_eventEmitter) {
+         return;
+     }
+@@ -1014,7 +1061,6 @@ - (void)onMapLoadedWithStatistics:(YMKMapLoadStatistics*)statistics {
+         });
+     }
+
+-    mapLoaded = YES;
+ }
+
+ - (void)setInteractiveDisabled:(BOOL)interactiveDisabled {
 diff --git a/node_modules/react-native-yamap-plus/src/modules/YamapInstance.ts b/node_modules/react-native-yamap-plus/src/modules/YamapInstance.ts
 index e5b76a8..70c4e74 100644
 --- a/node_modules/react-native-yamap-plus/src/modules/YamapInstance.ts
@@ -1010,3 +1243,15 @@ index 5d408ca..1abce27 100644
  }
 
  export default TurboModuleRegistry.getEnforcing<Spec>('RTNYamapModule');
+diff --git a/node_modules/react-native-yamap-plus/src/spec/YamapNativeComponent.ts b/node_modules/react-native-yamap-plus/src/spec/YamapNativeComponent.ts
+index f90e404..03bd132 100644
+--- a/node_modules/react-native-yamap-plus/src/spec/YamapNativeComponent.ts
++++ b/node_modules/react-native-yamap-plus/src/spec/YamapNativeComponent.ts
+@@ -104,6 +104,7 @@ export interface YamapNativeProps extends ViewProps {
+   tiltGesturesDisabled?: boolean;
+   rotateGesturesDisabled?: boolean;
+   fastTapDisabled?: boolean;
++  trafficVisible?: boolean;
+   initialRegion?: InitialRegion;
+   followUser?: boolean;
+   logoPosition?: YandexLogoPosition;

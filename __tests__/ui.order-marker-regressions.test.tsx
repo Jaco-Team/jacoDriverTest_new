@@ -73,6 +73,8 @@ import {
   type MarkerBitmap,
 } from '@/features/orders-map/ui/MeasuredMarkerImage';
 import {getOrderMarkerColor} from '@/features/orders-map/model/orderMarkerColor';
+import {RecommendationRouteMarker} from '@/features/order-recommendation/ui/RecommendationRouteMarker';
+import type {RecommendationRouteMapPoint} from '@/features/order-recommendation/model/recommendationRouteMap';
 
 const bitmap: MarkerBitmap = {
   signature: 'initial',
@@ -649,6 +651,52 @@ it('заменяет резервный значок подписью после
   expect(mockUnmount).not.toHaveBeenCalled();
   fireEvent.press(marker);
   expect(mockLogic.showOrdersMap).toHaveBeenCalledWith(baseItem.id);
+});
+
+it('скрывает обычную кликабельную метку взятого заказа', async () => {
+  const probe = await render(
+    <ListOrders images={{1: bitmap}} hiddenOrderIds={[baseItem.id]} />,
+  );
+
+  expect(probe.queryByTestId('order-marker-1')).toBeNull();
+
+  await probe.rerender(<ListOrders images={{1: bitmap}} hiddenOrderIds={[]} />);
+
+  expect(probe.getByTestId('order-marker-1')).toBeTruthy();
+});
+
+it('ставит номер рядом с меткой, а галочку — точно на её место', async () => {
+  const point: RecommendationRouteMapPoint = {
+    key: 'delivery-1-2',
+    seq: 2,
+    label: '2',
+    kind: 'delivery',
+    title: 'Доставить заказ',
+    point: baseItem.xy,
+    orderIds: [baseItem.id],
+    orderMarkerCenterOffsetY: 0,
+  };
+  const numberMarker = await render(
+    <RecommendationRouteMarker
+      point={point}
+      image={bitmap}
+      isAccepted={false}
+    />,
+  );
+
+  expect(numberMarker.getByTestId('order-recommendation-map-marker-delivery-1-2').props.anchor)
+    .toEqual({x: 1 + 14 / bitmap.width, y: 0.5});
+
+  const acceptedMarker = await render(
+    <RecommendationRouteMarker
+      point={point}
+      image={bitmap}
+      isAccepted
+    />,
+  );
+
+  expect(acceptedMarker.getByTestId('order-recommendation-map-marker-delivery-1-2').props.anchor)
+    .toEqual({x: 0.5, y: 0.5});
 });
 
 it('повторяет экспорт после исключения нативного SVG', async () => {

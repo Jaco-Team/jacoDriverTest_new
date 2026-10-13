@@ -16,6 +16,7 @@ import { OrdersListProps } from '@/features/orders-list/model/types';
 import { appPalette } from '@/shared/styles/appPalette';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 import { useScrollToTopOnFocus } from '@/shared/lib/useScrollToTopOnFocus'
+import { OrderRecommendationSection } from '@/features/order-recommendation/ui/OrderRecommendationSection'
 
 export function OrdersList({
   orders,
@@ -113,7 +114,12 @@ export function OrdersList({
       contentContainerStyle={styles.content}
       showsHorizontalScrollIndicator={false}
       showsVerticalScrollIndicator={false}
-      ListHeaderComponent={<TypeLimit />}
+      ListHeaderComponent={(
+        <>
+          <TypeLimit />
+          <OrderRecommendationSection />
+        </>
+      )}
       ListFooterComponent={<View style={styles.footer} />}
       ListEmptyComponent={emptyState}
     />

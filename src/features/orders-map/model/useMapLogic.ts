@@ -30,10 +30,15 @@ function scheduleAfterInteractions(cb: () => void): () => void {
   return () => clearTimeout(id)
 }
 
-export function useMapLogic() {
+export function useMapLogic({
+  suppressOrderActionHomeCenter = false,
+}: {
+  suppressOrderActionHomeCenter?: boolean
+} = {}) {
   const isOffline = useIsOffline()
   const mapRef = useRef<React.ElementRef<typeof YaMap>>(null)
   const didAutoRemountRef = useRef(false)
+  const handledHomeCenterRequestRef = useRef(0)
   const [zoom, setZoom] = useState<number>(12)
   const [trafficVisible, setTrafficVisible] = useState<boolean>(false)
   const [mapInitStatus, setMapInitStatus] = useState<'pending' | 'ready' | 'error'>('pending')
@@ -98,11 +103,17 @@ export function useMapLogic() {
   }, [])
 
   useEffect(() => {
-    if (!mapHomeCenterRequestId) return
+    if (
+      !mapHomeCenterRequestId ||
+      handledHomeCenterRequestRef.current === mapHomeCenterRequestId
+    ) return
+
+    handledHomeCenterRequestRef.current = mapHomeCenterRequestId
+    if (suppressOrderActionHomeCenter) return
     getHome()
     // только явный запрос после взятия/отмены, не каждый новый объект home с сервера
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapHomeCenterRequestId])
+  }, [mapHomeCenterRequestId, suppressOrderActionHomeCenter])
 
   const remountMap = useCallback(() => {
     setMapLoaded(false)
@@ -200,18 +211,13 @@ export function useMapLogic() {
   // Метод для отображения/скрытия пробок
   const toggleTrafficVisible = () => {
     if (isOffline) return
-
-    setTrafficVisible((prev) => {
-      const nextValue = !prev
-      mapRef.current?.setTrafficVisible(nextValue)
-      return nextValue
-    })
+    setTrafficVisible(prev => !prev)
   }
 
   useEffect(() => {
-    if (!isOffline || !trafficVisible) return
-    mapRef.current?.setTrafficVisible(false)
-    setTrafficVisible(false)
+    if (isOffline && trafficVisible) {
+      setTrafficVisible(false)
+    }
   }, [isOffline, trafficVisible])
 
   return {

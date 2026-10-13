@@ -29,6 +29,9 @@ export enum AnalyticsEvent {
   OrderAccept = 'order_accept',
   OrderArrive = 'order_arrive',
   OrderComplete = 'order_complete',
+  OrderRecommendationRequest = 'order_recommendation_request',
+  OrderRecommendationOpen = 'order_recommendation_open',
+  OrderRecommendationClose = 'order_recommendation_close',
 
   // Подтверждения
   ConfirmModalOpen = 'confirm_modal_open',

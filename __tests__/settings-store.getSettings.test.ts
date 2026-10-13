@@ -64,6 +64,8 @@ describe('useSettingsStore.getSettings', () => {
           night_map: 1,
           app_theme: 'light',
           is_scaleMap: 1,
+          map_hints: 0,
+          ai_recommend: 1,
           point_id: 15,
           all_points: [{ id: 15, name: 'Самара, Металлургов 76А' }],
         },
@@ -101,6 +103,8 @@ describe('useSettingsStore.getSettings', () => {
     expect(useOrdersStore.getState().update_interval).toBe(45);
     expect(useAppThemeStore.getState().preference).toBe('light');
     expect(useSettingsStore.getState().point_id).toBe(15);
+    expect(useSettingsStore.getState().map_hints).toBe(0);
+    expect(useSettingsStore.getState().ai_recommend).toBe(1);
     expect(useSettingsStore.getState().points).toEqual([
       { id: 15, name: 'Самара, Металлургов 76А' },
     ]);

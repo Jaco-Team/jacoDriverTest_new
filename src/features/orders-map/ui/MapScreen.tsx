@@ -1,4 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {useNavigation} from '@react-navigation/native';
 import {
   StyleSheet,
   Text,
@@ -54,9 +55,25 @@ import {useAppTheme} from '@/shared/theme/AppThemeProvider';
 import {ConnectivityLocationIndicator} from '@/shared/ui/ConnectivityLocationIndicator';
 import {useOfflineMapStore} from '@/features/offline-map/model/offlineMap.store';
 import {findOfflineMapCity} from '@/features/offline-map/model/offlineMapCities';
+import {OrderRecommendationSection} from '@/features/order-recommendation/ui/OrderRecommendationSection';
+import {
+  ActiveOrderRecommendationMarkerSources,
+  ActiveOrderRecommendationRouteLayer,
+  useActiveOrderRecommendationRoute,
+} from '@/features/order-recommendation/ui/ActiveOrderRecommendationRoute';
+import {useOrderRecommendationStore} from '@/features/order-recommendation/model/orderRecommendation.store';
+import {useSettingsStore} from '@/shared/store/store';
 
 export function MapScreen() {
+  const navigation = useNavigation();
   const {colors, isDark} = useAppTheme();
+  const storedRecommendationRouteVisible = useOrderRecommendationStore(
+    state => state.isRouteVisible,
+  );
+  const mapHintsEnabled = useSettingsStore(state => Number(state.map_hints) === 1);
+  const aiRecommendEnabled = useSettingsStore(state => Number(state.ai_recommend) === 1);
+  const recommendationRouteVisible =
+    aiRecommendEnabled && storedRecommendationRouteVisible;
   const {
     mapRef,
     zoom,
@@ -79,7 +96,9 @@ export function MapScreen() {
     handleMapLoaded,
     retryMap,
     shouldRenderMap,
-  } = useMapLogic();
+  } = useMapLogic({
+    suppressOrderActionHomeCenter: recommendationRouteVisible,
+  });
   const [homeMarkerImage, setHomeMarkerImage] = useState<MarkerBitmap | null>(null);
   const orderMarkerImages = useOrderMarkerImages();
   const [viewportSize, setViewportSize] = useState({width: 0, height: 0});
@@ -88,6 +107,7 @@ export function MapScreen() {
   const [driverMarkerImage, setDriverMarkerImage] =
     useState<DriverMarkerImageSource | null>(null);
   const [mapViewport, setMapViewport] = useState<MapViewport | null>(null);
+  const [mapLoadVersion, setMapLoadVersion] = useState(0);
   const viewportRequestRef = useRef(0);
   const validHome = isValidMapPoint(home) ? home : null;
   const offlineMapsHydrated = useOfflineMapStore(state => state.hydrated);
@@ -98,6 +118,16 @@ export function MapScreen() {
   );
   const showOfflineFallback =
     isOffline && offlineMapsHydrated && !hasReadyOfflineMap;
+  const activeRecommendationRoute = useActiveOrderRecommendationRoute(
+    mapRef,
+    mapInstanceKey * 1000 + mapLoadVersion,
+  );
+  const resetOrderRecommendation = useOrderRecommendationStore(state => state.reset);
+
+  useEffect(
+    () => navigation.addListener('blur', resetOrderRecommendation),
+    [navigation, resetOrderRecommendation],
+  );
 
   const updateMapViewport = useCallback(() => {
     const map = mapRef.current;
@@ -121,6 +151,7 @@ export function MapScreen() {
 
   const handleLoadedMap = useCallback(() => {
     handleMapLoaded();
+    setMapLoadVersion(current => current + 1);
     updateMapViewport();
   }, [handleMapLoaded, updateMapViewport]);
 
@@ -159,6 +190,7 @@ export function MapScreen() {
           <ConnectivityLocationIndicator />
         </View>
       ) : null}
+      <OrderRecommendationSection surface="map" />
       {!showOfflineFallback &&
         !(is_showModalTypeDop || isOpenOrderMap) &&
         is_scaleMap == 1 && (
@@ -192,7 +224,18 @@ export function MapScreen() {
           <OrderMarkerImageSources
             onImage={orderMarkerImages.onImage}
             setImages={orderMarkerImages.setImages}
+            hiddenOrderIds={
+              activeRecommendationRoute.isRouteVisible
+                ? activeRecommendationRoute.acceptedOrderIds
+                : []
+            }
           />
+          {activeRecommendationRoute.isRouteVisible ? (
+            <ActiveOrderRecommendationMarkerSources
+              points={activeRecommendationRoute.points}
+              onImage={activeRecommendationRoute.saveMarkerImage}
+            />
+          ) : null}
         </>
       ) : null}
 
@@ -311,6 +354,7 @@ export function MapScreen() {
             ref={mapRef}
             style={StyleSheet.absoluteFill}
             rotateGesturesDisabled={!rotate_map}
+            trafficVisible={trafficVisible}
             nightMode={isDark}
             initialRegion={
               validHome
@@ -330,7 +374,22 @@ export function MapScreen() {
               />
             )}
             <DriverMarker image={driverMarkerImage} />
-            <ListOrders images={orderMarkerImages.images} />
+            <ListOrders
+              images={orderMarkerImages.images}
+              hiddenOrderIds={
+                aiRecommendEnabled && activeRecommendationRoute.isRouteVisible
+                  ? activeRecommendationRoute.acceptedOrderIds
+                  : []
+              }
+            />
+            {aiRecommendEnabled && activeRecommendationRoute.isRouteVisible ? (
+              <ActiveOrderRecommendationRouteLayer
+                acceptedOrderIds={activeRecommendationRoute.acceptedOrderIds}
+                linePoints={activeRecommendationRoute.linePoints}
+                markerImages={activeRecommendationRoute.markerImages}
+                points={activeRecommendationRoute.points}
+              />
+            ) : null}
           </YaMap>
         ) : (
           <Center className="w-full h-full">
@@ -347,7 +406,7 @@ export function MapScreen() {
         )}
       </View>}
 
-      {!showOfflineFallback ? (
+      {!showOfflineFallback && mapHintsEnabled ? (
         <OrdersMapCompass viewport={mapViewport} onCenter={centerOnIndicator} />
       ) : null}
 

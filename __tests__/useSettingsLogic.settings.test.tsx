@@ -20,17 +20,22 @@ const mockShowAlertText = jest.fn();
 let mockSettingsState: any;
 let mockCurrentUser: any;
 
-jest.mock('@/shared/store/store', () => ({
-  useSettingsStore: (selector: any) => selector(mockSettingsState),
-  useGlobalStore: (selector: any) => selector({
-    globalFontSize: 18,
-    showAlertText: mockShowAlertText,
-  }),
-  useLoginStore: (selector: any) => selector({
-    currentUser: mockCurrentUser,
-    logogout: mockLogogout,
-  }),
-}));
+jest.mock('@/shared/store/store', () => {
+  const useSettingsStore: any = (selector: any) => selector(mockSettingsState);
+  useSettingsStore.getState = () => mockSettingsState;
+
+  return {
+    useSettingsStore,
+    useGlobalStore: (selector: any) => selector({
+      globalFontSize: 18,
+      showAlertText: mockShowAlertText,
+    }),
+    useLoginStore: (selector: any) => selector({
+      currentUser: mockCurrentUser,
+      logogout: mockLogogout,
+    }),
+  };
+});
 
 import { useSettingsLogic } from '@/features/settings/model/useSettingsLogic';
 
@@ -62,6 +67,8 @@ describe('useSettingsLogic: локальное состояние и сохра�
       update_interval: 30,
       night_map: 0,
       is_scaleMap: 1,
+      map_hints: 1,
+      ai_recommend: 0,
     };
   });
 
@@ -74,6 +81,8 @@ describe('useSettingsLogic: локальное состояние и сохра�
     expect(api!.centeredMap).toBe(true);
     expect(api!.appThemePreference).toBe('system');
     expect(api!.showMapScale).toBe(true);
+    expect(api!.showMapHints).toBe(true);
+    expect(api!.aiRecommend).toBe(false);
     expect(api!.fontSize).toBe(16);
     expect(api!.mapScale).toBe(1.25);
     expect(api!.color).toBe('#cc0033');
@@ -96,6 +105,8 @@ describe('useSettingsLogic: локальное состояние и сохра�
       api!.setMarkerTheme('black');
       api!.setAppThemePreference('dark');
       api!.setShowMapScale(false);
+      api!.setShowMapHints(false);
+      api!.setAiRecommend(true);
     });
 
     await act(async () => {
@@ -115,6 +126,8 @@ describe('useSettingsLogic: локальное состояние и сохра�
       ['is_night'],
       [],
       'dark',
+      false,
+      true,
     );
   });
 

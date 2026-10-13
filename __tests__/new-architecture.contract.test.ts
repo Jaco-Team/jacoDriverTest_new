@@ -98,6 +98,24 @@ describe('New Architecture contract', () => {
     expect(mapPatch).toContain('nightModeConfigured = NO;');
   });
 
+  it('создаёт TrafficLayer только после загрузки карты и сохраняет listener', () => {
+    const mapPatch = read('patches/react-native-yamap-plus+6.11.0.patch');
+
+    expect(mapPatch).toContain('private val trafficListener = WeakReference<TrafficListener>(this)');
+    expect(mapPatch).toContain('if (!mapLoaded) return');
+    expect(mapPatch).toContain('if (trafficVisibleRequested) setTrafficVisible(true)');
+    expect(mapPatch).toContain('if (!mapLoaded) {');
+    expect(mapPatch).toContain('if (trafficVisibleRequested) {');
+    expect(mapPatch).toContain('[self setTrafficVisible:YES]');
+  });
+
+  it('возвращает корректный status из iOS-роутера', () => {
+    const mapPatch = read('patches/react-native-yamap-plus+6.11.0.patch');
+
+    expect(mapPatch).toContain('[response setValue:@"success" forKey:@"status"]');
+    expect(mapPatch).toContain('-            [response setValue:@"status" forKey:@"success"]');
+  });
+
   it('Android использует edge-to-edge и системный Splash в стиле Greeting', () => {
     const pkg = JSON.parse(read('package.json')) as {
       dependencies: Record<string, string>;

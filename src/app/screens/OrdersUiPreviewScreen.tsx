@@ -9,6 +9,7 @@ import {
 import { CardOrder } from '@/entities/CardOrder/ui/CardOrder'
 import { ModalErrCam } from '@/features/schedule/ui/ModalErrCam'
 import { ModalErrOrder } from '@/features/schedule/ui/ModalErrOrder'
+import { NoSuitableOrdersSheet } from '@/features/order-recommendation/ui/NoSuitableOrdersSheet'
 import { appPalette } from '@/shared/styles/appPalette'
 import { OFFLINE_ORDER_ACTION_MESSAGE } from '@/shared/lib/offlineOrderAction'
 import { useGlobalStore } from '@/shared/store/store'
@@ -247,6 +248,7 @@ export function OrdersUiPreviewScreen(): React.JSX.Element {
   const [graphErrorPreview, setGraphErrorPreview] = useState<
     'order' | 'camera' | null
   >(null)
+  const [isNoSuitablePreviewOpen, setIsNoSuitablePreviewOpen] = useState(false)
 
   useEffect(() => () => clearPreviewPreference(), [clearPreviewPreference])
 
@@ -311,6 +313,28 @@ export function OrdersUiPreviewScreen(): React.JSX.Element {
               onPress={() => showModalText(true, OFFLINE_ORDER_ACTION_MESSAGE)}
             >
               <Text style={styles.previewButtonText}>Показать ошибку офлайн</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.modalPreview,
+            { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Рекомендации по заказам</Text>
+          <Text style={[styles.sectionDescription, { color: colors.textMuted }]}>
+            Предпросмотр результата, когда после анализа ни один заказ не подошёл.
+          </Text>
+          <View style={styles.graphPreviewActions}>
+            <Pressable
+              accessibilityRole="button"
+              style={[styles.previewButton, { backgroundColor: colors.brand }]}
+              testID="preview-no-suitable-orders"
+              onPress={() => setIsNoSuitablePreviewOpen(true)}
+            >
+              <Text style={styles.previewButtonText}>Нет подходящих заказов</Text>
             </Pressable>
           </View>
         </View>
@@ -397,6 +421,12 @@ export function OrdersUiPreviewScreen(): React.JSX.Element {
           setConfirm(CLOSED_CONFIRM_STATE)
           showSafeAction(`Подтверждение для заказа ${orderId}.`)
         }}
+      />
+
+      <NoSuitableOrdersSheet
+        fontSize={globalFontSize}
+        isOpen={isNoSuitablePreviewOpen}
+        onClose={() => setIsNoSuitablePreviewOpen(false)}
       />
 
       <ModalErrOrder

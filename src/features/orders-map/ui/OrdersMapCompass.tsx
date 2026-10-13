@@ -94,9 +94,9 @@ export const OrdersMapCompass = memo(function OrdersMapCompass({
           </Text>
 
           <View pointerEvents="none" style={styles.statuses}>
-            {indicator.statusColors.slice(0, 3).map(color => (
+            {indicator.statusColors.slice(0, 3).map((color, index) => (
               <View
-                key={color}
+                key={`${color}:${index}`}
                 style={[
                   styles.status,
                   {backgroundColor: color, borderColor: colors.surfaceRaised},

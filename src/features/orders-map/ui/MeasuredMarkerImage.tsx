@@ -124,6 +124,13 @@ interface Props {
   minHeight?: number;
   groupCount?: number;
   statusColors?: string[];
+  pill?: {
+    backgroundColor: string;
+    borderColor: string;
+    textColor: string;
+    height?: number;
+    width?: number;
+  };
   testID: string;
   onImage: (image: MarkerBitmap) => void;
 }
@@ -140,6 +147,7 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
   minHeight = 0,
   groupCount = 1,
   statusColors = [],
+  pill,
   testID,
   onImage,
 }: Props) {
@@ -177,12 +185,13 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
     [hasText, measurement, measurementKey],
   );
   const palette = getMarkerPalette(theme, isDark);
+  const isPill = Boolean(pill);
   const isGroup = groupCount > 1;
-  const visualIconWidth = isGroup ? 26 : icon.width;
-  const visualIconHeight = isGroup ? 26 : icon.height;
+  const visualIconWidth = isPill ? 0 : isGroup ? 26 : icon.width;
+  const visualIconHeight = isPill ? 0 : isGroup ? 26 : icon.height;
   const groupTopInset = 0;
   const groupBottomInset = isGroup ? 18 : 0;
-  const gap = !hasText ? 0 : isGroup ? 7 : theme === 'classic' ? 0 : 4;
+  const gap = !hasText || isPill ? 0 : isGroup ? 7 : theme === 'classic' ? 0 : 4;
   const visibleStatusColors = statusColors.slice(0, 3);
   const hiddenStatusCount = Math.max(
     0,
@@ -214,20 +223,24 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
     : 0;
   const statusPillLeft =
     groupLeftInset + visualIconWidth / 2 - statusPillWidth / 2;
-  const labelWidth =
-    hasText && measured
-      ? Math.ceil(measured.width) + 16 + 2 * palette.borderWidth
-      : 0;
+  const pillHeight = pill?.height ?? 30;
+  const labelWidth = hasText && measured
+    ? isPill
+      ? pill?.width ?? Math.max(pillHeight, Math.ceil(measured.width) + 14)
+      : Math.ceil(measured.width) + 16 + 2 * palette.borderWidth
+    : 0;
   const contentHeight = Math.ceil(
-    Math.max(
-      visualIconHeight,
-      minHeight,
-      hasText ? (measured?.height ?? 0) + 8 + 2 * palette.borderWidth : 0,
-    ),
+    isPill
+      ? Math.max(pillHeight, minHeight)
+      : Math.max(
+          visualIconHeight,
+          minHeight,
+          hasText ? (measured?.height ?? 0) + 8 + 2 * palette.borderWidth : 0,
+        ),
   );
   const height = groupTopInset + contentHeight + groupBottomInset;
   const labelX = groupSideInset + groupVisualWidth + gap;
-  const width = labelX + labelWidth + groupSideInset;
+  const width = isPill ? labelWidth : labelX + labelWidth + groupSideInset;
   const iconLayout = getMarkerIconLayout(icon);
   const captureKey = `${signature}:${width}:${height}`;
   const latestCaptureKey = useRef(captureKey);
@@ -235,7 +248,9 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
 
   const anchor = useMemo(
     () =>
-      isGroup
+      isPill
+        ? {x: 0.5, y: 0.5}
+        : isGroup
         ? {
             x: (groupLeftInset + visualIconWidth / 2) / width,
             y: (groupTopInset + contentHeight / 2) / height,
@@ -251,6 +266,7 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
       height,
       icon,
       isGroup,
+      isPill,
       visualIconWidth,
       width,
     ],
@@ -346,7 +362,7 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
             width: 8192,
             fontFamily: 'Roboto-Regular',
             fontSize,
-            fontWeight: '400',
+            fontWeight: isPill ? '700' : '400',
           }}
           onTextLayout={event => {
             const line = event.nativeEvent.lines[0];
@@ -381,18 +397,18 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
           testID={`${testID}-svg`}>
           {hasText ? (
             <Rect
-              x={labelX + palette.borderWidth / 2}
-              y={groupTopInset + palette.borderWidth / 2}
-              width={labelWidth - palette.borderWidth}
-              height={contentHeight - palette.borderWidth}
-              rx={6}
-              fill={palette.background}
+              x={isPill ? 1 : labelX + palette.borderWidth / 2}
+              y={groupTopInset + (isPill ? 1 : palette.borderWidth / 2)}
+              width={labelWidth - (isPill ? 2 : palette.borderWidth)}
+              height={contentHeight - (isPill ? 2 : palette.borderWidth)}
+              rx={isPill ? contentHeight / 2 - 1 : 6}
+              fill={pill?.backgroundColor ?? palette.background}
               fillOpacity={palette.opacity}
-              stroke={palette.border}
-              strokeWidth={palette.borderWidth}
+              stroke={pill?.borderColor ?? palette.border}
+              strokeWidth={isPill ? 2 : palette.borderWidth}
             />
           ) : null}
-          {isGroup ? (
+          {isPill ? null : isGroup ? (
             <>
               <Circle
                 cx={groupLeftInset + visualIconWidth / 2}
@@ -437,16 +453,17 @@ export const MeasuredMarkerImage = memo(function MeasuredMarkerImage({
           )}
           {hasText ? (
             <SvgText
-              x={labelX + 8 + palette.borderWidth}
+              x={isPill ? width / 2 : labelX + 8 + palette.borderWidth}
               y={
                 groupTopInset +
                 (contentHeight - measured.height) / 2 +
                 measured.baseline
               }
-              fill={palette.text}
-              fontFamily="Roboto-Regular"
+              fill={pill?.textColor ?? palette.text}
+              fontFamily={isPill ? 'Roboto-Bold' : 'Roboto-Regular'}
               fontSize={fontSize}
-              fontWeight="400">
+              fontWeight={isPill ? '700' : '400'}
+              textAnchor={isPill ? 'middle' : 'start'}>
               {text}
             </SvgText>
           ) : null}

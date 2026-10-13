@@ -21,6 +21,7 @@ export const laravelApiRoutes = {
   },
   orders: {
     getOrders: '/api/v1/orders/get_orders',
+    suggestRoute: '/api/v1/orders/suggest-route',
     actionOrder: '/api/v1/orders/action_order',
     checkFakeOrder: '/api/v1/orders/check_fake_order',
     getPayQr: '/api/v1/orders/get_pay_qr',
