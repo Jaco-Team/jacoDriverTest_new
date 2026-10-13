@@ -71,6 +71,12 @@ export function useCreateFeedbackModal() {
     closeCreateModal();
   }, [closeCreateModal, resetForm]);
 
+  useEffect(() => {
+    if (!isCreateModalOpen) {
+      resetForm();
+    }
+  }, [isCreateModalOpen, resetForm]);
+
   const feedbackTypes: FeedbackType[] = ['предложение', 'ошибка', 'улучшение', 'другое'];
 
   const handleSheetChanges = useCallback(

@@ -12,6 +12,9 @@
 production-проверка CAPTCHA/SSO и решение по QR-оплате.
 Текущие открытые задачи сайта, приложения и Laravel API собраны в
 [чек-листе унификации](./site-mobile-design-unification-checklist.md).
+Замечания сотрудников и курьеров, включая уже исправленные и требующие
+production/release-проверки, собраны в
+[отдельном чек-листе отзывов](./employee-feedback-checklist.md).
 
 Сюда входят:
 
@@ -96,6 +99,14 @@ production-проверка CAPTCHA/SSO и решение по QR-оплате.
 - адаптивность сайта и офлайн-состояния;
 - итоговая проверка web, Android и iOS.
 
+[docs/employee-feedback-checklist.md](./employee-feedback-checklist.md)
+
+Сводный чек-лист замечаний сотрудников и курьеров:
+
+- что уже реализовано в текущем коде;
+- что требует проверки актуальной release/production-версии;
+- какие подтверждённые доработки и продуктовые решения ещё остаются.
+
 [docs/theme-sync-decision.md](./theme-sync-decision.md)
 
 Зафиксированный контракт темы для сайта, приложения и API.
@@ -127,7 +138,8 @@ production-проверка CAPTCHA/SSO и решение по QR-оплате.
 9. Для переноса UI курьерского сайта смотреть [docs/driver-site-ui-migration-plan.md](./driver-site-ui-migration-plan.md).
 10. Для подключения приложения к Laravel API смотреть [docs/laravel-api-mobile-migration-plan.md](./laravel-api-mobile-migration-plan.md).
 11. Для унификации сайта и приложения смотреть [docs/site-mobile-design-unification-checklist.md](./site-mobile-design-unification-checklist.md).
-12. Для контракта темы смотреть [docs/theme-sync-decision.md](./theme-sync-decision.md).
+12. Для замечаний сотрудников и курьеров смотреть [docs/employee-feedback-checklist.md](./employee-feedback-checklist.md).
+13. Для контракта темы смотреть [docs/theme-sync-decision.md](./theme-sync-decision.md).
 
 ## Правило оформления ссылок
 

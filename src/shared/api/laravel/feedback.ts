@@ -10,10 +10,12 @@ import { getLaravelAuthToken } from '@/shared/lib/laravelAuthTokenStorage'
 import { bearerHeaders, laravelHttp } from './connector'
 import { laravelApiRoutes } from './routes'
 
-type LaravelFeedback = Omit<FeedbackResponse, 'status' | 'date_time_create' | 'user'> & {
+type LaravelFeedback = Omit<FeedbackResponse, 'status' | 'date_time_create' | 'user' | 'images'> & {
   date_time_create: string | null
   status: number | string
   user?: string
+  link?: string | null
+  images?: Array<string | { uri?: string | null }>
 }
 
 type LaravelFeedbackListResponse = {
@@ -39,14 +41,23 @@ function requireToken(token: string | null): string {
   return token
 }
 
-function normalizeFeedback(feedback: LaravelFeedback): FeedbackResponse {
+export function normalizeFeedback(feedback: LaravelFeedback): FeedbackResponse {
   const rawStatus = String(feedback.status ?? '').trim()
+  const imageUrls = [
+    ...(Array.isArray(feedback.images)
+      ? feedback.images.map(image => typeof image === 'string' ? image : image?.uri)
+      : []),
+    feedback.link,
+  ]
+    .map(image => String(image ?? '').trim())
+    .filter((image, index, images) => Boolean(image) && images.indexOf(image) === index)
 
   return {
     ...feedback,
     user: feedback.user ?? '',
     status: feedbackStatuses[rawStatus] ?? (rawStatus as FeedbackStatus),
     date_time_create: feedback.date_time_create ?? '',
+    images: imageUrls.map(uri => ({ uri })),
   }
 }
 

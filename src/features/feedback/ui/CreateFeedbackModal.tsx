@@ -34,7 +34,7 @@ const CreateFeedbackModal: React.FC = () => {
   const { colors } = useAppTheme()
   const {
     isCreateModalOpen,
-    closeCreateModal,
+    handleClose,
     globalFontSize,
     title,
     setTitle,
@@ -66,7 +66,7 @@ const CreateFeedbackModal: React.FC = () => {
     <FeedbackSheet
       busy={isSaving}
       isOpen={isCreateModalOpen}
-      onClose={closeCreateModal}
+      onClose={handleClose}
       testID="feedback-create-sheet"
     >
       <Text style={[styles.title, { color: colors.text, fontSize: clamp(bodyFontSize + 6, 20, 30) }]}>Новое предложение</Text>

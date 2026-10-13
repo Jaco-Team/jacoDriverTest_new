@@ -1,6 +1,23 @@
 const mockGet = jest.fn()
 const mockPost = jest.fn()
 const mockGetLaravelAuthToken = jest.fn()
+const OriginalFormData = (globalThis as any).FormData
+
+class TestFormData {
+  private readonly values = new Map<string, unknown[]>()
+
+  append(name: string, value: unknown): void {
+    this.values.set(name, [...(this.values.get(name) ?? []), value])
+  }
+
+  get(name: string): unknown {
+    return this.values.get(name)?.[0] ?? null
+  }
+
+  getAll(name: string): unknown[] {
+    return this.values.get(name) ?? []
+  }
+}
 
 jest.mock('@/shared/api/laravel/connector', () => ({
   bearerHeaders: (token: string) => ({ Authorization: `Bearer ${token}` }),
@@ -20,6 +37,14 @@ import {
 } from '@/shared/api/laravel/feedback'
 
 describe('Laravel feedback API', () => {
+  beforeAll(() => {
+    ;(globalThis as any).FormData = TestFormData
+  })
+
+  afterAll(() => {
+    ;(globalThis as any).FormData = OriginalFormData
+  })
+
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetLaravelAuthToken.mockResolvedValue('secure-token')
@@ -71,5 +96,39 @@ describe('Laravel feedback API', () => {
         },
       },
     )
+
+    const formData = mockPost.mock.calls[0][1] as TestFormData
+    expect(formData.get('title')).toBe('Ошибка карты')
+    expect(formData.get('description')).toBe('Описание')
+    expect(formData.get('type')).toBe('ошибка')
+    expect(formData.get('is_need_notification')).toBe('1')
+    expect(formData.getAll('images[]')).toEqual([
+      { uri: 'file://photo.jpg', type: 'image/jpeg', name: 'photo.jpg' },
+    ])
+  })
+
+  it('keeps emoji, unicode and every image in the multipart payload', async () => {
+    mockPost.mockResolvedValueOnce({ data: { success: true, id: 8 } })
+
+    await createLaravelFeedback({
+      title: 'LOCAL EMOJI TEST 😀🔥👍',
+      description: 'Кавычки: "двойные" Unicode: Привет 世界 café <script>test()</script>',
+      type: 'другое',
+      is_need_notification: 0,
+      images: [
+        { uri: 'file://one.png', type: 'image/png', fileName: 'one.png' },
+        { uri: 'file://two.png', type: 'image/png', fileName: 'two.png' },
+      ],
+    })
+
+    const formData = mockPost.mock.calls[0][1] as TestFormData
+    expect(formData.get('title')).toBe('LOCAL EMOJI TEST 😀🔥👍')
+    expect(formData.get('description')).toBe(
+      'Кавычки: "двойные" Unicode: Привет 世界 café <script>test()</script>',
+    )
+    expect(formData.getAll('images[]')).toEqual([
+      { uri: 'file://one.png', type: 'image/png', name: 'one.png' },
+      { uri: 'file://two.png', type: 'image/png', name: 'two.png' },
+    ])
   })
 })

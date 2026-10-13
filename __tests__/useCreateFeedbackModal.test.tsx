@@ -137,6 +137,21 @@ describe('useCreateFeedbackModal: форма и image picker', () => {
     });
   });
 
+  it('удаляет только выбранное изображение из черновика', async () => {
+    const first = { uri: 'file://one.jpg', fileName: 'one.jpg', type: 'image/jpeg' };
+    const second = { uri: 'file://two.jpg', fileName: 'two.jpg', type: 'image/jpeg' };
+    await render(<Probe />);
+
+    await act(async () => {
+      api!.handleImagePickerResponse({ assets: [first, second] } as any);
+    });
+    await act(async () => {
+      api!.removeImage(0);
+    });
+
+    expect(api!.images).toEqual([second]);
+  });
+
   it('вызывает gallery picker с ожидаемыми photo options', async () => {
     await render(<Probe />);
 
