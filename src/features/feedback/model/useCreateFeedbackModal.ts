@@ -6,6 +6,10 @@ import { useShallow } from 'zustand/react/shallow'
 import BottomSheet from '@gorhom/bottom-sheet'
 
 import { FeedbackType } from '@/shared/store/FeedbackStoreType';
+import {
+  FEEDBACK_IMAGES_ONLY_MESSAGE,
+  isFeedbackImageAsset,
+} from '@/shared/lib/feedbackImage'
 
 import { 
   Alert
@@ -107,8 +111,16 @@ export function useCreateFeedbackModal() {
     }
     
     if (response.assets && response.assets.length > 0) {
-      // Добавляем новые изображения к существующим
-      setImages(prevImages => [...prevImages, ...response.assets as Asset[]]);
+      const selectedAssets = response.assets as Asset[]
+      const selectedImages = selectedAssets.filter(isFeedbackImageAsset)
+
+      if (selectedImages.length !== selectedAssets.length) {
+        Alert.alert('Неподдерживаемый файл', FEEDBACK_IMAGES_ONLY_MESSAGE)
+      }
+
+      if (selectedImages.length > 0) {
+        setImages(prevImages => [...prevImages, ...selectedImages])
+      }
     }
   };
 

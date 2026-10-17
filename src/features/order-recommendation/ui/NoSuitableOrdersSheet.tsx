@@ -10,15 +10,12 @@ import {
 } from '@/components/ui/actionsheet'
 import {appPalette} from '@/shared/styles/appPalette'
 import {useAppTheme} from '@/shared/theme/AppThemeProvider'
+import {scaleGlobalFontSize} from '@/shared/lib/fontSize'
 
 interface NoSuitableOrdersSheetProps {
   fontSize: number
   isOpen: boolean
   onClose: () => void
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
 }
 
 export function NoSuitableOrdersSheet({
@@ -62,7 +59,10 @@ export function NoSuitableOrdersSheet({
             <Text
               style={[
                 styles.title,
-                {color: colors.text, fontSize: clamp(fontSize + 4, 18, 24)},
+                {
+                  color: colors.text,
+                  fontSize: scaleGlobalFontSize(20, fontSize, 18, 24),
+                },
               ]}
             >
               Рекомендации по заказам
@@ -72,7 +72,10 @@ export function NoSuitableOrdersSheet({
           <Text
             style={[
               styles.message,
-              {color: colors.textMuted, fontSize: clamp(fontSize, 14, 19)},
+              {
+                color: colors.textMuted,
+                fontSize: scaleGlobalFontSize(16, fontSize, 14, 19),
+              },
             ]}
             testID="order-recommendation-empty-message"
           >
@@ -86,7 +89,7 @@ export function NoSuitableOrdersSheet({
             testID="order-recommendation-empty-close"
             onPress={onClose}
           >
-            <Text style={[styles.buttonText, {fontSize: clamp(fontSize, 14, 19)}]}>
+            <Text style={[styles.buttonText, {fontSize: scaleGlobalFontSize(16, fontSize, 14, 19)}]}>
               Понятно
             </Text>
           </TouchableOpacity>

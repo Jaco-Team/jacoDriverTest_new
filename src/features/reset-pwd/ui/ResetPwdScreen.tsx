@@ -252,15 +252,20 @@ export function ResetPwdScreen(): React.JSX.Element {
           pointerEvents="none"
           style={[
             styles.primaryButtonSurface,
-            { backgroundColor: colors.brand },
             !canSubmit && styles.primaryButtonSurfaceDisabled,
+            {
+              backgroundColor: canSubmit ? colors.brand : colors.disabledSurface,
+              borderColor: canSubmit ? colors.brand : colors.disabledBorder,
+            },
           ]}
+          testID="reset-submit-surface"
         >
           <Text
             style={[
               styles.primaryButtonText,
-              !canSubmit && styles.primaryButtonTextDisabled,
+              { color: canSubmit ? '#FFFFFF' : colors.disabledText },
             ]}
+            testID="reset-submit-label"
           >
             {isLoading ? 'Подождите...' : submitLabel}
           </Text>
@@ -404,7 +409,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#CC0033',
   },
   primaryButtonSurfaceDisabled: {
-    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+    borderWidth: 1,
   },
   primaryButtonText: {
     color: '#FFFFFF',
@@ -412,9 +417,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     letterSpacing: 0.16,
-  },
-  primaryButtonTextDisabled: {
-    color: 'rgba(0, 0, 0, 0.38)',
   },
   resendButton: {
     alignSelf: 'flex-start',

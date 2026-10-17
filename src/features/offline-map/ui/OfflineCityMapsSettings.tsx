@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/actionsheet';
 import {useAppTheme} from '@/shared/theme/AppThemeProvider';
 import {useIsOffline} from '@/shared/lib/connectivityContext';
+import {scaleGlobalFontSize} from '@/shared/lib/fontSize';
 import {useOrdersStore, useSettingsStore} from '@/shared/store/store';
 import {useOfflineMapStore} from '../model/offlineMap.store';
 import {
@@ -37,10 +38,6 @@ import {
 
 function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024).toLocaleString('ru-RU', {maximumFractionDigits: 1})} МБ`;
-}
-
-function clampFontSize(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
 }
 
 const OFFLINE_MAP_ERROR_PREVIEW =
@@ -59,11 +56,12 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
     store => store.points.find(point => point.id === store.point_id)?.name,
   );
   const [deleteCityId, setDeleteCityId] = useState<string | null>(null);
-  const textSize = Math.min(22, Math.max(14, fontSize));
-  const metaSize = Math.min(20, Math.max(12, textSize - 1));
-  const deleteTitleSize = clampFontSize(fontSize + 4, 18, 24);
-  const deleteBodySize = clampFontSize(fontSize, 14, 18);
-  const deleteActionSize = clampFontSize(fontSize + 1, 14, 18);
+  const textSize = scaleGlobalFontSize(16, fontSize, 14, 22);
+  const metaSize = scaleGlobalFontSize(15, fontSize, 12, 20);
+  const headingSize = scaleGlobalFontSize(18, fontSize, 16);
+  const deleteTitleSize = scaleGlobalFontSize(20, fontSize, 18, 24);
+  const deleteBodySize = scaleGlobalFontSize(16, fontSize, 14, 18);
+  const deleteActionSize = scaleGlobalFontSize(17, fontSize, 14, 18);
   const city = getOfflineMapCity(state.selectedCityId);
   const storedEntry = city ? state.cities[city.id] : undefined;
   const entry =
@@ -137,7 +135,7 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
       <View style={styles.content} testID="settings-offline-maps">
         <Text
           style={{
-            fontSize: textSize + 2,
+            fontSize: headingSize,
             fontWeight: '700',
             color: colors.text,
           }}>

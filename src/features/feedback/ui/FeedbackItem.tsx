@@ -7,6 +7,7 @@ import type { FeedbackResponse } from '@/shared/store/FeedbackStoreType'
 
 import { StatusBadge } from './StatusBadge'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import { scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 interface FeedbackItemProps {
   feedback: FeedbackResponse
@@ -33,8 +34,9 @@ const FeedbackItem: React.FC<FeedbackItemProps> = ({ feedback, globalFontSize, o
   const description = String(feedback.description ?? '').trim() || 'Нет описания'
   const compact = title.length <= 24 && description.length <= 40
 
-  const titleFontSize = Math.min(30, Math.max(18, globalFontSize + 5))
-  const descriptionFontSize = Math.min(24, Math.max(14, globalFontSize))
+  const titleFontSize = scaleGlobalFontSize(21, globalFontSize, 18)
+  const descriptionFontSize = scaleGlobalFontSize(16, globalFontSize, 14, 24)
+  const metaFontSize = scaleGlobalFontSize(14, globalFontSize, 12, 20)
 
   return (
     <Pressable
@@ -61,10 +63,10 @@ const FeedbackItem: React.FC<FeedbackItemProps> = ({ feedback, globalFontSize, o
       </Text>
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        <StatusBadge status={feedback.status} globalFontSize={globalFontSize - 2} />
+        <StatusBadge status={feedback.status} globalFontSize={metaFontSize} />
         <View style={styles.date}>
-          <CalendarDays color={colors.textMuted} size={Math.max(14, globalFontSize - 2)} />
-          <Text style={[styles.dateText, { color: colors.textMuted, fontSize: Math.min(20, Math.max(12, globalFontSize - 2)) }]}>
+          <CalendarDays color={colors.textMuted} size={16} />
+          <Text style={[styles.dateText, { color: colors.textMuted, fontSize: metaFontSize }]}>
             {formatFeedbackDate(feedback.date_time_create)}
           </Text>
         </View>

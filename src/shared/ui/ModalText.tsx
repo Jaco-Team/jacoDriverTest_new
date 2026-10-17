@@ -13,10 +13,7 @@ import {
 } from '@/components/ui/actionsheet'
 import { useGlobalStore } from '@/shared/store/store'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
-
-function clampFontSize(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
-}
+import { scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 export function ModalText(): React.JSX.Element {
   const [isOpen, modalText, showModalText, globalFontSize] = useGlobalStore(
@@ -38,9 +35,9 @@ export function ModalText(): React.JSX.Element {
   const message = (isOpen ? modalText : lastOpenText.current) || 'Произошла неизвестная ошибка'
   const isOffline = message.startsWith('Нет интернета.')
   const body = isOffline ? message.slice('Нет интернета.'.length).trim() : message
-  const titleFontSize = clampFontSize(globalFontSize + 4, 18, 24)
-  const bodyFontSize = clampFontSize(globalFontSize, 14, 18)
-  const actionFontSize = clampFontSize(globalFontSize + 1, 14, 18)
+  const titleFontSize = scaleGlobalFontSize(20, globalFontSize, 18, 24)
+  const bodyFontSize = scaleGlobalFontSize(16, globalFontSize, 14, 18)
+  const actionFontSize = scaleGlobalFontSize(17, globalFontSize, 14, 18)
   const close = () => showModalText(false)
 
   return (

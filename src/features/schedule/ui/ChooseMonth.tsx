@@ -16,6 +16,7 @@ import { useChooseMonthLogic } from '../model/useChooseMonthLogic'
 import { useGraphStyles } from './graphStyles'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
+import { scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 // Полупрозрачный appPalette.soft вместе с elevation даёт на Android белый
 // прямоугольник под Text. Это тот же цвет, заранее смешанный с белым фоном.
@@ -141,7 +142,7 @@ export function ChooseMonth(): React.JSX.Element {
                       {
                         backgroundColor: selected ? selectedMonthBackground : 'transparent',
                         color: colors.text,
-                        fontSize: globalFontSize + 2,
+                        fontSize: scaleGlobalFontSize(18, globalFontSize),
                       },
                     ]}
                   >

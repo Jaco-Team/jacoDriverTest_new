@@ -17,7 +17,8 @@ export const MapPointTime = memo(function MapPointTime({
   text,
   setActive,
   value,
-  isActive
+  isActive,
+  fontSize,
 }: MapPointTimeType): React.JSX.Element {
   return (
     <Pressable
@@ -48,7 +49,14 @@ export const MapPointTime = memo(function MapPointTime({
       )}
 
       <View style={styles.label}>
-        <Text style={styles.labelText}>{text || '14:32 (15 мин.)'}</Text>
+        <Text
+          style={[
+            styles.labelText,
+            {fontSize, lineHeight: Math.round(fontSize * 1.3)},
+          ]}
+        >
+          {text || '14:32 (15 мин.)'}
+        </Text>
       </View>
       </View>
     </Pressable>
@@ -84,7 +92,5 @@ const styles = StyleSheet.create({
   },
   labelText: {
     color: '#1f2b36',
-    fontSize: 14,
-    lineHeight: 18,
   },
 })

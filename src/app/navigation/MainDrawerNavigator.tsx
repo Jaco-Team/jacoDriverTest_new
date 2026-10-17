@@ -22,6 +22,7 @@ import { StatisticsTableScreen } from '@/features/statistics/ui/StatisticsTableS
 import { Greeting } from '@/app/screens/Greeting';
 import { FeedbackScreen } from '@/features/feedback/ui/FeedbackScreen';
 import { OrdersUiPreviewScreen } from '@/app/screens/OrdersUiPreviewScreen'
+import { useOrderRecommendationStore } from '@/features/order-recommendation/model/orderRecommendation.store'
 
 import { CustomDrawerContent } from './CustomDrawerContent';
 
@@ -72,6 +73,7 @@ export function MainDrawerNavigator() {
     hasCurrentOrdersCache,
     ordersPrefetchPaused,
     isCheckingOrders,
+    orderTypeId,
   ] = useOrdersStore(useShallow(state => [
     state.getOrders,
     state.types_dop,
@@ -82,6 +84,7 @@ export function MainDrawerNavigator() {
     state.ordersCache?.[state.ordersContextKey ?? ''] !== undefined,
     state.ordersPrefetchPaused ?? false,
     state.is_check ?? false,
+    state.type.id,
   ]));
 
   const [ checkMyPos ] = useGEOStore(useShallow(state => [ state.checkMyPos ]));
@@ -125,6 +128,7 @@ export function MainDrawerNavigator() {
   // }, [setNotifToken]);
 
   const isActiveFilter = types_dop.length != type_dop.length;
+  const isRecommendationActive = useOrderRecommendationStore(state => state.isLoading || state.result !== null)
 
   return (
     <Drawer.Navigator
@@ -220,18 +224,32 @@ export function MainDrawerNavigator() {
             </TouchableOpacity>
           ),
           headerRight: () => (
-            <HStack>
+            <HStack style={{ alignItems: 'center' }}>
+              {orderTypeId === 1 && !isRecommendationActive ? (
+                <TouchableOpacity
+                  accessibilityLabel={isActiveFilter ? 'Фильтр статусов включён' : 'Фильтр статусов'}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActiveFilter }}
+                  testID="orders-status-filter"
+                  style={{ marginRight: 8, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                  onPress={() => showModalTypeDop(true)}
+                >
+                  <View
+                    testID="orders-status-filter-background"
+                    style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: isActiveFilter ? '#2196F3' : 'transparent', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <FontAwesomeIcon
+                      size={25}
+                      color="#fff"
+                      icon={faFilter}
+                    />
+                  </View>
+                </TouchableOpacity>
+              ) : null}
               <TouchableOpacity
-                style={{ marginRight: 30 }}
-                onPress={() => showModalTypeDop(true)}
-              >
-                <FontAwesomeIcon
-                  size={25}
-                  color={isActiveFilter ? '#fff44f' : '#fff'}
-                  icon={faFilter}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
+                accessibilityLabel="Обновить заказы"
+                accessibilityRole="button"
+                testID="orders-refresh"
                 style={{ marginRight: 16 }}
                 onPress={() => getOrders(true)}
               >

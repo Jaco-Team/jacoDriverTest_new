@@ -11,14 +11,17 @@ import { faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons'
 
 import { MapPointThemeType } from '@/shared/store/SettingsStoreType'  //components/store/SettingsStoreType'
 import { Path, G, Svg } from 'react-native-svg'
+import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 
 export const MapPointTheme = memo(function MapPointTheme({
   theme,
   text,
   setActive,
   value,
-  isActive
+  isActive,
+  fontSize,
 }: MapPointThemeType): React.JSX.Element {
+  const { isDark } = useAppTheme()
   return (
     <Pressable
       accessibilityRole="radio"
@@ -55,13 +58,16 @@ export const MapPointTheme = memo(function MapPointTheme({
           theme === 'transparent_white' && styles.labelTransparent,
           theme === 'white' && styles.labelWhite,
           theme === 'white_border' && styles.labelWhiteBorder,
+          theme === 'white_border' && isDark && styles.labelWhiteBorderDark,
           theme === 'black' && styles.labelBlack,
         ]}
       >
         <Text
           style={[
             styles.labelText,
+            {fontSize, lineHeight: Math.round(fontSize * 1.3)},
             theme === 'transparent_white' && styles.labelTextWhite,
+            theme === 'white_border' && isDark && styles.labelTextWhite,
             theme === 'black' && styles.labelTextWhite,
           ]}
         >
@@ -115,8 +121,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   labelWhiteBorder: {
-    borderColor: 'rgba(0,0,0,0.65)',
+    borderColor: '#000000',
     backgroundColor: '#ffffff',
+  },
+  labelWhiteBorderDark: {
+    borderColor: '#ffffff',
+    backgroundColor: '#000000',
   },
   labelBlack: {
     borderColor: '#000000',
@@ -124,8 +134,6 @@ const styles = StyleSheet.create({
   },
   labelText: {
     color: '#1f2b36',
-    fontSize: 14,
-    lineHeight: 18,
   },
   labelTextWhite: {
     color: '#ffffff',

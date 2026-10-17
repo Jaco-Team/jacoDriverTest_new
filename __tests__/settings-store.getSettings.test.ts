@@ -1,4 +1,5 @@
 import { waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const mockApi = jest.fn();
 
@@ -13,14 +14,19 @@ jest.mock('@/analytics/AppMetricaService', () => ({
 
 import {
   useGlobalStore,
+  useLoginStore,
   useOrdersStore,
   useSettingsStore,
 } from '@/shared/store/store';
 import {useAppThemeStore} from '@/shared/theme/AppThemeProvider';
 
+const asyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
+
 describe('useSettingsStore.getSettings', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
+    asyncStorage.getItem.mockResolvedValue(null);
+    useLoginStore.setState({currentUser: null});
     useGlobalStore.setState({
       tokenAuth: 'test-token',
       globalFontSize: 16,
@@ -35,6 +41,7 @@ describe('useSettingsStore.getSettings', () => {
       update_interval: 30,
     });
     useSettingsStore.setState({
+      isClick: false,
       fontSize: 16,
       mapScale: 1,
       theme: 'white_border',
@@ -42,6 +49,8 @@ describe('useSettingsStore.getSettings', () => {
       driver_avg_time: true,
       driver_page_stat_time: true,
       phones: null,
+      point_id: null,
+      points: [],
     } as any);
   });
 
@@ -136,6 +145,104 @@ describe('useSettingsStore.getSettings', () => {
 
     expect(useAppThemeStore.getState().preference).toBe('system');
     expect(useGlobalStore.getState().loadSpinner).toBe(false);
+  });
+
+  it.each([
+    {boundary: 'API', action: 'сохранения', reset: false},
+    {boundary: 'AsyncStorage', action: 'сохранения', reset: false},
+    {boundary: 'API', action: 'сброса', reset: true},
+    {boundary: 'AsyncStorage', action: 'сброса', reset: true},
+  ])('после $action не применяет старые настройки, задержанные на $boundary', async ({boundary, reset}) => {
+    let finishOldRequest!: (value: unknown) => void;
+    let finishStorageRead!: (value: string | null) => void;
+    const oldResponse = {
+      st: true,
+      data: {
+        color: '#ff0000',
+        fontSize: 26,
+        mapScale: 2,
+        theme: 'black',
+        app_theme: 'dark',
+        update_interval: 90,
+        point_id: 20,
+        all_points: [{id: 20, name: 'Старое кафе'}],
+      },
+    };
+    useSettingsStore.setState({
+      point_id: 15,
+      points: [{id: 15, name: 'Текущее кафе'}],
+    });
+
+    if (boundary === 'API') {
+      mockApi.mockImplementationOnce(() => new Promise(resolve => {
+        finishOldRequest = resolve;
+      }));
+    } else {
+      mockApi.mockResolvedValueOnce(oldResponse);
+      asyncStorage.getItem.mockImplementationOnce(() => new Promise(resolve => {
+        finishStorageRead = resolve;
+      }));
+    }
+    mockApi.mockResolvedValueOnce({st: true});
+
+    const pendingGet = useSettingsStore.getState().getSettings();
+    await waitFor(() => {
+      expect(mockApi).toHaveBeenCalledTimes(1);
+      if (boundary === 'AsyncStorage') {
+        expect(asyncStorage.getItem).toHaveBeenCalledWith('selected_driver_point_id');
+      }
+    });
+    const fontSize = reset ? 16 : 22;
+    const mapScale = reset ? 1 : 1.25;
+    const theme = reset ? 'transparent' : 'white_border';
+    const appTheme = reset ? 'system' : 'light';
+    const interval = reset ? 30 : 45;
+    const message = reset ? 'Настройки сброшены' : 'Настройки сохранены';
+
+    expect(await useSettingsStore.getState().saveSettings(
+      'min', [], fontSize, interval, '#123456', mapScale, 'norm', theme,
+      [], [], appTheme, true, false, message,
+    )).toBe(true);
+
+    if (boundary === 'API') finishOldRequest(oldResponse);
+    else finishStorageRead('20');
+    await pendingGet;
+    await jest.advanceTimersByTimeAsync(300);
+
+    expect(useSettingsStore.getState()).toMatchObject({
+      fontSize, mapScale, theme, app_theme: appTheme, color: '#123456',
+      update_interval: interval,
+      point_id: 15,
+      points: [{id: 15, name: 'Текущее кафе'}],
+      isClick: false,
+    });
+    expect(useGlobalStore.getState()).toMatchObject({
+      globalFontSize: fontSize, mapScale, theme, loadSpinner: false,
+      modal_text: message,
+    });
+    expect(useOrdersStore.getState().update_interval).toBe(interval);
+    expect(useAppThemeStore.getState().preference).toBe(appTheme);
+    expect(mockApi.mock.calls.map(([, data]) => data.type))
+      .toEqual(['getMySetting', 'saveMySetting']);
+  });
+
+  it('ограничивает полученный с сервера размер шрифта значением 26', async () => {
+    mockApi
+      .mockResolvedValueOnce({
+        st: true,
+        text: '',
+        data: {
+          fontSize: 40,
+          point_id: null,
+          all_points: [],
+        },
+      })
+      .mockResolvedValueOnce({st: true, text: '', data: {phone: null}});
+
+    await useSettingsStore.getState().getSettings();
+
+    expect(useSettingsStore.getState().fontSize).toBe(26);
+    expect(useGlobalStore.getState().globalFontSize).toBe(26);
   });
 
   it('при ошибке фонового обновления оставляет сохранённую тему', async () => {

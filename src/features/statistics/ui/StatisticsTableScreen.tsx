@@ -311,8 +311,8 @@ function createStyles(colors: AppPalette) {
     marginBottom: 18,
     color: colors.text,
     fontFamily: 'Roboto-Bold',
-    fontSize: 32,
-    lineHeight: 38,
+    fontSize: 26,
+    lineHeight: 29,
     textAlign: 'center',
   },
   rangeControl: {

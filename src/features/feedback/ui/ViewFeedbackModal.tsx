@@ -12,10 +12,7 @@ import { formatFeedbackDate } from './FeedbackItem'
 import { StatusBadge } from './StatusBadge'
 import { TypeBadge } from './TypeBadge'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
-}
+import { normalizeGlobalFontSize, scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 const ViewFeedbackModal: React.FC = () => {
   const { colors } = useAppTheme()
@@ -26,11 +23,11 @@ const ViewFeedbackModal: React.FC = () => {
   const [isImageViewerOpen, setIsImageViewerOpen] = React.useState(false)
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0)
   const feedback = modal.selectedFeedback
-  const normalizedFontSize = Number.isFinite(globalFontSize) && globalFontSize > 0
-    ? globalFontSize
-    : 16
-  const bodyFontSize = clamp(normalizedFontSize, 14, 20)
-  const sectionFontSize = clamp(bodyFontSize + 1, 15, 24)
+  const normalizedFontSize = normalizeGlobalFontSize(globalFontSize)
+  const bodyFontSize = scaleGlobalFontSize(16, normalizedFontSize, 14, 20)
+  const sectionFontSize = scaleGlobalFontSize(17, normalizedFontSize, 15, 24)
+  const titleFontSize = scaleGlobalFontSize(22, normalizedFontSize, 20)
+  const metaFontSize = scaleGlobalFontSize(15, normalizedFontSize, 13, 18)
   const images = (feedback?.images ?? [])
     .filter(image => Boolean(image.uri))
     .map(image => ({ uri: image.uri as string }))
@@ -47,19 +44,19 @@ const ViewFeedbackModal: React.FC = () => {
     >
       {feedback ? (
         <>
-          <Text style={[styles.title, { color: colors.text, fontSize: clamp(bodyFontSize + 6, 20, 30) }]}>
+          <Text style={[styles.title, { color: colors.text, fontSize: titleFontSize }]}>
             {String(feedback.title ?? '').trim() || 'Без заголовка'}
           </Text>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.metaRow}>
             <View style={styles.dateRow}>
-              <Clock color={colors.textMuted} size={clamp(bodyFontSize - 1, 13, 18)} />
-              <Text style={[styles.date, { color: colors.textMuted, fontSize: clamp(bodyFontSize - 1, 13, 18) }]}>
+              <Clock color={colors.textMuted} size={16} />
+              <Text style={[styles.date, { color: colors.textMuted, fontSize: metaFontSize }]}>
                 {formatFeedbackDate(feedback.date_time_create)}
               </Text>
             </View>
-            <StatusBadge status={feedback.status} globalFontSize={bodyFontSize - 1} size="details" />
+            <StatusBadge status={feedback.status} globalFontSize={metaFontSize} size="details" />
             <TypeBadge type={feedback.type} globalFontSize={bodyFontSize} />
           </View>
 

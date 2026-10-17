@@ -2,6 +2,7 @@ import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 
 import { CardTagType } from '@/entities/CardOrder/model/types'
+import { scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 const TAG_COLORS = {
   blue: '#2196F3',
@@ -15,7 +16,10 @@ export const CardTag: React.FC<CardTagType> = ({
   color,
   count,
   globalFontSize,
-}) => (
+}) => {
+  const tagFontSize = scaleGlobalFontSize(14, globalFontSize, 12)
+
+  return (
   <View
     style={[styles.tag, { backgroundColor: TAG_COLORS[color] }]}
     testID={`order-tag-${color}`}
@@ -24,15 +28,16 @@ export const CardTag: React.FC<CardTagType> = ({
       style={[
         styles.text,
         {
-          fontSize: Math.max(globalFontSize - 2, 12),
-          lineHeight: Math.max(globalFontSize + 2, 16),
+          fontSize: tagFontSize,
+          lineHeight: Math.round(tagFontSize * 1.3),
         },
       ]}
     >
       {text}{count ? ` x${count}` : ''}
     </Text>
   </View>
-)
+  )
+}
 
 const styles = StyleSheet.create({
   tag: {

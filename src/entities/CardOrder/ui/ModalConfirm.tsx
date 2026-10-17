@@ -21,6 +21,7 @@ import { appPalette } from '@/shared/styles/appPalette'
 import { useGlobalStore, useOrdersStore } from '@/shared/store/store'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 import type { AppPalette } from '@/shared/styles/appPalette'
+import { scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 export type OrderConfirmType = '' | 'fake' | 'finish' | 'cancel'
 
@@ -41,10 +42,6 @@ interface OrderConfirmModalProps {
   busy?: boolean
   onClose: () => void
   onConfirm: () => void
-}
-
-function clampFontSize(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
 }
 
 function getConfig(
@@ -111,9 +108,9 @@ export function OrderConfirmModal({
     if (isOpen && typeConfirm) lastOpenConfig.current = getConfig(typeConfirm, orderId, colors)
   }, [isOpen, typeConfirm, orderId, colors])
   const config = isOpen ? currentConfig : (lastOpenConfig.current ?? currentConfig)
-  const titleFontSize = clampFontSize(globalFontSize + 4, 18, 24)
-  const bodyFontSize = clampFontSize(globalFontSize, 14, 18)
-  const actionFontSize = clampFontSize(globalFontSize + 1, 14, 18)
+  const titleFontSize = scaleGlobalFontSize(20, globalFontSize, 18, 24)
+  const bodyFontSize = scaleGlobalFontSize(16, globalFontSize, 14, 18)
+  const actionFontSize = scaleGlobalFontSize(17, globalFontSize, 14, 18)
 
   function close(): void {
     if (!busy) onClose()

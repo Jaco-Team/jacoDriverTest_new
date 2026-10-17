@@ -1,4 +1,4 @@
-import { useGlobalStore, useOrdersStore, useStatStore } from '@/shared/store/store'
+import { useGlobalStore, useLoginStore, useOrdersStore, useSettingsStore, useStatStore } from '@/shared/store/store'
 import { useShallow } from 'zustand/react/shallow'
 import { useDialCall } from '@/shared/lib/useDialCall'
 
@@ -51,16 +51,29 @@ export function useModalOrderLogic() {
 
 export function useModalFilterOrdersLogic() {
   const globalFontSize = useGlobalStore((state) => state.globalFontSize)
-  const [types_dop, type_dop, is_showModalTypeDop, showModalTypeDop, setTypeDop] =
+  const ownerId = useLoginStore((state) =>
+    String(state.currentUser?.user_id ?? state.currentUser?.login ?? 'session'),
+  )
+  const pointId = useSettingsStore((state) => state.point_id ?? null)
+  const activeOrdersCacheKey = JSON.stringify([ownerId, pointId, 1])
+  const [types_dop, type_dop, is_showModalTypeDop, showModalTypeDop, setTypeDop, activeOrders, typeToStatus] =
     useOrdersStore(
       useShallow((state) => [
         state.types_dop,
         state.type_dop,
         state.is_showModalTypeDop,
         state.showModalTypeDop,
-        state.setTypeDop
+        state.setTypeDop,
+        state.ordersCache[activeOrdersCacheKey],
+        state.typeToStatus,
       ])
     )
+  const statusCounts = Object.fromEntries(
+    types_dop.map((item) => [
+      String(item.id),
+      (activeOrders ?? []).filter((order) => order.status === typeToStatus[String(item.id)]).length,
+    ]),
+  )
 
   return {
     globalFontSize,
@@ -69,5 +82,6 @@ export function useModalFilterOrdersLogic() {
     is_showModalTypeDop, 
     showModalTypeDop, 
     setTypeDop,
+    statusCounts,
   }
 }

@@ -27,6 +27,7 @@ import {toOrderInt} from '@/entities/CardOrder/model/normalizeOrderValue';
 import {appPalette} from '@/shared/styles/appPalette';
 import type {Order} from '@/shared/store/OrdersStoreType';
 import {subscribeSuccessfulOrderAction} from '@/shared/lib/orderActionEvents';
+import {scaleGlobalFontSize} from '@/shared/lib/fontSize';
 
 import {getOrderUrgency} from '../model/mapEdgeIndicators';
 import {useModalOrderLogic} from '../model/useModalOrderLogic';
@@ -98,10 +99,13 @@ export const ModalOrder = (): React.JSX.Element | null => {
           {borderColor: colors.border, backgroundColor: sheetBackground},
         ]}
         testID="order-map-sheet">
-        <ActionsheetDragIndicatorWrapper>
+        <ActionsheetDragIndicatorWrapper
+          pointerEvents={isBusy ? 'none' : 'auto'}
+          style={styles.dragRegion}
+          testID="order-map-sheet-drag-region">
           <ActionsheetDragIndicator style={styles.handleArea}>
             <Pressable
-              accessibilityLabel="Закрыть карточку заказа"
+              accessibilityLabel="Свернуть карточку заказа"
               accessibilityRole="button"
               disabled={isBusy}
               style={styles.handlePressable}
@@ -205,6 +209,9 @@ function OrderGroupList({
     ? 'rgba(126, 155, 179, 0.42)'
     : 'rgba(66, 98, 125, 0.28)';
   const rowBackground = isDark ? colors.surfaceAlt : colors.surfaceRaised;
+  const usesLargeTextLayout = globalFontSize >= 22;
+  const titleFontSize = scaleGlobalFontSize(20, globalFontSize);
+  const metaFontSize = scaleGlobalFontSize(15, globalFontSize, 12);
   const sortedOrders = [...orders].sort(
     (left, right) => getOrderUrgency(left) - getOrderUrgency(right),
   );
@@ -214,7 +221,11 @@ function OrderGroupList({
       <Text
         style={[
           styles.groupTitle,
-          {color: colors.text, fontSize: globalFontSize + 4},
+          {
+            color: colors.text,
+            fontSize: titleFontSize,
+            lineHeight: Math.round(titleFontSize * 1.35),
+          },
         ]}
         testID="order-map-group-title">
         {getOrdersCountLabel(orders.length)} по адресу
@@ -237,6 +248,7 @@ function OrderGroupList({
             key={item.id}
             style={[
               styles.groupRow,
+              usesLargeTextLayout && styles.groupRowLargeText,
               {
                 borderColor: rowBorderColor,
                 backgroundColor: rowBackground,
@@ -244,7 +256,12 @@ function OrderGroupList({
             ]}
             testID={`order-map-group-order-${item.id}`}
             onPress={() => onSelect(item.id)}>
-            <View style={styles.groupRowContent}>
+            <View
+              style={[
+                styles.groupRowContent,
+                usesLargeTextLayout && styles.groupRowContentLargeText,
+              ]}
+            >
               <View style={styles.groupRowTitleLine}>
                 <View
                   style={[
@@ -259,7 +276,11 @@ function OrderGroupList({
                   numberOfLines={1}
                   style={[
                     styles.groupRowTitle,
-                    {color: colors.text, fontSize: globalFontSize},
+                    {
+                      color: colors.text,
+                      fontSize: globalFontSize,
+                      lineHeight: Math.round(globalFontSize * 1.35),
+                    },
                   ]}>
                   {item.id_text || `#${item.id}`}
                 </Text>
@@ -269,20 +290,28 @@ function OrderGroupList({
                   styles.groupRowMeta,
                   {
                     color: colors.textMuted,
-                    fontSize: Math.max(12, globalFontSize - 1),
+                    fontSize: metaFontSize,
+                    lineHeight: Math.round(metaFontSize * 1.35),
                   },
                 ]}>
                 Пд: {item.pd || '—'} · Эт: {item.et || '—'} · Кв:{' '}
                 {item.kv || '—'}
               </Text>
             </View>
-            <View style={styles.groupRowTime}>
+            <View
+              style={[
+                styles.groupRowTime,
+                usesLargeTextLayout && styles.groupRowTimeLargeText,
+              ]}
+              testID={`order-map-group-time-${item.id}`}
+            >
               <Text
                 style={[
                   styles.groupRowTimeText,
                   {
                     color: colors.text,
-                    fontSize: Math.max(12, globalFontSize - 1),
+                    fontSize: metaFontSize,
+                    lineHeight: Math.round(metaFontSize * 1.35),
                   },
                 ]}>
                 {item.point_text || item.to_time || ''}
@@ -314,21 +343,27 @@ const styles = StyleSheet.create({
     maxHeight: '75%',
     overflow: 'hidden',
     paddingHorizontal: 0,
-    paddingTop: 9,
+    paddingTop: 0,
     paddingBottom: 0,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderWidth: 1,
     borderColor: appPalette.softStrong,
   },
+  dragRegion: {
+    width: '100%',
+    height: 48,
+    flexShrink: 0,
+    paddingVertical: 0,
+  },
   handleArea: {
     width: '100%',
-    height: 22,
+    height: 48,
     backgroundColor: 'transparent',
   },
   handlePressable: {
     width: '100%',
-    height: 22,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -343,6 +378,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     width: '100%',
+    flexShrink: 1,
   },
   group: {
     paddingHorizontal: 20,
@@ -370,9 +406,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  groupRowLargeText: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
   groupRowContent: {
     flex: 1,
     minWidth: 0,
+  },
+  groupRowContentLargeText: {
+    width: '100%',
+    flex: 0,
   },
   groupRowTitleLine: {
     flexDirection: 'row',
@@ -387,17 +431,20 @@ const styles = StyleSheet.create({
   groupRowTitle: {
     flex: 1,
     fontWeight: '700',
-    lineHeight: 22,
   },
   groupRowMeta: {
     marginTop: 5,
-    lineHeight: 19,
   },
   groupRowTime: {
     maxWidth: '42%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  groupRowTimeLargeText: {
+    width: '100%',
+    maxWidth: '100%',
+    justifyContent: 'space-between',
   },
   groupRowTimeText: {
     flexShrink: 1,

@@ -111,4 +111,30 @@ describe('шапка списка заказов', () => {
     expect(mockSelectType).not.toHaveBeenCalled()
     expect(screen.queryByTestId('orders-status-sheet')).toBeNull()
   })
+
+  it('при размере 26 переносит показатели под тип заказов', async () => {
+    mockGlobalState.globalFontSize = 26
+
+    const screen = await render(<TypeLimit />)
+
+    expect(screen.getByTestId('orders-list-summary')).toHaveStyle({
+      flexDirection: 'column',
+      alignItems: 'stretch',
+    })
+    expect(screen.getByTestId('orders-list-large-text-stats')).toHaveStyle({
+      width: '100%',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    })
+    expect(screen.getByTestId('orders-list-limit-count')).toHaveStyle({
+      fontSize: 26,
+    })
+    expect(screen.getByTestId('orders-list-limit-sum')).toHaveStyle({
+      fontSize: 26,
+    })
+    expect(screen.getByText('АКТИВНЫЕ')).toHaveStyle({
+      fontSize: 26,
+      lineHeight: 34,
+    })
+  })
 })

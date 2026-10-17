@@ -136,6 +136,18 @@ describe('боковое меню', () => {
     expect(screen.getByTestId('drawer-route-Statistics')).toBeTruthy()
   })
 
+  it('масштабирует подписи до 26, сохраняя компактные пункты меню', async () => {
+    mockGlobalState.globalFontSize = 26
+
+    const screen = await render(
+      <CustomDrawerContent {...drawerProps('List_orders')} />,
+    )
+
+    expect(screen.getByText('НАВИГАЦИЯ')).toHaveStyle({ fontSize: 23 })
+    expect(screen.getByText('00:31:20')).toHaveStyle({ fontSize: 26 })
+    expect(screen.getAllByText('Список заказов')[1]).toHaveStyle({ fontSize: 18 })
+  })
+
   it('сохраняет переходы, звонок и выход', async () => {
     const screen = await render(
       <CustomDrawerContent {...drawerProps('List_orders')} />,

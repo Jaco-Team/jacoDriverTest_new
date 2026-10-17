@@ -131,4 +131,52 @@ describe('Laravel feedback API', () => {
       { uri: 'file://two.png', type: 'image/png', name: 'two.png' },
     ])
   })
+
+  it('rejects video before creating the multipart request', async () => {
+    await expect(createLaravelFeedback({
+      title: 'Видео',
+      description: 'Видео не должно отправляться',
+      type: 'ошибка',
+      is_need_notification: 0,
+      images: [{ uri: 'file://clip.mp4', type: 'video/mp4', fileName: 'clip.mp4' }],
+    })).rejects.toThrow('Можно загружать только изображения.')
+
+    expect(mockGetLaravelAuthToken).not.toHaveBeenCalled()
+    expect(mockPost).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])('rejects a mixed photo/video list before reading the token (video first: %s)', async videoFirst => {
+    const photo = {uri: 'file://photo.jpg', type: 'image/jpeg', fileName: 'photo.jpg'}
+    const video = {uri: 'file://clip.jpg', type: 'video/mp4', fileName: 'clip.jpg'}
+
+    await expect(createLaravelFeedback({
+      title: 'Смешанные вложения',
+      description: 'Нельзя отправить даже одно видео вместе с фото',
+      type: 'ошибка',
+      is_need_notification: 0,
+      images: videoFirst ? [video, photo] : [photo, video],
+    })).rejects.toThrow('Можно загружать только изображения.')
+
+    expect(mockGetLaravelAuthToken).not.toHaveBeenCalled()
+    expect(mockPost).not.toHaveBeenCalled()
+  })
+
+  it('accepts an image without MIME using its filename and keeps the multipart fallback', async () => {
+    mockPost.mockResolvedValueOnce({data: {success: true, id: 9}})
+
+    await createLaravelFeedback({
+      title: 'Фото без MIME',
+      description: 'Фотография распознана по расширению',
+      type: 'ошибка',
+      is_need_notification: 0,
+      images: [{uri: 'content://photos/9', fileName: 'PHOTO.JPG'}],
+    })
+
+    expect(mockGetLaravelAuthToken).toHaveBeenCalledTimes(1)
+    expect(mockPost).toHaveBeenCalledTimes(1)
+    const formData = mockPost.mock.calls[0][1] as TestFormData
+    expect(formData.getAll('images[]')).toEqual([
+      {uri: 'content://photos/9', type: 'image/jpeg', name: 'PHOTO.JPG'},
+    ])
+  })
 })

@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native'
 import { useNavigation, type ParamListBase } from '@react-navigation/native'
@@ -37,8 +38,16 @@ import {
 } from '@/shared/theme/AppThemeProvider'
 import type { AppPalette } from '@/shared/styles/appPalette'
 import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
+import {
+  MAX_GLOBAL_FONT_SIZE,
+  MIN_GLOBAL_FONT_SIZE,
+  normalizeGlobalFontSize,
+  scaleGlobalFontSize,
+} from '@/shared/lib/fontSize'
+import { resolveMarkerTheme } from '@/shared/lib/markerTheme'
 
 import { useSettingsLogic } from '../model/useSettingsLogic'
+import { SETTINGS_RESET_CONFIRMATION } from '../model/settingsDefaults'
 import { MapPointTheme } from './MapPointTheme'
 import { MapPointTime } from './MapPointTime'
 import { OfflineCityMapsSettings } from '@/features/offline-map/ui/OfflineCityMapsSettings'
@@ -48,10 +57,6 @@ const PRESET_COLORS = [
   '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39',
   '#ffeb3b', '#ffc107', '#ff9800', '#ff5722', '#795548', '#607d8b',
 ]
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
-}
 
 function SettingsCard({
   children,
@@ -68,7 +73,7 @@ function SettingsCard({
 
 function SectionTitle({ children, fontSize, centered = false }: { children: string; fontSize: number; centered?: boolean }) {
   const styles = useSettingsStyles()
-  const titleFontSize = clamp(fontSize + 2, 16, 28)
+  const titleFontSize = scaleGlobalFontSize(18, fontSize, 16)
 
   return (
     <Text
@@ -93,6 +98,7 @@ type ChoiceProps = {
 
 function RadioChoice({ label, selected, onPress, fontSize, testID }: ChoiceProps) {
   const styles = useSettingsStyles()
+  const labelFontSize = scaleGlobalFontSize(16, fontSize, 14, 22)
   return (
     <Pressable
       accessibilityRole="radio"
@@ -105,7 +111,7 @@ function RadioChoice({ label, selected, onPress, fontSize, testID }: ChoiceProps
         <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
           {selected ? <View style={styles.radioInner} /> : null}
         </View>
-        <Text style={[styles.choiceLabel, { fontSize: clamp(fontSize, 14, 22) }]}>{label}</Text>
+        <Text style={[styles.choiceLabel, { fontSize: labelFontSize, lineHeight: Math.round(labelFontSize * 1.35) }]}>{label}</Text>
       </View>
     </Pressable>
   )
@@ -113,6 +119,7 @@ function RadioChoice({ label, selected, onPress, fontSize, testID }: ChoiceProps
 
 function CheckboxChoice({ label, selected, onPress, fontSize, testID }: ChoiceProps) {
   const styles = useSettingsStyles()
+  const labelFontSize = scaleGlobalFontSize(16, fontSize, 14, 22)
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -125,7 +132,7 @@ function CheckboxChoice({ label, selected, onPress, fontSize, testID }: ChoicePr
         <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
           {selected ? <Check color="#ffffff" size={15} strokeWidth={4} /> : null}
         </View>
-        <Text style={[styles.choiceLabel, { fontSize: clamp(fontSize, 14, 22) }]}>{label}</Text>
+        <Text style={[styles.choiceLabel, { fontSize: labelFontSize, lineHeight: Math.round(labelFontSize * 1.35) }]}>{label}</Text>
       </View>
     </Pressable>
   )
@@ -163,13 +170,14 @@ function SettingsSlider({ value, min, max, step, onChange, testID }: SettingsSli
 
 export function SettingsScreen(): React.JSX.Element {
   const isOffline = useIsOffline()
-  const { colors } = useAppTheme()
+  const { colors, isDark } = useAppTheme()
   const styles = useSettingsStyles()
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>()
   const insets = useSafeAreaInsets()
   const [isPointListOpen, setIsPointListOpen] = React.useState(false)
   const [isDeleteSheetOpen, setIsDeleteSheetOpen] = React.useState(false)
   const [isDeletingAccount, setIsDeletingAccount] = React.useState(false)
+  const [isResetSheetOpen, setIsResetSheetOpen] = React.useState(false)
   const {
     globalFontSize,
     typeShowDel,
@@ -199,7 +207,10 @@ export function SettingsScreen(): React.JSX.Element {
     aiRecommend,
     setAiRecommend,
     isSaving,
+    isResetting,
+    isSettingsLoading,
     saveSettings,
+    resetSettings,
     points = [],
     pointId = null,
     setPointId,
@@ -207,10 +218,9 @@ export function SettingsScreen(): React.JSX.Element {
     deleteDemoAccount,
   } = useSettingsLogic()
 
-  const normalizedFontSize = Number.isFinite(globalFontSize) && globalFontSize > 0
-    ? globalFontSize
-    : 16
-  const helperFontSize = clamp(normalizedFontSize - 1, 12, 20)
+  const normalizedFontSize = normalizeGlobalFontSize(globalFontSize)
+  const helperFontSize = scaleGlobalFontSize(15, normalizedFontSize, 12, 20)
+  const previewFontSize = scaleGlobalFontSize(14, normalizedFontSize)
   const timeOptions: Array<{ value: ShowType; text: string }> = [
     { value: 'norm', text: '21:46 (53 мин.)' },
     { value: 'full', text: '21:46 - 22:16 (53 мин.)' },
@@ -218,8 +228,7 @@ export function SettingsScreen(): React.JSX.Element {
   ]
   const themeOptions: Array<{ value: Theme; text: string }> = [
     { value: 'classic', text: 'Классический яндекс' },
-    { value: 'transparent', text: '21:46 (53 мин.)' },
-    { value: 'transparent_white', text: '21:46 (53 мин.)' },
+    { value: isDark ? 'transparent_white' : 'transparent', text: '21:46 (53 мин.)' },
     { value: 'white', text: '21:46 (53 мин.)' },
     { value: 'white_border', text: '21:46 (53 мин.)' },
     { value: 'black', text: '21:46 (53 мин.)' },
@@ -229,6 +238,7 @@ export function SettingsScreen(): React.JSX.Element {
     { value: 'light', text: 'Светлая' },
     { value: 'dark', text: 'Тёмная' },
   ]
+  const visibleMarkerTheme = resolveMarkerTheme(markerTheme, isDark)
   const pointOptions = [...points]
     .filter(point => Number(point.id) > 0)
     .sort((left, right) => {
@@ -239,6 +249,12 @@ export function SettingsScreen(): React.JSX.Element {
   const scrollRef = useScrollToTopOnFocus<ScrollView>()
 
   const closePointList = () => setIsPointListOpen(false)
+  const closeResetSheet = () => {
+    if (!isResetting) setIsResetSheetOpen(false)
+  }
+  const confirmSettingsReset = async () => {
+    if (await resetSettings()) setIsResetSheetOpen(false)
+  }
   const closeDeleteSheet = () => {
     if (!isDeletingAccount) {
       setIsDeleteSheetOpen(false)
@@ -274,10 +290,10 @@ export function SettingsScreen(): React.JSX.Element {
           contentContainerStyle={styles.content}
         >
         <View style={styles.intro}>
-          <Text style={[styles.introTitle, { fontSize: clamp(normalizedFontSize + 4, 18, 32) }]}>
+          <Text style={[styles.introTitle, { fontSize: scaleGlobalFontSize(20, normalizedFontSize, 18) }]}>
             Настройки приложения
           </Text>
-          <Text style={[styles.introText, { fontSize: clamp(normalizedFontSize, 14, 24) }]}>
+          <Text style={[styles.introText, { fontSize: scaleGlobalFontSize(16, normalizedFontSize, 14, 24) }]}>
             Настройте отображение карты и интерфейса под свой рабочий ритм.
           </Text>
         </View>
@@ -300,8 +316,8 @@ export function SettingsScreen(): React.JSX.Element {
                     !selectedPoint && styles.pointSelectPlaceholder,
                     {
                       fontSize: selectedPoint
-                        ? clamp(normalizedFontSize, 14, 22)
-                        : clamp(normalizedFontSize - 1, 12, 20),
+                        ? scaleGlobalFontSize(16, normalizedFontSize, 14, 22)
+                        : scaleGlobalFontSize(15, normalizedFontSize, 12, 20),
                     },
                   ]}
                 >
@@ -357,6 +373,7 @@ export function SettingsScreen(): React.JSX.Element {
                 setActive={setMapDataType}
                 theme="white_border"
                 text={option.text}
+                fontSize={previewFontSize}
               />
             ))}
           </View>
@@ -369,10 +386,11 @@ export function SettingsScreen(): React.JSX.Element {
               <MapPointTheme
                 key={option.value}
                 value={option.value}
-                isActive={markerTheme === option.value}
+                isActive={visibleMarkerTheme === option.value}
                 setActive={setMarkerTheme}
                 theme={option.value}
                 text={option.text}
+                fontSize={previewFontSize}
               />
             ))}
           </View>
@@ -414,11 +432,11 @@ export function SettingsScreen(): React.JSX.Element {
           <SectionTitle fontSize={normalizedFontSize}>Размер шрифта</SectionTitle>
           <Text style={[styles.helperText, { fontSize: helperFontSize }]}>Текущее значение: {fontSize}</Text>
           <View style={styles.scalePreview}>
-            <View style={styles.scalePreviewItem}><Text style={[styles.sampleText, { fontSize: 10 }]}>Ая</Text><Text style={styles.scaleCaption}>Меньше</Text></View>
-            <View style={styles.scalePreviewItem}><Text style={[styles.sampleText, { fontSize: clamp(fontSize, 14, 24) }]}>Ая</Text><Text style={styles.scaleCaption}>Текущий</Text></View>
-            <View style={styles.scalePreviewItem}><Text style={[styles.sampleText, { fontSize: 40 }]}>Ая</Text><Text style={styles.scaleCaption}>Больше</Text></View>
+            <View style={styles.scalePreviewItem}><Text style={[styles.sampleText, { fontSize: MIN_GLOBAL_FONT_SIZE }]}>Ая</Text><Text style={styles.scaleCaption}>Меньше</Text></View>
+            <View style={styles.scalePreviewItem}><Text style={[styles.sampleText, { fontSize: normalizeGlobalFontSize(fontSize) }]}>Ая</Text><Text style={styles.scaleCaption}>Текущий</Text></View>
+            <View style={styles.scalePreviewItem}><Text style={[styles.sampleText, { fontSize: MAX_GLOBAL_FONT_SIZE }]}>Ая</Text><Text style={styles.scaleCaption}>Больше</Text></View>
           </View>
-          <SettingsSlider value={fontSize} min={10} max={40} step={1} onChange={value => setFontSize(Math.round(value))} testID="settings-font-size-slider" />
+          <SettingsSlider value={fontSize} min={MIN_GLOBAL_FONT_SIZE} max={MAX_GLOBAL_FONT_SIZE} step={1} onChange={value => setFontSize(Math.round(value))} testID="settings-font-size-slider" />
         </SettingsCard>
 
         <SettingsCard testID="settings-map-scale-card">
@@ -485,8 +503,8 @@ export function SettingsScreen(): React.JSX.Element {
         >
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ busy: isSaving, disabled: isSaving || isOffline }}
-            disabled={isSaving || isOffline}
+            accessibilityState={{ busy: isSaving || isResetting, disabled: isSaving || isResetting || isOffline }}
+            disabled={isSaving || isResetting || isOffline}
             onPress={saveSettings}
             style={({ pressed }) => [
               styles.saveButton,
@@ -501,7 +519,7 @@ export function SettingsScreen(): React.JSX.Element {
                   styles.saveButtonText,
                   {
                     color: isOffline ? colors.textMuted : '#ffffff',
-                    fontSize: clamp(normalizedFontSize + 1, 15, 24),
+                    fontSize: scaleGlobalFontSize(17, normalizedFontSize, 15, 24),
                   },
                 ]}
               >
@@ -511,9 +529,35 @@ export function SettingsScreen(): React.JSX.Element {
           </Pressable>
         </View>
 
+        <View
+          style={[
+            styles.resetButtonSurface,
+            {
+              backgroundColor: isDark ? colors.surfaceRaised : colors.disabledSurface,
+              borderColor: isDark ? colors.border : colors.disabledBorder,
+            },
+            (isOffline || isSettingsLoading || isSaving || isResetting) && styles.resetButtonDisabled,
+          ]}
+          testID="settings-reset-surface"
+        >
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isOffline || isSettingsLoading || isSaving || isResetting }}
+            disabled={isOffline || isSettingsLoading || isSaving || isResetting}
+            onPress={() => setIsResetSheetOpen(true)}
+            activeOpacity={0.75}
+            style={styles.resetButtonContent}
+            testID="settings-reset"
+          >
+            <Text style={[styles.resetButtonText, { fontSize: scaleGlobalFontSize(17, normalizedFontSize, 15, 24) }]}>
+              Сбросить настройки
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {isDemoAccount ? (
           <View style={styles.dangerZone} testID="settings-delete-account-zone">
-            <Text style={[styles.dangerTitle, { fontSize: clamp(normalizedFontSize + 2, 16, 24) }]}>
+            <Text style={[styles.dangerTitle, { fontSize: scaleGlobalFontSize(18, normalizedFontSize, 16, 24) }]}>
               Удаление аккаунта
             </Text>
             <Text style={[styles.dangerText, { fontSize: helperFontSize }]}>
@@ -526,7 +570,7 @@ export function SettingsScreen(): React.JSX.Element {
               style={({ pressed }) => [styles.deleteAccountButton, pressed && styles.deleteAccountButtonPressed]}
               testID="settings-delete-account"
             >
-              <Text style={[styles.deleteAccountButtonText, { fontSize: clamp(normalizedFontSize, 14, 22) }]}>
+              <Text style={[styles.deleteAccountButtonText, { fontSize: scaleGlobalFontSize(16, normalizedFontSize, 14, 22) }]}>
                 Удалить аккаунт
               </Text>
             </Pressable>
@@ -534,6 +578,55 @@ export function SettingsScreen(): React.JSX.Element {
         ) : null}
         </ScrollView>
       </ScreenLayout>
+
+      <Actionsheet isOpen={isResetSheetOpen} onClose={closeResetSheet}>
+        <ActionsheetBackdrop testID="settings-reset-backdrop" />
+        <ActionsheetContent
+          style={[styles.resetSheet, { paddingBottom: insets.bottom + 24 }]}
+          testID="settings-reset-sheet"
+        >
+          <ActionsheetDragIndicatorWrapper>
+            <ActionsheetDragIndicator style={styles.pointSheetHandleArea}>
+              <View style={styles.pointSheetHandle} />
+            </ActionsheetDragIndicator>
+          </ActionsheetDragIndicatorWrapper>
+          <ScrollView style={styles.resetSheetScroll}>
+            <Text style={[styles.deleteSheetTitle, { fontSize: scaleGlobalFontSize(22, normalizedFontSize, 20), lineHeight: Math.round(scaleGlobalFontSize(22, normalizedFontSize, 20) * 1.3) }]}>
+              Сбросить настройки?
+            </Text>
+            <Text style={[styles.deleteSheetText, { fontSize: scaleGlobalFontSize(16, normalizedFontSize, 14, 21), lineHeight: Math.round(scaleGlobalFontSize(16, normalizedFontSize, 14, 21) * 1.4) }]}>
+              {SETTINGS_RESET_CONFIRMATION}
+            </Text>
+          </ScrollView>
+          <View style={styles.resetSheetActions}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isResetting}
+              onPress={closeResetSheet}
+              style={[styles.resetSheetAction, { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+              testID="settings-reset-cancel"
+            >
+              <Text style={[styles.deleteSheetCancelText, { fontSize: scaleGlobalFontSize(17, normalizedFontSize, 15, 24) }]}>Отмена</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ busy: isResetting, disabled: isOffline || isSettingsLoading || isSaving || isResetting }}
+              disabled={isOffline || isSettingsLoading || isSaving || isResetting}
+              onPress={() => void confirmSettingsReset()}
+              style={[
+                styles.resetSheetAction,
+                { backgroundColor: colors.brand },
+                (isOffline || isSettingsLoading || isSaving || isResetting) && styles.resetButtonDisabled,
+              ]}
+              testID="settings-reset-confirm"
+            >
+              <Text style={[styles.deleteSheetConfirmText, { fontSize: scaleGlobalFontSize(17, normalizedFontSize, 15, 24), textAlign: 'center' }]}>
+                {isResetting ? 'Сбрасываем...' : 'Сбросить и сохранить'}
+              </Text>
+            </Pressable>
+          </View>
+        </ActionsheetContent>
+      </Actionsheet>
 
       <Actionsheet isOpen={isPointListOpen} onClose={closePointList}>
         <ActionsheetBackdrop testID="settings-cafe-backdrop" />
@@ -550,7 +643,7 @@ export function SettingsScreen(): React.JSX.Element {
           <Text
             style={[
               styles.pointSheetTitle,
-              { fontSize: clamp(normalizedFontSize + 8, 22, 30) },
+              { fontSize: scaleGlobalFontSize(24, normalizedFontSize, 22) },
             ]}
           >
             Выберите кафе
@@ -585,7 +678,7 @@ export function SettingsScreen(): React.JSX.Element {
                     numberOfLines={2}
                     style={[
                       styles.pointOptionText,
-                      { fontSize: clamp(normalizedFontSize + 2, 16, 22) },
+                      { fontSize: scaleGlobalFontSize(18, normalizedFontSize, 16, 22) },
                       selected && styles.pointOptionTextSelected,
                     ]}
                   >
@@ -610,10 +703,10 @@ export function SettingsScreen(): React.JSX.Element {
             </ActionsheetDragIndicator>
           </ActionsheetDragIndicatorWrapper>
 
-          <Text style={[styles.deleteSheetTitle, { fontSize: clamp(normalizedFontSize + 6, 20, 28) }]}>
+          <Text style={[styles.deleteSheetTitle, { fontSize: scaleGlobalFontSize(22, normalizedFontSize, 20) }]}>
             Удалить аккаунт?
           </Text>
-          <Text style={[styles.deleteSheetText, { fontSize: clamp(normalizedFontSize, 14, 21) }]}>
+          <Text style={[styles.deleteSheetText, { fontSize: scaleGlobalFontSize(16, normalizedFontSize, 14, 21) }]}>
             Вы уверены? После удаления вы выйдете из аккаунта, а локальная сессия будет очищена.
           </Text>
 
@@ -663,7 +756,7 @@ function createStyles(colors: AppPalette) {
   cardRoomy: { padding: 20 },
   sectionTitle: { color: colors.text, fontWeight: '700', marginBottom: 12 },
   previewSurface: { minHeight: 170, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt, paddingHorizontal: 12, paddingVertical: 12, justifyContent: 'space-around', overflow: 'hidden' },
-  themePreviewSurface: { minHeight: 400 },
+  themePreviewSurface: { minHeight: 330 },
   choiceRow: { minHeight: 43, borderRadius: 12, justifyContent: 'center' },
   choiceRowContent: { width: '100%', minHeight: 43, paddingHorizontal: 4, paddingVertical: 7, flexDirection: 'row', alignItems: 'center' },
   choicePressed: { backgroundColor: colors.surfacePressed },
@@ -714,6 +807,14 @@ function createStyles(colors: AppPalette) {
   saveButtonOffline: { backgroundColor: colors.surfaceAlt, shadowOpacity: 0, elevation: 0 },
   saveButtonControlOffline: { backgroundColor: colors.surfaceAlt },
   saveButtonText: { color: '#ffffff', fontWeight: '700' },
+  resetButtonSurface: { width: '100%', minHeight: 54, borderRadius: 16, borderWidth: 1, overflow: 'hidden', marginBottom: 22 },
+  resetButtonContent: { minHeight: 52, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+  resetButtonText: { color: colors.text, fontWeight: '700', textAlign: 'center' },
+  resetButtonDisabled: { opacity: 0.45 },
+  resetSheet: { maxHeight: '85%', paddingTop: 8, paddingHorizontal: 20, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 0, backgroundColor: colors.surfaceRaised },
+  resetSheetScroll: { width: '100%', flexGrow: 0, flexShrink: 1 },
+  resetSheetActions: { width: '100%', flexShrink: 0, gap: 10, marginTop: 24 },
+  resetSheetAction: { width: '100%', minHeight: 52, borderRadius: 15, paddingHorizontal: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
   dangerZone: { borderRadius: 20, borderWidth: 1, borderColor: colors.brandSoftStrong, backgroundColor: colors.dangerSurface, padding: 16, marginBottom: 22 },
   dangerTitle: { color: colors.dangerText, fontWeight: '800', lineHeight: 28 },
   dangerText: { color: colors.textMuted, lineHeight: 21, marginTop: 7, marginBottom: 16 },

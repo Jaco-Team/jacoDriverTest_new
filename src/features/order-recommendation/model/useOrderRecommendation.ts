@@ -25,6 +25,24 @@ import {
 import {buildOrderRecommendationSignature} from './orderRecommendationSignature'
 import {resolveRecommendationPointId} from './resolveRecommendationPointId'
 
+function getRecommendationOwnerId() {
+  const user = useLoginStore.getState().currentUser
+  return String(user?.user_id ?? user?.login ?? 'session')
+}
+
+function getActiveOrdersCacheKey() {
+  const pointId = useSettingsStore.getState().point_id ?? null
+  return JSON.stringify([getRecommendationOwnerId(), pointId, 1])
+}
+
+function getActiveRecommendationOrders() {
+  const orders = useOrdersStore.getState().ordersCache[getActiveOrdersCacheKey()] ?? []
+
+  return orders.filter(order =>
+    Number(order.is_delete ?? 0) !== 1 && Number(order.status_order ?? 0) !== 6,
+  )
+}
+
 export function useOrderRecommendation(surface: OrderRecommendationSurface = 'list') {
   const [isNoSuitableOpen, setIsNoSuitableOpen] = useState(false)
   const {
@@ -55,35 +73,23 @@ export function useOrderRecommendation(surface: OrderRecommendationSurface = 'li
   const aiRecommendEnabled = Number(aiRecommend) === 1
   const currentUser = useLoginStore(state => state.currentUser)
   const showAlertText = useGlobalStore(state => state.showAlertText)
-  const [orders, ordersCache, type, limit, limitCount] = useOrdersStore(
+  const [orders, ordersCache, type] = useOrdersStore(
     useShallow(state => [
       state.orders,
       state.ordersCache,
       state.type,
-      state.limit_summ,
-      state.limit_count,
     ]),
   )
+  const activeOrdersCacheKey = JSON.stringify([
+    String(currentUser?.user_id ?? currentUser?.login ?? 'session'),
+    selectedPointId ?? null,
+    1,
+  ])
   const recommendationOrders = useMemo(
-    () => orders.filter(order =>
+    () => (ordersCache[activeOrdersCacheKey] ?? []).filter(order =>
       Number(order.is_delete ?? 0) !== 1 && Number(order.status_order ?? 0) !== 6,
     ),
-    [orders],
-  )
-
-  const currentPointId = useMemo(
-    () => resolveRecommendationPointId({
-      selectedPointId,
-      userPointId: currentUser?.point_id ?? null,
-      points,
-      login: currentUser?.login ?? null,
-    }),
-    [
-      currentUser?.login,
-      currentUser?.point_id,
-      points,
-      selectedPointId,
-    ],
+    [ordersCache, activeOrdersCacheKey],
   )
   const hasCurrentResult = Boolean(result && orderTypeId === type.id)
   const isVisible = aiRecommendEnabled && type.id === 1 && (recommendationOrders.length > 0 || hasCurrentResult)
@@ -135,7 +141,7 @@ export function useOrderRecommendation(surface: OrderRecommendationSurface = 'li
   const request = useCallback(async () => {
     if (isLoading) return false
 
-    if (!hasCurrentResult && recommendationOrders.length === 0) {
+    if (!hasCurrentResult && getActiveRecommendationOrders().length === 0) {
       showAlertText(true, 'Нет заказов, для которых можно построить маршрут.', 'warning')
       return false
     }
@@ -163,15 +169,25 @@ export function useOrderRecommendation(surface: OrderRecommendationSurface = 'li
       return true
     }
 
+    const ordersState = useOrdersStore.getState()
+    ordersState.setTypeDop(ordersState.types_dop.map(item => String(item.id)))
+    ordersState.showModalTypeDop(false)
     const requestVersion = start()
+    const requestOwnerId = getRecommendationOwnerId()
+    let requestCacheKey = getActiveOrdersCacheKey()
     setIsNoSuitableOpen(false)
+    const isCurrentOwnerRequest = () =>
+      useOrderRecommendationStore.getState().requestVersion === requestVersion &&
+      getRecommendationOwnerId() === requestOwnerId
     const isCurrentRequest = () =>
-      useOrderRecommendationStore.getState().requestVersion === requestVersion
+      isCurrentOwnerRequest() &&
+      getActiveOrdersCacheKey() === requestCacheKey
     Analytics.log(
       AnalyticsEvent.OrderRecommendationRequest,
       'Запрошена ИИ-подсказка по активным заказам',
     )
 
+    let requestOrders = getActiveRecommendationOrders()
     try {
       let pointId = resolveRecommendationPointId({
         selectedPointId,
@@ -182,7 +198,7 @@ export function useOrderRecommendation(surface: OrderRecommendationSurface = 'li
 
       if (pointId === null) {
         await getSettings(true)
-        if (!isCurrentRequest()) return false
+        if (!isCurrentOwnerRequest()) return false
         const settings = useSettingsStore.getState()
         const user = useLoginStore.getState().currentUser
         pointId = resolveRecommendationPointId({
@@ -191,6 +207,9 @@ export function useOrderRecommendation(surface: OrderRecommendationSurface = 'li
           points: settings.points,
           login: user?.login ?? null,
         })
+        // Settings recovery may resolve the initially unknown cafe.
+        // Lock its full cache scope before waiting for GPS or the analysis.
+        requestCacheKey = getActiveOrdersCacheKey()
       }
 
       if (pointId === null) {
@@ -205,11 +224,21 @@ export function useOrderRecommendation(surface: OrderRecommendationSurface = 'li
 
       const courier = await getRecommendationCourierLocation()
       if (!isCurrentRequest()) return false
+      const currentOrdersState = useOrdersStore.getState()
+      if (currentOrdersState.ordersCache[requestCacheKey] === undefined) {
+        showAlertText(true, 'Список заказов обновляется. Повторите подбор после загрузки.', 'warning')
+        return false
+      }
+      requestOrders = getActiveRecommendationOrders()
+      if (requestOrders.length === 0) {
+        setIsNoSuitableOpen(true)
+        return false
+      }
       const payload = buildOrderRecommendationRequest({
-        orders: recommendationOrders,
+        orders: requestOrders,
         pointId,
-        limit,
-        limitCount,
+        limit: currentOrdersState.limit_summ,
+        limitCount: currentOrdersState.limit_count,
         courier,
       })
       const nextResult = await requestOrderRecommendation(payload)
@@ -228,10 +257,10 @@ export function useOrderRecommendation(surface: OrderRecommendationSurface = 'li
       }
 
       const requestSignature = buildOrderRecommendationSignature({
-        orders: recommendationOrders,
+        orders: requestOrders,
         pointId,
-        limit,
-        limitCount,
+        limit: currentOrdersState.limit_summ,
+        limitCount: currentOrdersState.limit_count,
       })
       succeed(
         requestVersion,
@@ -239,7 +268,7 @@ export function useOrderRecommendation(surface: OrderRecommendationSurface = 'li
         requestSignature,
         surface,
         type.id,
-        recommendationOrders,
+        requestOrders,
       )
       Analytics.log(
         AnalyticsEvent.OrderRecommendationOpen,
@@ -254,7 +283,7 @@ export function useOrderRecommendation(surface: OrderRecommendationSurface = 'li
 
       showAlertText(true, message, 'error')
       Analytics.reportError('order_recommendation_failed', error, {
-        ordersCount: recommendationOrders.length,
+        ordersCount: requestOrders.length,
         pointId: selectedPointId,
       })
       return false
@@ -269,11 +298,8 @@ export function useOrderRecommendation(surface: OrderRecommendationSurface = 'li
     hasCurrentResult,
     isLoading,
     isRouteVisible,
-    limit,
-    limitCount,
     orderTypeId,
     open,
-    recommendationOrders,
     points,
     selectedPointId,
     showAlertText,

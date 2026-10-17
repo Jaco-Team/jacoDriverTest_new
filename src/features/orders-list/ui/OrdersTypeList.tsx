@@ -17,6 +17,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { TypeOrder } from '@/shared/store/OrdersStoreType';
 import { appPalette } from '@/shared/styles/appPalette';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import { scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 export const OrdersTypeList: React.FC = () => {
   const { colors } = useAppTheme()
@@ -29,6 +30,8 @@ export const OrdersTypeList: React.FC = () => {
   const [type, types, selectType] = useOrdersStore(useShallow(state => {
     return [state.type, state.types, state.selectType];
   }));
+  const titleFontSize = scaleGlobalFontSize(18, globalFontSize)
+  const optionFontSize = scaleGlobalFontSize(16, globalFontSize)
 
   const handleSelect = (item: TypeOrder) => {
     selectType(item);
@@ -47,7 +50,14 @@ export const OrdersTypeList: React.FC = () => {
       >
         <Text
           numberOfLines={1}
-          style={[styles.triggerText, { color: colors.brand, fontSize: globalFontSize }]}
+          style={[
+            styles.triggerText,
+            {
+              color: colors.brand,
+              fontSize: globalFontSize,
+              lineHeight: Math.round(globalFontSize * 1.3),
+            },
+          ]}
         >
           {(type ? type.text : 'Заказы').toUpperCase()}
         </Text>
@@ -70,7 +80,7 @@ export const OrdersTypeList: React.FC = () => {
 
           <View style={styles.sheetHeader}>
             <View style={styles.headerSide} />
-            <Text style={[styles.sheetTitle, { color: colors.text, fontSize: globalFontSize + 2 }]}>
+            <Text style={[styles.sheetTitle, { color: colors.text, fontSize: titleFontSize, lineHeight: Math.round(titleFontSize * 1.35) }]}>
               Список заказов
             </Text>
             <Pressable
@@ -113,7 +123,11 @@ export const OrdersTypeList: React.FC = () => {
                   <Text
                     style={[
                       styles.optionText,
-                      { color: colors.text, fontSize: globalFontSize },
+                      {
+                        color: colors.text,
+                        fontSize: optionFontSize,
+                        lineHeight: Math.round(optionFontSize * 1.35),
+                      },
                       isSelected && styles.optionTextSelected,
                     ]}
                   >
@@ -141,7 +155,6 @@ const styles = StyleSheet.create({
   triggerText: {
     color: appPalette.brand,
     fontFamily: 'Roboto-Medium',
-    lineHeight: 22,
   },
   sheetContent: {
     maxHeight: '75%',
@@ -208,6 +221,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
+    paddingVertical: 10,
     borderWidth: 1,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
@@ -224,7 +238,6 @@ const styles = StyleSheet.create({
     width: '100%',
     color: '#333333',
     fontFamily: 'Roboto-Medium',
-    lineHeight: 22,
     textAlign: 'center',
   },
   optionTextSelected: {

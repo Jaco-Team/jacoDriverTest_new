@@ -8,6 +8,7 @@ const mockSetCenteredMap = jest.fn();
 const mockSetMapDataType = jest.fn();
 const mockSetMarkerTheme = jest.fn();
 const mockSaveSettings = jest.fn();
+const mockResetSettings = jest.fn();
 const mockSetPointId = jest.fn();
 const mockDeleteDemoAccount = jest.fn();
 const mockNavigationReset = jest.fn();
@@ -33,7 +34,9 @@ jest.mock('@/shared/ui/ScreenLayout', () => {
 jest.mock('@/components/ui/slider', () => {
   const { View } = require('react-native');
   return {
-    Slider: ({ children, testID }: any) => <View testID={testID}>{children}</View>,
+    Slider: ({ children, testID, ...props }: any) => (
+      <View testID={testID} {...props}>{children}</View>
+    ),
     SliderTrack: ({ children }: any) => <View>{children}</View>,
     SliderFilledTrack: () => <View />,
     SliderThumb: () => <View />,
@@ -106,7 +109,10 @@ jest.mock('@/features/settings/model/useSettingsLogic', () => ({
     showMapScale: true,
     setShowMapScale: mockSetShowMapScale,
     isSaving: false,
+    isResetting: false,
+    isSettingsLoading: false,
     saveSettings: mockSaveSettings,
+    resetSettings: mockResetSettings,
     points: [
       { id: 15, name: 'Самара, Металлургов 76А' },
       { id: 21, name: 'Тольятти, Мира 12' },
@@ -119,6 +125,9 @@ jest.mock('@/features/settings/model/useSettingsLogic', () => ({
 }));
 
 import { SettingsScreen } from '@/features/settings/ui/SettingsScreen';
+import { ConnectivityContext } from '@/shared/lib/connectivityContext';
+import * as AppTheme from '@/shared/theme/AppThemeProvider';
+import { darkAppPalette, lightAppPalette } from '@/shared/styles/appPalette';
 
 describe('SettingsScreen', () => {
   beforeEach(() => {
@@ -126,6 +135,66 @@ describe('SettingsScreen', () => {
     mockPointId = 15;
     mockIsDemoAccount = true;
     mockDeleteDemoAccount.mockResolvedValue(true);
+    mockResetSettings.mockResolvedValue(true);
+  });
+
+  it('требует подтверждение сброса, а отмена ничего не сохраняет', async () => {
+    const screen = await render(<SettingsScreen />);
+    await fireEvent.press(screen.getByTestId('settings-reset'));
+    expect(screen.getByText('Сбросить настройки?')).toBeTruthy();
+    expect(mockResetSettings).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('settings-reset-cancel'));
+    expect(screen.queryByTestId('settings-reset-sheet')).toBeNull();
+    expect(mockSaveSettings).not.toHaveBeenCalled();
+    expect(mockResetSettings).not.toHaveBeenCalled();
+  });
+
+  it('закрывает подтверждение только после успешного сброса', async () => {
+    const screen = await render(<SettingsScreen />);
+    await fireEvent.press(screen.getByTestId('settings-reset'));
+    mockResetSettings.mockResolvedValueOnce(false);
+    await fireEvent.press(screen.getByTestId('settings-reset-confirm'));
+    expect(screen.getByTestId('settings-reset-sheet')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('settings-reset-confirm'));
+    await waitFor(() => expect(screen.queryByTestId('settings-reset-sheet')).toBeNull());
+    expect(mockResetSettings).toHaveBeenCalledTimes(2);
+  });
+
+  it('без сети кнопка сброса видна, но неактивна', async () => {
+    const screen = await render(
+      <ConnectivityContext.Provider value={true}><SettingsScreen /></ConnectivityContext.Provider>,
+    );
+    expect(screen.getByTestId('settings-reset')).toBeDisabled();
+    await fireEvent.press(screen.getByTestId('settings-reset'));
+    expect(screen.queryByTestId('settings-reset-sheet')).toBeNull();
+    expect(mockResetSettings).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('рисует фон и рамку сброса в отдельном контейнере, dark=%s', async isDark => {
+    const colors = isDark ? darkAppPalette : lightAppPalette;
+    const themeSpy = jest.spyOn(AppTheme, 'useAppTheme').mockReturnValue({
+      colors,
+      isDark,
+      preference: isDark ? 'dark' : 'light',
+      deviceScheme: isDark ? 'dark' : 'light',
+      resolvedScheme: isDark ? 'dark' : 'light',
+      setPreference: jest.fn(),
+      setPreviewPreference: jest.fn(),
+      clearPreviewPreference: jest.fn(),
+    });
+    try {
+      const screen = await render(<SettingsScreen />);
+      expect(screen.getByTestId('settings-reset-surface')).toHaveStyle({
+        width: '100%',
+        minHeight: 54,
+        borderWidth: 1,
+        borderRadius: 16,
+        backgroundColor: isDark ? colors.surfaceRaised : '#E0E0E0',
+        borderColor: isDark ? colors.border : '#C9CDD1',
+      });
+    } finally {
+      themeSpy.mockRestore();
+    }
   });
 
   it('показывает структуру и варианты актуальной страницы сайта', async () => {
@@ -143,10 +212,15 @@ describe('SettingsScreen', () => {
       selected: true,
     });
     expect(screen.getByText('Размер шрифта')).toBeTruthy();
+    expect(screen.getByTestId('settings-font-size-slider').props).toMatchObject({
+      minValue: 10,
+      maxValue: 26,
+    });
     expect(screen.getByText('Масштабирование иконок на карте')).toBeTruthy();
     expect(screen.getByText('Частота обновления заказов')).toBeTruthy();
     expect(screen.getByText('Цвет на карте')).toBeTruthy();
-    expect(screen.getByTestId('settings-marker-theme-transparent_white')).toBeTruthy();
+    expect(screen.getByTestId('settings-marker-theme-transparent')).toBeTruthy();
+    expect(screen.queryByTestId('settings-marker-theme-transparent_white')).toBeNull();
   });
 
   it('открывает модальное окно кафе и выбирает точку Laravel API', async () => {
@@ -218,14 +292,14 @@ describe('SettingsScreen', () => {
     await fireEvent.press(screen.getByTestId('settings-map-scale-control'));
     await fireEvent.press(screen.getByTestId('settings-center-map'));
     await fireEvent.press(screen.getByTestId('settings-map-data-full'));
-    await fireEvent.press(screen.getByTestId('settings-marker-theme-transparent_white'));
+    await fireEvent.press(screen.getByTestId('settings-marker-theme-transparent'));
     await fireEvent.press(screen.getByTestId('settings-save'));
 
     expect(mockSetAppThemePreference).toHaveBeenCalledWith('dark');
     expect(mockSetShowMapScale).toHaveBeenCalledWith(false);
     expect(mockSetCenteredMap).toHaveBeenCalledWith(false);
     expect(mockSetMapDataType).toHaveBeenCalledWith('full');
-    expect(mockSetMarkerTheme).toHaveBeenCalledWith('transparent_white');
+    expect(mockSetMarkerTheme).toHaveBeenCalledWith('transparent');
     expect(mockSaveSettings).toHaveBeenCalledTimes(1);
   });
 

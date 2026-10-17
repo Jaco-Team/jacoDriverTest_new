@@ -9,30 +9,77 @@ function read(rel: string) {
 
 describe('New Architecture contract', () => {
   it('включает Fabric в native flags', () => {
-    expect(read('android/gradle.properties')).toMatch(/newArchEnabled\s*=\s*true/);
-    expect(read('android/gradle.properties')).toMatch(/android\.builtInKotlin\s*=\s*false/);
-    expect(read('android/gradle.properties')).toMatch(/android\.newDsl\s*=\s*false/);
-    expect(read('ios/Podfile')).toMatch(/ENV\['RCT_NEW_ARCH_ENABLED'\]\s*=\s*'1'/);
+    expect(read('android/gradle.properties')).toMatch(
+      /newArchEnabled\s*=\s*true/,
+    );
+    expect(read('android/gradle.properties')).toMatch(
+      /android\.builtInKotlin\s*=\s*false/,
+    );
+    expect(read('android/gradle.properties')).toMatch(
+      /android\.newDsl\s*=\s*false/,
+    );
+    expect(read('ios/Podfile')).toMatch(
+      /ENV\['RCT_NEW_ARCH_ENABLED'\]\s*=\s*'1'/,
+    );
     expect(read('ios/jacoDriverTest/Info.plist')).toMatch(
       /<key>RCTNewArchEnabled<\/key>\s*<true\/>/,
     );
   });
 
-  it('держит RN 0.87, Reanimated 4.7, Worklets 0.13 и yamap-plus', () => {
+  it('держит RN 0.88, Reanimated 4.7, Worklets 0.13 и yamap-plus', () => {
     const pkg = JSON.parse(read('package.json')) as {
       dependencies: Record<string, string>;
     };
     const deps = pkg.dependencies;
 
-    expect(deps['react-native']).toBe('0.87.1');
+    expect(deps['react-native']).toBe('0.88.0');
     expect(deps['react-native-reanimated']).toBe('4.7.1');
     expect(deps['react-native-worklets']).toBe('0.13.0');
-    expect(deps['react-native-yamap-plus']).toMatch(/^\^?6\.11/);
-    expect(deps['react-native-screens']).toMatch(/^\^?4\.28/);
+    expect(deps['react-native-yamap-plus']).toBe('6.12.0');
+    expect(deps['react-native-screens']).toBe('4.30.0');
     expect(deps['react-native-gesture-handler']).toMatch(/^\^?3\.3/);
     expect(deps['react-native-safe-area-context']).toMatch(/^\^?5\.10/);
     expect(deps['react-native-yamap']).toBeUndefined();
     expect(deps['react-native-worklets-core']).toBeUndefined();
+  });
+
+  it('согласует пакеты RN и версии React с тестовым рендерером', () => {
+    const pkg = JSON.parse(read('package.json')) as {
+      dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+    for (const name of [
+      'babel-preset',
+      'community-cli-plugin',
+      'eslint-config',
+      'jest-preset',
+      'metro-config',
+      'typescript-config',
+    ]) {
+      expect(pkg.devDependencies[`@react-native/${name}`]).toBe(
+        pkg.dependencies['react-native'],
+      );
+    }
+    expect(pkg.dependencies.react).toBe('19.3.1');
+    expect(pkg.dependencies['react-dom']).toBe(pkg.dependencies.react);
+    expect(pkg.devDependencies['react-test-renderer']).toBe(
+      pkg.dependencies.react,
+    );
+  });
+
+  it('согласует нативное ядро iOS с версией React Native', () => {
+    const version = JSON.parse(read('package.json')).dependencies[
+      'react-native'
+    ];
+    const entries = read('ios/Podfile.lock').split('\n');
+    for (const pod of [
+      'React-Core',
+      'React-Core-prebuilt',
+      'ReactNativeDependencies',
+    ]) {
+      const entry = entries.find(line => line.startsWith(`  - ${pod} (`));
+      expect(entry?.replace(/:$/, '')).toBe(`  - ${pod} (${version})`);
+    }
   });
 
   it('держит Navigation 7, Sentry 8, Firebase 26 и CocoaPods Firebase', () => {
@@ -43,8 +90,8 @@ describe('New Architecture contract', () => {
     const deps = pkg.dependencies;
 
     expect(deps['@react-navigation/drawer']).toMatch(/^\^?7\.14/);
-    expect(deps['@react-navigation/native']).toMatch(/^\^?7\.4/);
-    expect(deps['@react-navigation/native-stack']).toMatch(/^\^?7\.19/);
+    expect(deps['@react-navigation/native']).toMatch(/^\^?7\.5/);
+    expect(deps['@react-navigation/native-stack']).toMatch(/^\^?7\.21/);
     expect(deps['@sentry/react-native']).toMatch(/^\^?8\./);
     expect(deps['@react-native-firebase/app']).toMatch(/^\^?26\./);
     expect(deps['@react-native-firebase/messaging']).toMatch(/^\^?26\./);
@@ -53,15 +100,19 @@ describe('New Architecture contract', () => {
     expect(pkg.devDependencies['@typescript/native']).toBeUndefined();
     expect(pkg.devDependencies.typescript).toBe('6.0.3');
     expect(deps['@appmetrica/react-native-analytics']).toMatch(/^\^?4\.2/);
-    expect(deps['@react-native-async-storage/async-storage']).toMatch(/^\^?3\.1/);
+    expect(deps['@react-native-async-storage/async-storage']).toMatch(
+      /^\^?3\.1/,
+    );
     expect(deps['@react-native-community/datetimepicker']).toMatch(/^\^?9\.2/);
     expect(deps['@fortawesome/react-native-fontawesome']).toMatch(/^\^?1\.0/);
-    expect(deps['lucide-react-native']).toMatch(/^\^?1\.47/);
+    expect(deps['lucide-react-native']).toMatch(/^\^?1\.58/);
     expect(deps['@react-native-community/netinfo']).toMatch(/^\^?12\.0/);
     expect(deps['react-native-device-info']).toMatch(/^\^?15\.0/);
     expect(read('ios/Podfile')).toMatch(/\$RNFirebaseDisableSPM\s*=\s*true/);
     expect(
-      fs.existsSync(path.join(root, 'patches/@sentry+react-native+7.13.0.patch')),
+      fs.existsSync(
+        path.join(root, 'patches/@sentry+react-native+7.13.0.patch'),
+      ),
     ).toBe(false);
   });
 
@@ -74,46 +125,62 @@ describe('New Architecture contract', () => {
     expect(metro).toContain('metro-config/private/defaults/exclusionList');
     expect(metro).not.toContain('metro-config/src/defaults/exclusionList');
     expect(metro).toContain('"mjs"');
-    expect(read('jest.config.js')).toContain("preset: '@react-native/jest-preset'");
+    expect(read('jest.config.js')).toContain(
+      "preset: '@react-native/jest-preset'",
+    );
   });
 
   it('Android MapKit pin совпадает с yamap-plus 4.42', () => {
-    expect(read('android/build.gradle')).toContain("maps.mobile:4.42.0-full");
-    expect(read('android/app/build.gradle')).toContain("maps.mobile:4.42.0-full");
+    expect(read('android/build.gradle')).toContain('maps.mobile:4.42.0-full');
+    expect(read('android/app/build.gradle')).toContain(
+      'maps.mobile:4.42.0-full',
+    );
     expect(read('android/app/build.gradle')).not.toContain('4.19.0-full');
   });
 
   it('инициализирует geometry iOS-маркера до Fabric mount', () => {
-    const markerPatch = read('patches/react-native-yamap-plus+6.11.0.patch');
+    const markerPatch = read('patches/react-native-yamap-plus+6.12.0.patch');
 
-    expect(markerPatch).toContain('_point = [YMKPoint pointWithLatitude:0 longitude:0]');
+    expect(markerPatch).toContain(
+      '_point = [YMKPoint pointWithLatitude:0 longitude:0]',
+    );
     expect(markerPatch).toContain('prepareForRecycle');
   });
 
   it('явно применяет светлый режим к iOS-карте при первом mount и повторном использовании', () => {
-    const mapPatch = read('patches/react-native-yamap-plus+6.11.0.patch');
+    const mapPatch = read('patches/react-native-yamap-plus+6.12.0.patch');
 
-    expect(mapPatch).toContain('if (!nightModeConfigured || oldViewProps.nightMode != newViewProps.nightMode)');
+    expect(mapPatch).toContain(
+      'if (!nightModeConfigured || oldViewProps.nightMode != newViewProps.nightMode)',
+    );
     expect(mapPatch).toContain('[self setNightMode:newViewProps.nightMode]');
     expect(mapPatch).toContain('nightModeConfigured = NO;');
   });
 
   it('создаёт TrafficLayer только после загрузки карты и сохраняет listener', () => {
-    const mapPatch = read('patches/react-native-yamap-plus+6.11.0.patch');
+    const mapPatch = read('patches/react-native-yamap-plus+6.12.0.patch');
 
-    expect(mapPatch).toContain('private val trafficListener = WeakReference<TrafficListener>(this)');
+    expect(mapPatch).toContain(
+      'private val trafficListener = WeakReference<TrafficListener>(this)',
+    );
     expect(mapPatch).toContain('if (!mapLoaded) return');
-    expect(mapPatch).toContain('if (trafficVisibleRequested) setTrafficVisible(true)');
+    expect(mapPatch).toContain(
+      'if (trafficVisibleRequested) setTrafficVisible(true)',
+    );
     expect(mapPatch).toContain('if (!mapLoaded) {');
     expect(mapPatch).toContain('if (trafficVisibleRequested) {');
     expect(mapPatch).toContain('[self setTrafficVisible:YES]');
   });
 
   it('возвращает корректный status из iOS-роутера', () => {
-    const mapPatch = read('patches/react-native-yamap-plus+6.11.0.patch');
+    const mapPatch = read('patches/react-native-yamap-plus+6.12.0.patch');
 
-    expect(mapPatch).toContain('[response setValue:@"success" forKey:@"status"]');
-    expect(mapPatch).toContain('-            [response setValue:@"status" forKey:@"success"]');
+    expect(mapPatch).toContain(
+      '[response setValue:@"success" forKey:@"status"]',
+    );
+    expect(mapPatch).toContain(
+      '-            [response setValue:@"status" forKey:@"success"]',
+    );
   });
 
   it('Android использует edge-to-edge и системный Splash в стиле Greeting', () => {
@@ -147,9 +214,7 @@ describe('New Architecture contract', () => {
     expect(styles).toContain(
       '<item name="postSplashScreenTheme">@style/AppTheme</item>',
     );
-    expect(colors).toContain(
-      '<color name="splash_background">#CC0033</color>',
-    );
+    expect(colors).toContain('<color name="splash_background">#CC0033</color>');
     expect(splashIcon).toContain('@drawable/jaco_splash_logo');
     expect(debugStyles).toContain(
       '<item name="android:windowBackground">@color/splash_background</item>',
@@ -200,7 +265,9 @@ describe('New Architecture contract', () => {
 
   it('index.js подключает InteractionManager shim до App', () => {
     const index = read('index.js');
-    const shim = index.indexOf("import './src/shared/lib/interactionManagerCompat'");
+    const shim = index.indexOf(
+      "import './src/shared/lib/interactionManagerCompat'",
+    );
     const app = index.indexOf("import App from './App'", shim);
     expect(shim).toBeGreaterThanOrEqual(0);
     expect(app).toBeGreaterThan(shim);

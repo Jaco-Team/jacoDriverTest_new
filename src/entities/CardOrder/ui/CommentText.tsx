@@ -18,10 +18,7 @@ import {
   type ExtractedPhone,
 } from '@/shared/lib/extractPhonesFromText'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
-
-function clampFontSize(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
-}
+import { scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 function FilledPhoneIcon({ color }: { color: string }): React.JSX.Element {
   return (
@@ -44,8 +41,8 @@ export const CommentText: React.FC<CommentTextProps> = ({
   const { colors } = useAppTheme()
   const phones = useMemo(() => extractPhonesFromText(comment), [comment])
   const [phonesOpen, setPhonesOpen] = useState(false)
-  const titleFontSize = clampFontSize(globalFontSize + 4, 18, 24)
-  const actionFontSize = clampFontSize(globalFontSize + 1, 14, 18)
+  const titleFontSize = scaleGlobalFontSize(20, globalFontSize, 18, 24)
+  const actionFontSize = scaleGlobalFontSize(17, globalFontSize, 14, 18)
 
   useEffect(() => {
     if (phones.length < 2) {

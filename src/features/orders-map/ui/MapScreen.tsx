@@ -1,5 +1,7 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {useNavigation} from '@react-navigation/native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {RefreshCcw} from 'lucide-react-native';
 import {
   StyleSheet,
   Text,
@@ -62,11 +64,14 @@ import {
   useActiveOrderRecommendationRoute,
 } from '@/features/order-recommendation/ui/ActiveOrderRecommendationRoute';
 import {useOrderRecommendationStore} from '@/features/order-recommendation/model/orderRecommendation.store';
-import {useSettingsStore} from '@/shared/store/store';
+import {useOrdersStore, useSettingsStore} from '@/shared/store/store';
 
 export function MapScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const {colors, isDark} = useAppTheme();
+  const getOrders = useOrdersStore(state => state.getOrders);
+  const refreshBusy = useOrdersStore(state => state.isClick);
   const storedRecommendationRouteVisible = useOrderRecommendationStore(
     state => state.isRouteVisible,
   );
@@ -176,6 +181,12 @@ export function MapScreen() {
 
   const controlsTop = isOffline ? offlineBannerHeight + 10 : 10;
   const mtop = Math.max(controlsTop + 50, (viewportSize.height - 300) / 4);
+  // Reserve space for refresh, limits and the category bar on shorter screens.
+  const zoomHeight = Math.min(
+    300,
+    Math.max(80, viewportSize.height - mtop - insets.bottom - 180),
+  );
+  const refreshDisabled = refreshBusy;
 
   return (
     <View
@@ -206,7 +217,7 @@ export function MapScreen() {
             position: 'absolute',
             right: MAP_CONTROL_RIGHT,
             width: 50,
-            height: 300,
+            height: zoomHeight,
             top: mtop,
             zIndex: 200,
           }}>
@@ -216,6 +227,32 @@ export function MapScreen() {
           <SliderThumb />
         </Slider>
       )}
+
+      {!isOffline && !(is_showModalTypeDop || isOpenOrderMap) ? (
+        <TouchableOpacity
+          accessibilityLabel="Обновить заказы"
+          accessibilityRole="button"
+          accessibilityState={{disabled: refreshDisabled, busy: refreshBusy}}
+          activeOpacity={0.75}
+          disabled={refreshDisabled}
+          style={[
+            styles1.refreshButton,
+            {
+              bottom: insets.bottom + 112,
+            },
+          ]}
+          testID="orders-map-refresh"
+          onPress={() => {
+            if (!refreshDisabled) void getOrders(true);
+          }}>
+          <RefreshCcw
+            size={22}
+            strokeWidth={2.7}
+            color={isDark ? '#FFFFFF' : colors.text}
+            testID="orders-map-refresh-icon"
+          />
+        </TouchableOpacity>
+      ) : null}
 
       {!showOfflineFallback ? (
         <>
@@ -425,6 +462,18 @@ export const styles1 = StyleSheet.create({
   },
   ymap: {
     flex: 1,
+  },
+  refreshButton: {
+    position: 'absolute',
+    opacity: 1,
+    right: MAP_CONTROL_RIGHT + 3,
+    width: 44,
+    height: 44,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 200,
   },
   offlineBanner: {
     position: 'absolute',

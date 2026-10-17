@@ -13,13 +13,15 @@ jest.mock('@/analytics/AppMetricaService', () => ({
   },
 }));
 
-import { useGlobalStore, useSettingsStore } from '@/shared/store/store';
+import { useGlobalStore, useLoginStore, useSettingsStore } from '@/shared/store/store';
+import {setAppOffline} from '@/shared/lib/connectivityState';
 import { useAppThemeStore } from '@/shared/theme/AppThemeProvider';
 
 describe('useSettingsStore.saveSettings', () => {
   beforeEach(async () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    setAppOffline(false);
     useGlobalStore.setState({
       tokenAuth: 'test-token',
       loadSpinner: false,
@@ -146,6 +148,30 @@ describe('useSettingsStore.saveSettings', () => {
     expect(useGlobalStore.getState().loadSpinner).toBe(false);
   });
 
+  it('ограничивает отправляемый и сохранённый размер шрифта значением 26', async () => {
+    mockApi.mockResolvedValueOnce({st: true, text: ''});
+
+    await useSettingsStore.getState().saveSettings(
+      'full',
+      [],
+      40,
+      30,
+      '#000000',
+      1,
+      'norm',
+      'white',
+      [],
+      [],
+    );
+
+    expect(mockApi).toHaveBeenCalledWith(
+      'settings',
+      expect.objectContaining({fontSize: 26}),
+    );
+    expect(useSettingsStore.getState().fontSize).toBe(26);
+    expect(useGlobalStore.getState().globalFontSize).toBe(26);
+  });
+
   it('ответ st=false считается ошибкой и не применяет настройки', async () => {
     mockApi.mockResolvedValueOnce({ st: false, text: 'Сохранение отклонено' });
 
@@ -191,5 +217,41 @@ describe('useSettingsStore.saveSettings', () => {
     );
 
     expect(mockApi).not.toHaveBeenCalled();
+  });
+
+  it('возвращает результат сброса и показывает его сообщение только после сохранения', async () => {
+    mockApi.mockResolvedValueOnce({st: true});
+    const saved = await useSettingsStore.getState().saveSettings(
+      'min', [], 16, 30, '#123456', 1, 'norm', 'transparent', [], [],
+      'system', true, false, 'Настройки сброшены',
+    );
+    expect(saved).toBe(true);
+    expect(useGlobalStore.getState().modal_text).toBe('Настройки сброшены');
+    expect(useAppThemeStore.getState().preference).toBe('system');
+  });
+
+  it('не применяет сброс после смены токена/аккаунта', async () => {
+    let finish!: (value: any) => void;
+    mockApi.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+    const pending = useSettingsStore.getState().saveSettings(
+      'min', [], 16, 30, '#123456', 1, 'norm', 'transparent', [], [], 'system', true, false,
+    );
+    await Promise.resolve();
+    const previousUser = useLoginStore.getState().currentUser;
+    useGlobalStore.setState({tokenAuth: 'new-token'});
+    finish({st: true});
+    expect(await pending).toBe(false);
+    expect(useGlobalStore.getState().theme).toBe('white');
+    expect(useAppThemeStore.getState().preference).toBe('light');
+    expect(useLoginStore.getState().currentUser).toBe(previousUser);
+  });
+
+  it('без сети не отправляет сброс и возвращает false', async () => {
+    setAppOffline(true);
+    expect(await useSettingsStore.getState().saveSettings(
+      'min', [], 16, 30, '#123456', 1, 'norm', 'transparent', [], [], 'system', true, false,
+    )).toBe(false);
+    expect(mockApi).not.toHaveBeenCalled();
+    setAppOffline(false);
   });
 });

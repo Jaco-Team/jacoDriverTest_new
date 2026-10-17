@@ -15,7 +15,7 @@ index 02de75e..77de38b 100644
 +import org.json.JSONArray
 +import org.json.JSONObject
  import ru.yamap.NativeYamapModuleSpec
-
+ 
  class YamapModule(reactContext: ReactApplicationContext) : NativeYamapModuleSpec(reactContext) {
 +    private var offlineListListener: RegionListUpdatesListener? = null
 +    private var offlineErrorListener: OfflineCacheManager.ErrorListener? = null
@@ -48,9 +48,9 @@ index 02de75e..77de38b 100644
 +            manager.addErrorListener(WeakReference(listener))
 +        }
 +    }
-
+ 
      override fun getName() = NAME
-
+ 
      override fun init(apiKey: String?, promise: Promise) {
 +        if (apiKey.isNullOrBlank()) {
 +            promise.reject("MAPKIT_API_KEY_MISSING", "Set YAMAP_API_KEY before initializing MapKit")
@@ -80,7 +80,7 @@ index 02de75e..77de38b 100644
 @@ -70,6 +112,103 @@ class YamapModule(reactContext: ReactApplicationContext) : NativeYamapModuleSpec
          })
      }
-
+ 
 +    override fun getOfflineRegionsAtPoint(latitude: Double, longitude: Double, promise: Promise) {
 +        UiThreadUtil.runOnUiThread {
 +            try {
@@ -194,14 +194,14 @@ index fef09fb..0a48849 100644
  import android.os.Looper
  import android.util.Base64
 @@ -12,7 +13,9 @@ import java.net.URL
-
+ 
  class ImageCacheManager {
      companion object {
 -        private val imageCache = mutableMapOf<String, Bitmap?>()
 +        private val imageCache = object : LruCache<String, Bitmap>(32 * 1024 * 1024) {
 +            override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount + key.length * 2
 +        }
-
+ 
          @Throws(IOException::class)
          fun getBitmapSync(context: Context, url: String): Bitmap {
 @@ -54,13 +57,14 @@ class ImageCacheManager {
@@ -213,7 +213,7 @@ index fef09fb..0a48849 100644
                  }
              }.start()
          }
-
+ 
          fun getImage(context: Context, source: String, setImage: (image: Bitmap?) -> Unit) {
 -            imageCache[source]?.let {
 +            imageCache.get(source)?.let {
@@ -260,7 +260,7 @@ index 7d8cbbf..6fb129f 100644
 @@ -68,6 +78,13 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
          _handled = handled
      }
-
+ 
 +    fun setStrictTapBounds(value: Boolean) {
 +        _strictTapBounds = value
 +        updateMarker()
@@ -273,7 +273,7 @@ index 7d8cbbf..6fb129f 100644
          updateMarker()
 @@ -79,7 +96,11 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
      }
-
+ 
      fun setIconSource(source: String?) {
 -        _iconSource = source
 +        if (_iconSource != source) {
@@ -283,7 +283,7 @@ index 7d8cbbf..6fb129f 100644
 +        }
          updateMarker()
      }
-
+ 
 @@ -98,6 +119,7 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
              iconStyle.scale = _scale
              iconStyle.rotationType = if (_rotated) RotationType.ROTATE else RotationType.NO_ROTATION
@@ -293,7 +293,7 @@ index 7d8cbbf..6fb129f 100644
                  iconStyle.anchor = _markerAnchor
              }
 @@ -107,6 +129,8 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
-
+ 
              if (_childView != null) {
                  try {
 +                    iconWidth = _childView!!.width.toFloat()
@@ -334,7 +334,7 @@ index 7d8cbbf..6fb129f 100644
              }
          }
      }
-
+ 
      fun setMarkerMapObject(obj: MapObject?) {
 +        rnMapObject?.takeIf { it.isValid }?.removeTapListener(tapListener)
          rnMapObject = obj as PlacemarkMapObject?
@@ -345,7 +345,7 @@ index 7d8cbbf..6fb129f 100644
 +        rnMapObject?.takeIf { it.isValid }?.addTapListener(tapListener)
          updateMarker()
      }
-
+ 
      private fun setChildView(view: View?) {
          if (view == null) {
 -            _childView!!.removeOnLayoutChangeListener(childLayoutListener)
@@ -360,7 +360,7 @@ index 7d8cbbf..6fb129f 100644
      }
 @@ -203,6 +241,19 @@ class MarkerView(context: Context?) : ReactViewGroup(context), MapObjectTapListe
      }
-
+ 
      override fun onMapObjectTap(mapObject: MapObject, point: Point): Boolean {
 +        if (mapObject !== rnMapObject || !mapObject.isValid || !_visible) return false
 +        if (_strictTapBounds) {
@@ -377,7 +377,7 @@ index 7d8cbbf..6fb129f 100644
 +        }
          val eventDispatcher = UIManagerHelper.getEventDispatcherForReactTag(context as ThemedReactContext, id)
          eventDispatcher?.dispatchEvent(YamapMarkerPressEvent(getSurfaceId(context), id))
-
+ 
 diff --git a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/MarkerViewManager.kt b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/MarkerViewManager.kt
 index 870251e..4fd70ef 100644
 --- a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/MarkerViewManager.kt
@@ -385,7 +385,7 @@ index 870251e..4fd70ef 100644
 @@ -45,6 +45,10 @@ class MarkerViewManager : ViewGroupManager<MarkerView>(), MarkerViewManagerInter
          view.setHandled(handled)
      }
-
+ 
 +    override fun setStrictTapBounds(view: MarkerView, value: Boolean) {
 +        view.setStrictTapBounds(value)
 +    }
@@ -394,10 +394,10 @@ index 870251e..4fd70ef 100644
          view.setRotated(rotated)
      }
 diff --git a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapView.kt b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapView.kt
-index 29bf132..115197f 100644
+index 6f19b43..a091912 100644
 --- a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapView.kt
 +++ b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapView.kt
-@@ -67,6 +67,10 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
+@@ -71,6 +71,10 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
      private var userLocationAccuracyStrokeColor = 0
      private var userLocationAccuracyStrokeWidth = 0f
      private var trafficLayer: TrafficLayer? = null
@@ -407,10 +407,10 @@ index 29bf132..115197f 100644
 +    private var mapLoaded = false
      private var initializedRegion = false
      private var userLocationView: UserLocationView? = null
-
-@@ -430,17 +434,30 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
+     private var focusInsets = RectF()
+@@ -463,17 +467,30 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
      }
-
+ 
      fun setTrafficVisible(isVisible: Boolean) {
 -        if (trafficLayer == null) {
 -            trafficLayer = MapKitFactory.getInstance().createTrafficLayer(mapWindow)
@@ -424,7 +424,7 @@ index 29bf132..115197f 100644
 +            }
 +            return
          }
-
+ 
 -        if (isVisible) {
 -            trafficLayer!!.addTrafficListener(WeakReference(this))
 -            trafficLayer!!.isTrafficVisible = true
@@ -445,9 +445,9 @@ index 29bf132..115197f 100644
          }
 +        layer.isTrafficVisible = true
      }
-
+ 
      fun setShowUserPosition(show: Boolean) {
-@@ -488,6 +505,7 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
+@@ -521,6 +538,7 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
              val obj = mapWindow.map.mapObjects.addPlacemark()
              obj.setIcon(ImageProvider.fromBitmap(createBitmap(1, 1)))
              obj.geometry = child.point!!
@@ -455,10 +455,10 @@ index 29bf132..115197f 100644
              child.setMarkerMapObject(obj)
          } else if (child is CircleView) {
              val obj = mapWindow.map.mapObjects.addCircle(child.circle)
-@@ -501,6 +519,10 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
+@@ -534,6 +552,10 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
              val mapObject = child.rnMapObject
              if (mapObject == null || !mapObject.isValid) return
-
+ 
 +            if (child is MarkerView) {
 +                child.setMarkerMapObject(null)
 +                child.setMarkerMapWindow(null)
@@ -466,9 +466,9 @@ index 29bf132..115197f 100644
              mapWindow.map.mapObjects.remove(mapObject)
          }
      }
-@@ -591,6 +613,9 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
+@@ -624,6 +646,9 @@ open class YamapView(context: Context?) : MapView(context), UserLocationObjectLi
      }
-
+ 
      override fun onMapLoaded(statistics: MapLoadStatistics) {
 +        mapLoaded = true
 +        if (trafficVisibleRequested) setTrafficVisible(true)
@@ -477,13 +477,13 @@ index 29bf132..115197f 100644
          eventDispatcher?.dispatchEvent(MapLoadedEvent(
              getSurfaceId(context),
 diff --git a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapViewManager.kt b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapViewManager.kt
-index 8ee7f70..278cd37 100644
+index d55ffe1..79adf07 100644
 --- a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapViewManager.kt
 +++ b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/view/YamapViewManager.kt
 @@ -81,6 +81,10 @@ class YamapViewManager : ViewGroupManager<YamapView>(), YamapViewManagerInterfac
          implementation.setFastTapDisabled(view, value)
      }
-
+ 
 +    override fun setTrafficVisible(view: YamapView, value: Boolean) {
 +        view.setTrafficVisible(value)
 +    }
@@ -504,19 +504,19 @@ index 5c74845..70871a2 100644
  import com.yandex.mapkit.directions.driving.VehicleOptions
  import com.yandex.mapkit.geometry.SubpolylineHelper
 @@ -33,6 +34,10 @@ import ru.yamap.utils.PointUtil
-
+ 
  class TransportModuleImpl {
-
+ 
 +    // MapKit cancels an in-flight route when its session is released. Several
 +    // React map lifecycles may overlap briefly, so retain every active request.
 +    private val drivingSessions = mutableSetOf<DrivingSession>()
 +
      fun findRoutes(jsPoints: ReadableArray, jsVehicles: ReadableArray?, promise: Promise?) {
          val points = PointUtil.jsPointsToPoints(jsPoints)
-
+ 
 @@ -45,8 +50,10 @@ class TransportModuleImpl {
          }
-
+ 
          if (vehicles.size == 1 && vehicles[0] == "car") {
 +            lateinit var drivingSession: DrivingSession
              val listener: DrivingRouteListener = object : DrivingRouteListener {
@@ -527,14 +527,14 @@ index 5c74845..70871a2 100644
                          val _route = routes[i]
 @@ -67,6 +74,7 @@ class TransportModuleImpl {
                  }
-
+ 
                  override fun onDrivingRoutesError(error: Error) {
 +                    drivingSessions.remove(drivingSession)
                      promise?.reject("onDrivingRoutesError", error.toString())
                  }
              }
 @@ -79,12 +87,13 @@ class TransportModuleImpl {
-
+ 
              runOnUiThread {
                  val drivingRouter = DirectionsFactory.getInstance().createDrivingRouter(DrivingRouterType.ONLINE)
 -                drivingRouter.requestRoutes(
@@ -554,12 +554,12 @@ index bf01868..b10ae56 100644
 +++ b/node_modules/react-native-yamap-plus/ios/Module/RTNTransportModule.mm
 @@ -74,7 +74,7 @@ - (void)findRoutesImpl:(nonnull NSArray *)points vehicles:(nonnull NSArray *)veh
              }
-
+             
              NSMutableDictionary* response = [[NSMutableDictionary alloc] init];
 -            [response setValue:@"status" forKey:@"success"];
 +            [response setValue:@"success" forKey:@"status"];
              NSMutableArray* jsonRoutes = [[NSMutableArray alloc] init];
-
+             
              for (int i = 0; i < [routes count]; ++i) {
 diff --git a/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm b/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm
 index b8e9491..9ca0bc6 100644
@@ -567,13 +567,13 @@ index b8e9491..9ca0bc6 100644
 +++ b/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm
 @@ -1,10 +1,60 @@
  #import "RTNYamapModule.h"
-
+ 
  #import <YandexMapsMobile/YMKMapKitFactory.h>
 +#import <YandexMapsMobile/YMKOfflineCacheManager.h>
 +#import <YandexMapsMobile/YMKOfflineCacheRegion.h>
 +#import <YandexMapsMobile/YMKPoint.h>
  #import <YandexMapsMobile/YRTI18nManager.h>
-
+ 
 +static NSString *offlineRegionStateName(YMKOfflineCacheRegionState state) {
 +    switch (state) {
 +        case YMKOfflineCacheRegionStateAvailable: return @"available";
@@ -600,7 +600,7 @@ index b8e9491..9ca0bc6 100644
 +@end
 +
  @implementation RTNYamapModule
-
+ 
 +- (void)watchOfflineCatalog:(YMKOfflineCacheManager *)manager {
 +    if (!self.offlineListenersAdded) {
 +        [manager addRegionListUpdatesListenerWithRegionListUpdatesListener:self];
@@ -629,7 +629,7 @@ index b8e9491..9ca0bc6 100644
 @@ -53,6 +103,101 @@ - (void)getLocale:(nonnull RCTPromiseResolveBlock)resolve reject:(nonnull RCTPro
      [self getLocaleImpl:resolve];
  }
-
+ 
 +- (void)getOfflineRegionsAtPoint:(double)latitude longitude:(double)longitude resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
 +    @try {
 +        YMKOfflineCacheManager *manager = [YMKMapKit sharedInstance].offlineCacheManager;
@@ -726,7 +726,7 @@ index b8e9491..9ca0bc6 100644
 +}
 +
  RCT_EXPORT_MODULE()
-
+ 
  @end
 diff --git a/node_modules/react-native-yamap-plus/ios/Util/ImageCacheManager.mm b/node_modules/react-native-yamap-plus/ios/Util/ImageCacheManager.mm
 index 1de710c..6442fea 100644
@@ -741,7 +741,7 @@ index 1de710c..6442fea 100644
      }
      return _instance;
  }
-
+ 
  - (void)getWithSource:(NSString * _Nonnull)source completion:(void (^ _Nonnull __strong)(UIImage * _Nonnull __strong))completion {
 +    UIImage *cached = [_imageCache objectForKey:source];
 +    if (cached) { completion(cached); return; }
@@ -756,12 +756,12 @@ index 1de710c..6442fea 100644
 +        return;
 +    }
      NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithURL:[NSURL URLWithString:source] completionHandler:^(NSData * _Nullable taskData, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-
+ 
          UIImage *cachedImage = [_imageCache objectForKey:source];
 @@ -54,7 +68,7 @@ - (void)getWithSource:(NSString * _Nonnull)source completion:(void (^ _Nonnull _
              completion(image);
          });
-
+ 
 -        [_imageCache setObject:image forKey:source];
 +        [_imageCache setObject:image forKey:source cost:CGImageGetBytesPerRow(image.CGImage) * CGImageGetHeight(image.CGImage)];
      }];
@@ -773,33 +773,33 @@ index 2a3bd1f..73a17d0 100644
 +++ b/node_modules/react-native-yamap-plus/ios/View/MarkerView.h
 @@ -4,6 +4,7 @@
  #import <React/RCTViewComponentView.h>
-
+ 
  #import <YandexMapsMobile/YMKPlacemark.h>
 +#import <YandexMapsMobile/YMKMapWindow.h>
-
+ 
  NS_ASSUME_NONNULL_BEGIN
-
+ 
 @@ -14,6 +15,8 @@ NS_ASSUME_NONNULL_BEGIN
  - (void)setMapObject:(YMKPlacemarkMapObject*)mapObject;
  - (void)setClusterMapObject:(YMKPlacemarkMapObject*)mapObject;
  - (BOOL)excludeFromCluster;
 +- (void)setMarkerMapWindow:(nullable YMKMapWindow*)window;
 +- (void)detachMapObject;
-
+ 
  @end
-
+ 
 diff --git a/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm b/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
 index 8e07f96..2a6ee1e 100644
 --- a/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
 +++ b/node_modules/react-native-yamap-plus/ios/View/MarkerView.mm
 @@ -5,6 +5,7 @@
  #import "ImageCacheManager.h"
-
+ 
  #import <YandexMapsMobile/YMKIconStyle.h>
 +#import <YandexMapsMobile/YMKRect.h>
-
+ 
  #import "../Util/NewArchUtils.h"
-
+ 
 @@ -34,6 +35,11 @@ @implementation MarkerView {
      NSValue *anchor;
      BOOL visible;
@@ -817,16 +817,16 @@ index 8e07f96..2a6ee1e 100644
          static const auto defaultProps = std::make_shared<const MarkerViewProps>();
          _props = defaultProps;
 +        _point = [YMKPoint pointWithLatitude:0 longitude:0];
-
+ 
          zIndex = 1;
          scale = [NSNumber numberWithInt:1];
 @@ -64,34 +71,31 @@ + (ComponentDescriptorProvider)componentDescriptorProvider
  }
-
+ 
  - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps {
 -    const auto &oldViewProps = *std::static_pointer_cast<MarkerViewProps const>(_props);
      const auto &newViewProps = *std::static_pointer_cast<MarkerViewProps const>(props);
-
+ 
 -    if (oldViewProps.point.lat != newViewProps.point.lat || oldViewProps.point.lon != newViewProps.point.lon) {
 -        _point = [YMKPoint pointWithLatitude:newViewProps.point.lat longitude:newViewProps.point.lon];
 -    }
@@ -860,19 +860,19 @@ index 8e07f96..2a6ee1e 100644
 +    anchor = [NSValue valueWithCGPoint:CGPointMake(newViewProps.anchor.x, newViewProps.anchor.y)];
 +    scale = [NSNumber numberWithFloat:newViewProps.scale];
 +    zIndex = newViewProps.zI;
-
+ 
      visible = newViewProps.visible;
      rotated = newViewProps.rotated;
      handled = newViewProps.handled;
 +    strictTapBounds = newViewProps.strictTapBounds;
      excludeFromCluster = newViewProps.excludeFromCluster;
-
+ 
 +    [super updateProps:props oldProps:oldProps];
      [self updateMarker];
  }
-
+ 
 @@ -111,15 +115,21 @@ - (void)handleCommand:(const NSString *)commandName args:(const NSArray *)args {
-
+ 
  - (void)prepareForRecycle
  {
 +    [self detachMapObject];
@@ -894,10 +894,10 @@ index 8e07f96..2a6ee1e 100644
 +    _markerViewProvider = nil;
      _reactSubviews = [[NSMutableArray alloc] init];
  }
-
+ 
 @@ -128,68 +138,83 @@ - (BOOL)excludeFromCluster {
  }
-
+ 
  - (BOOL)onMapObjectTapWithMapObject:(nonnull YMKMapObject*)_mapObject point:(nonnull YMKPoint*)point {
 +    if (_mapObject != mapObject || !visible || ![mapObject isValid]) return NO;
 +    if (strictTapBounds) {
@@ -919,10 +919,10 @@ index 8e07f96..2a6ee1e 100644
 +        if (!emitter) return NO;
 +        emitter->onPress({});
      }
-
+ 
      return handled;
  }
-
+ 
  - (void)updateMarker {
 -    if (mapObject != nil && [mapObject isValid]) {
 -        [mapObject setGeometry:_point];
@@ -987,7 +987,7 @@ index 8e07f96..2a6ee1e 100644
          }
      }
  }
-
+ 
  - (void)updateClusterMarker {
 -    if (mapObject != nil && [mapObject isValid]) {
 -        [mapObject setGeometry:_point];
@@ -1027,11 +1027,11 @@ index 8e07f96..2a6ee1e 100644
 +    lastSource = @"";
 +    ++imageRequestId;
  }
-
+ 
  - (YMKPoint*)getPoint {
 @@ -201,7 +226,11 @@ - (YMKPlacemarkMapObject*)getMapObject {
  }
-
+ 
  - (void)setMapObject:(YMKPlacemarkMapObject *)_mapObject {
 +    if (mapObject && [mapObject isValid]) [mapObject removeTapListenerWithTapListener:self];
      mapObject = _mapObject;
@@ -1043,7 +1043,7 @@ index 8e07f96..2a6ee1e 100644
      }
 @@ -209,7 +238,11 @@ - (void)setMapObject:(YMKPlacemarkMapObject *)_mapObject {
  }
-
+ 
  - (void)setClusterMapObject:(YMKPlacemarkMapObject *)_mapObject {
 +    if (mapObject && [mapObject isValid]) [mapObject removeTapListenerWithTapListener:self];
      mapObject = _mapObject;
@@ -1055,19 +1055,19 @@ index 8e07f96..2a6ee1e 100644
      }
 @@ -235,7 +268,9 @@ - (void)mountChildComponentView:(UIView<RCTComponentViewProtocol> *)childCompone
  }
-
+ 
  - (void)unmountChildComponentView:(UIView<RCTComponentViewProtocol> *)childComponentView index:(NSInteger)index {
 +    [_reactSubviews removeObject:childComponentView];
      [childComponentView removeFromSuperview];
 +    [self setChildView];
  }
-
+ 
  - (void)moveAnimationLoop:(NSInteger)frame withTotalFrames:(NSInteger)totalFrames withDeltaLat:(double)deltaLat withDeltaLon:(double)deltaLon {
 diff --git a/node_modules/react-native-yamap-plus/ios/View/YamapView.mm b/node_modules/react-native-yamap-plus/ios/View/YamapView.mm
-index 6cca002..1bbb3d0 100644
+index 2025475..03533c6 100644
 --- a/node_modules/react-native-yamap-plus/ios/View/YamapView.mm
 +++ b/node_modules/react-native-yamap-plus/ios/View/YamapView.mm
-@@ -63,6 +63,10 @@ @implementation YamapView {
+@@ -64,6 +64,10 @@ @implementation YamapView {
      NSMutableArray<YMKPlacemarkMapObject *> *clusterPlacemarks;
      YMKClusterizedPlacemarkCollection *clusterCollection;
      BOOL mapLoaded;
@@ -1078,7 +1078,7 @@ index 6cca002..1bbb3d0 100644
      BOOL hasImperativePlacemarks;
      NSMutableDictionary<NSValue *, NSNumber *> *imperativeIndexMap;
      NSInteger imperativePlacemarkCounter;
-@@ -96,6 +100,8 @@ - (instancetype)initWithFrame:(CGRect)frame {
+@@ -99,6 +103,8 @@ - (instancetype)initWithFrame:(CGRect)frame {
          clusterCollection = [mapView.mapWindow.map.mapObjects addClusterizedPlacemarkCollectionWithClusterListener:self];
          clusterColor = UIColor.redColor;
          mapLoaded = NO;
@@ -1087,10 +1087,10 @@ index 6cca002..1bbb3d0 100644
          clusterWidth = 32;
          clusterHeight = 32;
          clusterTextColor = UIColor.blackColor;
-@@ -129,8 +135,16 @@ - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &
+@@ -132,8 +138,16 @@ - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &
          mapView.mapWindow.map.mapType = [self mapTypeWithJsEnum:newViewProps.mapType];
      }
-
+ 
 -    if (oldViewProps.nightMode != newViewProps.nightMode) {
 +    // The first React prop can be false while MapKit is already in night mode.
 +    // Apply that initial value explicitly, including after Fabric view reuse.
@@ -1103,12 +1103,12 @@ index 6cca002..1bbb3d0 100644
 +        [self setTrafficVisible:newViewProps.trafficVisible];
 +        trafficVisibleConfigured = YES;
      }
-
+ 
      if (oldViewProps.showUserPosition != newViewProps.showUserPosition) {
-@@ -423,6 +437,16 @@ - (void)prepareForRecycle
+@@ -433,6 +447,16 @@ - (void)prepareForRecycle
  {
      [super prepareForRecycle];
-
+ 
 +    nightModeConfigured = NO;
 +    trafficVisibleConfigured = NO;
 +    trafficVisibleRequested = NO;
@@ -1122,9 +1122,9 @@ index 6cca002..1bbb3d0 100644
      [self removeAllSections];
      [clusterPlacemarks removeAllObjects];
      [imperativeIndexMap removeAllObjects];
-@@ -474,19 +498,35 @@ - (void)setMapType:(NSString *)type {
+@@ -484,19 +508,35 @@ - (void)setMapType:(NSString *)type {
  }
-
+ 
  - (void)setTrafficVisible:(BOOL)isVisible {
 -    YMKMapKit *inst = [YMKMapKit sharedInstance];
 +    trafficVisibleRequested = isVisible;
@@ -1145,12 +1145,12 @@ index 6cca002..1bbb3d0 100644
 +    if (!mapLoaded) {
 +        return;
 +    }
-
+ 
      if (trafficLayer == nil) {
 +        YMKMapKit *inst = [YMKMapKit sharedInstance];
          trafficLayer = [inst createTrafficLayerWithMapWindow:mapView.mapWindow];
      }
-
+ 
 -    if (isVisible) {
 -        [trafficLayer setTrafficVisibleWithOn:YES];
 +    if (!trafficListenerAttached) {
@@ -1162,9 +1162,9 @@ index 6cca002..1bbb3d0 100644
      }
 +    [trafficLayer setTrafficVisibleWithOn:YES];
  }
-
+ 
  - (void)onCameraPositionChangedWithMap:(nonnull YMKMap*)map
-@@ -766,6 +806,7 @@ - (void)insertSubview:(UIView *)subview atIndex:(NSInteger)index {
+@@ -798,6 +838,7 @@ - (void)insertSubview:(UIView *)subview atIndex:(NSInteger)index {
              YMKPlacemarkMapObject *obj = [objects addPlacemark];
              [obj setIconWithImage:[[UIImage alloc] init]];
              [obj setGeometry:[marker getPoint]];
@@ -1172,7 +1172,7 @@ index 6cca002..1bbb3d0 100644
              [marker setMapObject:obj];
          }
      } else if ([subview isKindOfClass:[CircleView class]]) {
-@@ -798,6 +839,7 @@ - (void)removeReactSubview:(UIView *)subview {
+@@ -830,6 +871,7 @@ - (void)removeReactSubview:(UIView *)subview {
          MarkerView *marker = (MarkerView *) subview;
          YMKPlacemarkMapObject *mapObject = [marker getMapObject];
          BOOL inClusterHost = [self isKindOfClass:[ClusteredYamapView class]];
@@ -1180,9 +1180,9 @@ index 6cca002..1bbb3d0 100644
          if (inClusterHost && ![marker excludeFromCluster]) {
              [clusterPlacemarks removeObject:mapObject];
          } else if (mapObject != nil && [mapObject isValid]) {
-@@ -984,6 +1026,11 @@ - (void) clusterPlacemarks {
+@@ -1016,6 +1058,11 @@ - (void) clusterPlacemarks {
  }
-
+ 
  - (void)onMapLoadedWithStatistics:(YMKMapLoadStatistics*)statistics {
 +    mapLoaded = YES;
 +    if (trafficVisibleRequested) {
@@ -1192,13 +1192,13 @@ index 6cca002..1bbb3d0 100644
      if (!_eventEmitter) {
          return;
      }
-@@ -1014,7 +1061,6 @@ - (void)onMapLoadedWithStatistics:(YMKMapLoadStatistics*)statistics {
+@@ -1046,7 +1093,6 @@ - (void)onMapLoadedWithStatistics:(YMKMapLoadStatistics*)statistics {
          });
      }
-
+ 
 -    mapLoaded = YES;
  }
-
+ 
  - (void)setInteractiveDisabled:(BOOL)interactiveDisabled {
 diff --git a/node_modules/react-native-yamap-plus/src/modules/YamapInstance.ts b/node_modules/react-native-yamap-plus/src/modules/YamapInstance.ts
 index e5b76a8..70c4e74 100644
@@ -1241,13 +1241,13 @@ index 5d408ca..1abce27 100644
 +  pauseOfflineRegionDownload(regionId: number): Promise<void>
 +  removeOfflineRegion(regionId: number): Promise<void>
  }
-
+ 
  export default TurboModuleRegistry.getEnforcing<Spec>('RTNYamapModule');
 diff --git a/node_modules/react-native-yamap-plus/src/spec/YamapNativeComponent.ts b/node_modules/react-native-yamap-plus/src/spec/YamapNativeComponent.ts
-index f90e404..03bd132 100644
+index 0e9471c..db101ca 100644
 --- a/node_modules/react-native-yamap-plus/src/spec/YamapNativeComponent.ts
 +++ b/node_modules/react-native-yamap-plus/src/spec/YamapNativeComponent.ts
-@@ -104,6 +104,7 @@ export interface YamapNativeProps extends ViewProps {
+@@ -111,6 +111,7 @@ export interface YamapNativeProps extends ViewProps {
    tiltGesturesDisabled?: boolean;
    rotateGesturesDisabled?: boolean;
    fastTapDisabled?: boolean;

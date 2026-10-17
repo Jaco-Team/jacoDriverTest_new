@@ -178,7 +178,6 @@ function createGraphStyles(colors: AppPalette) {
   emptyText: {
     color: colors.textMuted,
     fontFamily: 'Roboto-Medium',
-    lineHeight: 22,
     textAlign: 'center',
   },
   })

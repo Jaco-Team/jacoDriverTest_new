@@ -9,7 +9,7 @@ jest.mock('@/analytics/AppMetricaService', () => ({
   AnalyticsEvent: {},
 }));
 
-import { useGlobalStore, useOrdersStore, useSettingsStore } from '@/shared/store/store';
+import { useGlobalStore, useLoginStore, useOrdersStore, useSettingsStore } from '@/shared/store/store';
 import {setAppOffline} from '@/shared/lib/connectivityState';
 
 const originalGetOrders = useOrdersStore.getState().getOrders;
@@ -31,9 +31,10 @@ describe('orders-map filters and getOrders', () => {
       types_dop: [
         { id: 1, text: 'В очереди' },
         { id: 2, text: 'Готовится' },
+        { id: 4, text: 'На сборке' },
         { id: 3, text: 'Собран' },
       ],
-      type_dop: ['1', '2', '3'],
+      type_dop: ['1', '2', '4', '3'],
       orders: [],
       ordersCache: {},
       ordersContextKey: '',
@@ -57,17 +58,148 @@ describe('orders-map filters and getOrders', () => {
     jest.useRealTimers();
   });
 
-  it('setTypeDop: пустой выбор сбрасывает фильтр на все типы и обновляет без полного спиннера', async () => {
-    const getOrders = jest.fn();
-    useOrdersStore.setState({
-      type_dop: ['1'],
-      getOrders,
-    } as any);
+  it('setTypeDop: фильтрует полный кэш сразу, а пустой выбор возвращает все заказы без запроса', async () => {
+    const orders = [
+      {id: 1, status: 'В очереди'},
+      {id: 2, status: 'Готовится'},
+      {id: 3, status: 'Собран'},
+      {id: 4, status: 'Отдан'},
+    ];
+    mockApi.mockResolvedValueOnce({st: true, data: {orders}});
+    await useOrdersStore.getState().getOrders(false);
+    await jest.advanceTimersByTimeAsync(300);
+    mockApi.mockClear();
+
+    useOrdersStore.getState().setTypeDop(['3']);
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([3]);
+
+    useOrdersStore.getState().setTypeDop(['1', '2']);
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([1, 2]);
 
     useOrdersStore.getState().setTypeDop([]);
+    expect(useOrdersStore.getState().type_dop).toEqual(['1', '2', '4', '3']);
+    expect(useOrdersStore.getState().orders).toBe(orders);
+    expect(mockApi).not.toHaveBeenCalled();
+    expect(useOrdersStore.getState().is_check).toBe(false);
+    expect(useOrdersStore.getState().ordersRefreshPending).toBe(false);
+  });
 
+  it('смена точки сбрасывает фильтр до показа полного кэша новой точки', () => {
+    setAppOffline(true);
+    const currentUser = useLoginStore.getState().currentUser;
+    const owner = String(currentUser?.user_id ?? currentUser?.login ?? 'session');
+    const orders = [
+      {id: 21, status: 'В очереди'},
+      {id: 22, status: 'Готов на кухне'},
+    ];
+    useSettingsStore.setState({point_id: 15});
+    useOrdersStore.setState({
+      type_dop: ['3'],
+      is_showModalTypeDop: true,
+      ordersCache: {[JSON.stringify([owner, 20, 1])]: orders},
+    } as any);
+
+    useSettingsStore.getState().setPointId(20);
+
+    expect(useOrdersStore.getState().type_dop).toEqual(['1', '2', '4', '3']);
+    expect(useOrdersStore.getState().orders).toBe(orders);
+    expect(useOrdersStore.getState().is_showModalTypeDop).toBe(false);
+    expect(mockApi).not.toHaveBeenCalled();
+  });
+
+  it('повторный выбор текущей точки сохраняет фильтр', () => {
+    setAppOffline(true);
+    useSettingsStore.setState({point_id: 15});
+    useOrdersStore.setState({type_dop: ['3']});
+
+    useSettingsStore.getState().setPointId(15);
+
+    expect(useOrdersStore.getState().type_dop).toEqual(['3']);
+  });
+
+  it('«На сборке» сопоставляется с точным status «Готов на кухне», а старые три варианта остаются частичным выбором', async () => {
+    const orders = [
+      {id: 1, status: 'В очереди'},
+      {id: 2, status: 'Готовится'},
+      {id: 3, status: 'Собран'},
+      {id: 4, status: 'Готов на кухне'},
+      {id: 5, status: 'На сборке'},
+      {id: 6, status: 'Готов на кухне '},
+    ];
+    mockApi.mockResolvedValueOnce({st: true, data: {orders}});
+    await useOrdersStore.getState().getOrders(false);
+
+    useOrdersStore.getState().setTypeDop(['4']);
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([4]);
+
+    useOrdersStore.getState().setTypeDop(['3']);
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([3]);
+
+    useOrdersStore.getState().setTypeDop(['1', '2', '3']);
     expect(useOrdersStore.getState().type_dop).toEqual(['1', '2', '3']);
-    expect(getOrders).toHaveBeenCalledWith(false);
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([1, 2, 3]);
+  });
+
+  it.each([false, true])('getOrders: ответ учитывает текущие галочки при наличии кэша=%s', async hasCache => {
+    const cachedOrders = [
+      {id: 1, status: 'В очереди'},
+      {id: 3, status: 'Собран'},
+    ];
+    if (hasCache) {
+      mockApi.mockResolvedValueOnce({st: true, data: {orders: cachedOrders}});
+      await useOrdersStore.getState().getOrders(false);
+      await jest.advanceTimersByTimeAsync(300);
+    }
+    mockApi.mockClear();
+    let finishRequest!: (value: any) => void;
+    let started!: () => void;
+    const requestStarted = new Promise<void>(resolve => {
+      started = resolve;
+    });
+    mockApi.mockImplementationOnce(() => {
+      started();
+      return new Promise(resolve => {
+        finishRequest = resolve;
+      });
+    });
+
+    const pendingRequest = useOrdersStore.getState().getOrders(false);
+    await requestStarted;
+    useOrdersStore.getState().setTypeDop(['3']);
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual(
+      hasCache ? [3] : [],
+    );
+    expect(useOrdersStore.getState().ordersRefreshPending).toBe(false);
+
+    const responseOrders = [
+      {id: 11, status: 'В очереди'},
+      {id: 12, status: 'Готовится'},
+      {id: 13, status: 'Собран'},
+    ];
+    finishRequest({st: true, data: {orders: responseOrders}});
+    await pendingRequest;
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([13]);
+    const state = useOrdersStore.getState();
+    expect(state.ordersCache[state.ordersContextKey]).toBe(responseOrders);
+
+    await jest.advanceTimersByTimeAsync(300);
+    expect(mockApi).toHaveBeenCalledTimes(1);
+    expect(useOrdersStore.getState().type_dop).toEqual(['3']);
+    expect(useOrdersStore.getState().orders.map(order => order.id)).toEqual([13]);
+  });
+
+  it('setTypeDop: выбранные статусы не ограничивают заказы другого раздела', async () => {
+    const orders = [{id: 1, status: 'В пути'}, {id: 2, status: 'Собран'}];
+    useOrdersStore.setState({type: {id: 2, text: 'Мои отмеченные'}} as any);
+    mockApi.mockResolvedValueOnce({st: true, data: {orders}});
+    await useOrdersStore.getState().getOrders(false);
+    await jest.advanceTimersByTimeAsync(300);
+    mockApi.mockClear();
+
+    useOrdersStore.getState().setTypeDop(['3']);
+
+    expect(useOrdersStore.getState().orders).toBe(orders);
+    expect(mockApi).not.toHaveBeenCalled();
   });
 
   it('filterOrdersByTypes фильтрует активные заказы по статусам доп-типов', async () => {
@@ -184,6 +316,70 @@ describe('orders-map filters and getOrders', () => {
     expect(mockApi).toHaveBeenCalledTimes(2);
     expect(useOrdersStore.getState().ordersRefreshPending).toBe(false);
     await jest.advanceTimersByTimeAsync(300);
+  });
+
+  it.each([
+    {failure: 'st=false', offline: false},
+    {failure: 'rejection', offline: false},
+    {failure: 'st=false', offline: true},
+    {failure: 'rejection', offline: true},
+  ])('20 нажатий обновления: $failure, уход офлайн=$offline, без потери кэша и зависания очереди', async ({failure, offline}) => {
+    const currentUser = useLoginStore.getState().currentUser;
+    const owner = String(currentUser?.user_id ?? currentUser?.login ?? 'session');
+    const cacheKey = JSON.stringify([owner, null, 1]);
+    const cachedOrders = [{id: 10, status: 'Собран'}];
+    useOrdersStore.setState({
+      orders: cachedOrders,
+      ordersCache: {[cacheKey]: cachedOrders},
+      ordersContextKey: cacheKey,
+    } as any);
+    let finishFirst!: (value: unknown) => void;
+    let rejectFirst!: (reason: Error) => void;
+    let signalStarted!: () => void;
+    const started = new Promise<void>(resolve => { signalStarted = resolve; });
+    const response = (id: number) => ({st: true, data: {orders: [{id, status: 'Собран'}]}});
+    mockApi.mockImplementationOnce(() => {
+      signalStarted();
+      return new Promise((resolve, reject) => {
+        finishFirst = resolve;
+        rejectFirst = reject;
+      });
+    }).mockResolvedValueOnce(response(20));
+    if (!offline) mockApi.mockResolvedValueOnce(response(30));
+
+    const first = useOrdersStore.getState().getOrders(true);
+    await started;
+    await Promise.all(Array.from({length: 20}, () => useOrdersStore.getState().getOrders(true)));
+    expect(mockApi).toHaveBeenCalledTimes(1);
+    expect(useOrdersStore.getState().ordersRefreshPending).toBe(true);
+    expect(useGlobalStore.getState().loadSpinner).toBe(true);
+
+    if (offline) setAppOffline(true);
+    if (failure === 'rejection') rejectFirst(new Error('Network timeout'));
+    else finishFirst({st: false, text: 'Временная ошибка сервера'});
+    await first;
+
+    expect(useOrdersStore.getState().orders).toBe(cachedOrders);
+    expect(useOrdersStore.getState().ordersCache[cacheKey]).toBe(cachedOrders);
+    await jest.advanceTimersByTimeAsync(300);
+    expect(mockApi).toHaveBeenCalledTimes(offline ? 1 : 2);
+    expect(useOrdersStore.getState().ordersRefreshPending).toBe(false);
+    await jest.advanceTimersByTimeAsync(300);
+    expect(useOrdersStore.getState().is_check).toBe(false);
+    expect(useGlobalStore.getState().loadSpinner).toBe(false);
+    expect(useGlobalStore.getState().loadSpinnerHidden).toBe(false);
+    expect(useOrdersStore.getState().orders.map(item => item.id)).toEqual(offline ? [10] : [20]);
+
+    setAppOffline(false);
+    await useOrdersStore.getState().getOrders(true);
+    await jest.advanceTimersByTimeAsync(300);
+    expect(mockApi).toHaveBeenCalledTimes(offline ? 2 : 3);
+    expect(useOrdersStore.getState().orders.map(item => item.id)).toEqual(offline ? [20] : [30]);
+    expect(useOrdersStore.getState().ordersCache[cacheKey]).toEqual(useOrdersStore.getState().orders);
+    expect(useOrdersStore.getState().is_check).toBe(false);
+    expect(useOrdersStore.getState().ordersRefreshPending).toBe(false);
+    expect(useGlobalStore.getState().loadSpinner).toBe(false);
+    expect(useGlobalStore.getState().loadSpinnerHidden).toBe(false);
   });
 
   it('getOrders: после смены кафе загружает новую точку сразу, не показывая старый ответ', async () => {

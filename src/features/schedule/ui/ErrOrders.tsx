@@ -52,7 +52,15 @@ export function ErrOrders(): React.JSX.Element {
 
           {visibleErrors.length === 0 ? (
             <View style={graphStyles.empty}>
-              <Text style={[graphStyles.emptyText, { fontSize: globalFontSize }]}>
+              <Text
+                style={[
+                  graphStyles.emptyText,
+                  {
+                    fontSize: globalFontSize,
+                    lineHeight: Math.round(globalFontSize * 1.25),
+                  },
+                ]}
+              >
                 Ошибок по заказам за выбранный период нет.
               </Text>
             </View>

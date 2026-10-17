@@ -31,6 +31,7 @@ import {useOrderRecommendationStore} from '@/features/order-recommendation/model
 import {emitOrderTakeStarted} from '@/shared/lib/orderActionEvents'
 import {
   useGlobalStore,
+  useLoginStore,
   useOrdersStore,
   useSettingsStore,
 } from '@/shared/store/store'
@@ -49,6 +50,8 @@ const order = {
   online_pay: 1,
   xy: {latitude: 53.5, longitude: 49.3},
 } as any
+const activeCacheKey = JSON.stringify(['42', 7, 1])
+const originalGetSettings = useSettingsStore.getState().getSettings
 
 describe('ИИ-подсказка в списке заказов', () => {
   beforeEach(() => {
@@ -58,7 +61,8 @@ describe('ИИ-подсказка в списке заказов', () => {
       globalFontSize: 16,
       showAlertText: jest.fn(),
     })
-    useSettingsStore.setState({point_id: 7, ai_recommend: 1})
+    useSettingsStore.setState({point_id: 7, points: [], ai_recommend: 1, getSettings: originalGetSettings})
+    useLoginStore.setState({currentUser: {user_id: 42, login: '79990000002', point_id: 7} as any})
     useOrderRecommendationStore.setState({
       result: null,
       signature: null,
@@ -73,6 +77,10 @@ describe('ИИ-подсказка в списке заказов', () => {
     })
     useOrdersStore.setState({
       orders: [order],
+      ordersCache: {[activeCacheKey]: [order]},
+      ordersContextKey: activeCacheKey,
+      type_dop: ['1', '2', '4', '3'],
+      is_showModalTypeDop: false,
       type: {id: 1, text: 'Активные'},
       limit_summ: '12500 / 70000',
       limit_count: '1 / 6',
@@ -106,6 +114,139 @@ describe('ИИ-подсказка в списке заказов', () => {
 
     const screen = await render(<OrderRecommendationSection />)
 
+    expect(screen.queryByTestId('order-recommendation-button')).toBeNull()
+  })
+
+  it.each([false, true])('анализирует все «Активные», даже если фильтр скрыл всё: %s', async emptyVisibleOrders => {
+    const secondOrder = {...order, id: 900004, status: 'В очереди', status_order: 1}
+    const foreignOrder = {...order, id: 990001}
+    const cancelledOrder = {...order, id: 900005, is_delete: 1}
+    useOrdersStore.setState({
+      orders: emptyVisibleOrders ? [] : [order],
+      ordersCache: {
+        [activeCacheKey]: [order, secondOrder, cancelledOrder],
+        [JSON.stringify(['43', 7, 1])]: [foreignOrder],
+        [JSON.stringify(['42', 8, 1])]: [foreignOrder],
+      },
+      type_dop: ['2'],
+      is_showModalTypeDop: true,
+    })
+    mockRequestRecommendation.mockResolvedValue({
+      st: true,
+      take: [{id: order.id, seq: 1, reason: 'Близко'}],
+    })
+    const screen = await render(<OrderRecommendationSection />)
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('order-recommendation-button'))
+    })
+
+    expect(mockRequestRecommendation.mock.calls[0][0].orders.map((item: any) => item.id))
+      .toEqual([order.id, secondOrder.id])
+    expect(useOrdersStore.getState().type_dop).toEqual(['1', '2', '4', '3'])
+    expect(useOrdersStore.getState().is_showModalTypeDop).toBe(false)
+  })
+
+  it('берёт свежие полные заказы после ожидания геолокации', async () => {
+    let resolveLocation!: (value: any) => void
+    mockGetCourierLocation.mockReturnValue(new Promise(resolve => {resolveLocation = resolve}))
+    mockRequestRecommendation.mockResolvedValue({st: false, code: 'no_suitable_orders'})
+    const screen = await render(<OrderRecommendationSection />)
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('order-recommendation-button'))
+    })
+    const nextOrder = {...order, id: 900004}
+    await act(async () => {
+      useOrdersStore.setState({ordersCache: {[activeCacheKey]: [order, nextOrder]}})
+      resolveLocation(null)
+    })
+    expect(mockRequestRecommendation.mock.calls[0][0].orders.map((item: any) => item.id))
+      .toEqual([order.id, nextOrder.id])
+  })
+
+  it('не отправляет старое кафе с заказами нового кафе после ожидания геолокации', async () => {
+    let resolveLocation!: (value: any) => void
+    mockGetCourierLocation.mockReturnValue(new Promise(resolve => {resolveLocation = resolve}))
+    const screen = await render(<OrderRecommendationSection />)
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('order-recommendation-button'))
+    })
+    await act(async () => {
+      useSettingsStore.setState({point_id: 8})
+      useOrdersStore.setState({ordersCache: {[JSON.stringify(['42', 8, 1])]: [order]}})
+      resolveLocation(null)
+    })
+    expect(mockRequestRecommendation).not.toHaveBeenCalled()
+    expect(useOrderRecommendationStore.getState().isLoading).toBe(false)
+  })
+
+  it('с первого нажатия использует кафе и полный кеш, восстановленные настройками', async () => {
+    const nullPointCacheKey = JSON.stringify(['42', null, 1])
+    const cafeOrder = {...order, id: 900010}
+    const getSettings = jest.fn(async () => {
+      useSettingsStore.setState({point_id: 7, points: [{id: 7, name: 'Кафе'}]})
+      useOrdersStore.setState({
+        orders: [cafeOrder],
+        ordersContextKey: activeCacheKey,
+        ordersCache: {[activeCacheKey]: [cafeOrder]},
+        limit_summ: '100 / 5000',
+        limit_count: '0 / 4',
+      })
+    })
+    useLoginStore.setState({currentUser: {user_id: 42, login: '79990000002', point_id: null} as any})
+    useSettingsStore.setState({point_id: null, points: [], getSettings})
+    useOrdersStore.setState({
+      ordersCache: {[nullPointCacheKey]: [order]},
+      ordersContextKey: nullPointCacheKey,
+      type_dop: ['2'],
+    })
+    mockRequestRecommendation.mockResolvedValue({st: false, code: 'no_suitable_orders'})
+    const screen = await render(<OrderRecommendationSection />)
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('order-recommendation-button'))
+    })
+
+    expect(getSettings).toHaveBeenCalledWith(true)
+    expect(mockRequestRecommendation).toHaveBeenCalledTimes(1)
+    expect(mockRequestRecommendation.mock.calls[0][0]).toMatchObject({
+      point_id: 7,
+      limits: {sum: {current: 100, max: 5000}, count: {current: 0, max: 4}},
+    })
+    expect(mockRequestRecommendation.mock.calls[0][0].orders.map((item: any) => item.id))
+      .toEqual([cafeOrder.id])
+    expect(useOrderRecommendationStore.getState().isLoading).toBe(false)
+  })
+
+  it('не отправляет старый кеш, если настройки восстановили кафе без загруженных заказов', async () => {
+    const nullPointCacheKey = JSON.stringify(['42', null, 1])
+    useLoginStore.setState({currentUser: {user_id: 42, login: '79990000002', point_id: null} as any})
+    useSettingsStore.setState({
+      point_id: null,
+      points: [],
+      getSettings: jest.fn(async () => {
+        useSettingsStore.setState({point_id: 7, points: [{id: 7, name: 'Кафе'}]})
+      }),
+    })
+    useOrdersStore.setState({ordersCache: {[nullPointCacheKey]: [order]}, ordersContextKey: nullPointCacheKey})
+    const screen = await render(<OrderRecommendationSection />)
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('order-recommendation-button'))
+    })
+    expect(mockRequestRecommendation).not.toHaveBeenCalled()
+    expect(useGlobalStore.getState().showAlertText).toHaveBeenCalledWith(
+      true,
+      'Список заказов обновляется. Повторите подбор после загрузки.',
+      'warning',
+    )
+    expect(useOrderRecommendationStore.getState().isLoading).toBe(false)
+  })
+
+  it('не использует старые заказы другого владельца или кафе', async () => {
+    useOrdersStore.setState({
+      ordersCache: {[JSON.stringify(['43', 8, 1])]: [order]},
+      ordersContextKey: JSON.stringify(['43', 8, 1]),
+    })
+    const screen = await render(<OrderRecommendationSection />)
     expect(screen.queryByTestId('order-recommendation-button')).toBeNull()
   })
 
@@ -162,6 +303,7 @@ describe('ИИ-подсказка в списке заказов', () => {
   })
 
   it('использует на карте компактную кнопку и общий готовый результат', async () => {
+    useOrdersStore.setState({type_dop: ['2'], is_showModalTypeDop: true})
     useOrderRecommendationStore.setState({
       result: {st: true, title: 'Готовый совет'},
       orderTypeId: 1,
@@ -190,9 +332,19 @@ describe('ИИ-подсказка в списке заказов', () => {
     expect(screen.getByText('Рекомендации по заказам')).toBeTruthy()
     expect(useOrderRecommendationStore.getState().isRouteVisible).toBe(true)
     expect(mockRequestRecommendation).not.toHaveBeenCalled()
+    expect(useOrdersStore.getState().type_dop).toEqual(['2'])
+    expect(useOrdersStore.getState().is_showModalTypeDop).toBe(true)
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('order-recommendation-close'))
+    })
+    expect(useOrderRecommendationStore.getState().isOpen).toBe(false)
+    expect(useOrderRecommendationStore.getState().result).not.toBeNull()
+    expect(useOrderRecommendationStore.getState().isRouteVisible).toBe(true)
   })
 
   it('показывает нижнюю модалку, когда подходящих заказов нет', async () => {
+    useOrdersStore.setState({type_dop: ['2']})
     mockRequestRecommendation.mockResolvedValue({
       st: false,
       code: 'no_suitable_orders',
@@ -210,9 +362,44 @@ describe('ИИ-подсказка в списке заказов', () => {
     expect(screen.getByText('Подходящих заказов для Вас сейчас нет.')).toBeTruthy()
     expect(screen.getByText('Помочь с выбором')).toBeTruthy()
     expect(useOrderRecommendationStore.getState().isRouteVisible).toBe(false)
+    expect(useOrderRecommendationStore.getState().isLoading).toBe(false)
+    expect(useOrderRecommendationStore.getState().result).toBeNull()
+    expect(useOrdersStore.getState().type_dop).toEqual(['1', '2', '4', '3'])
+  })
+
+  it('освобождает фильтр после ошибки и оставляет все статусы выбранными', async () => {
+    useOrdersStore.setState({type_dop: ['2']})
+    mockRequestRecommendation.mockRejectedValue(new Error('Нет ответа'))
+    const screen = await render(<OrderRecommendationSection />)
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('order-recommendation-button'))
+    })
+    expect(useOrderRecommendationStore.getState().isLoading).toBe(false)
+    expect(useOrderRecommendationStore.getState().result).toBeNull()
+    expect(useOrdersStore.getState().type_dop).toEqual(['1', '2', '4', '3'])
+    expect(useGlobalStore.getState().showAlertText).toHaveBeenCalledWith(true, 'Нет ответа', 'error')
+  })
+
+  it('сброс подборки очищает результат, оставляя фильтр на всех статусах', async () => {
+    mockRequestRecommendation.mockResolvedValue({
+      st: true,
+      take: [{id: order.id, seq: 1, reason: 'Близко'}],
+    })
+    useOrdersStore.setState({type_dop: ['2']})
+    const screen = await render(<OrderRecommendationSection surface="map" />)
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('order-recommendation-map-button'))
+    })
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('order-recommendation-route-hide'))
+    })
+    expect(useOrderRecommendationStore.getState().result).toBeNull()
+    expect(useOrderRecommendationStore.getState().isLoading).toBe(false)
+    expect(useOrdersStore.getState().type_dop).toEqual(['1', '2', '4', '3'])
   })
 
   it('не показывает запоздавший результат после начала взятия заказа', async () => {
+    useOrdersStore.setState({type_dop: ['2']})
     let resolveRecommendation!: (value: any) => void
     mockRequestRecommendation.mockReturnValue(
       new Promise(resolve => {
@@ -233,6 +420,7 @@ describe('ИИ-подсказка в списке заказов', () => {
     })
 
     expect(useOrderRecommendationStore.getState().isLoading).toBe(false)
+    expect(useOrdersStore.getState().type_dop).toEqual(['1', '2', '4', '3'])
     expect(screen.getByText('Помочь с выбором')).toBeTruthy()
 
     await act(async () => {

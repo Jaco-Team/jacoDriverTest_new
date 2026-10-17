@@ -21,6 +21,7 @@ import {
 import {appPalette} from '@/shared/styles/appPalette'
 import type {Order} from '@/shared/store/OrdersStoreType'
 import {useAppTheme} from '@/shared/theme/AppThemeProvider'
+import {scaleGlobalFontSize} from '@/shared/lib/fontSize'
 
 import {
   formatRecommendationDistance,
@@ -43,10 +44,6 @@ interface OrderRecommendationSheetProps {
   onClose: () => void
   onShowOnMap: () => void
   showMapAction?: boolean
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
 }
 
 export function OrderRecommendationSheet({
@@ -94,10 +91,10 @@ export function OrderRecommendationSheet({
       : '',
     distance || '',
   ].filter(Boolean).join(' · ')
-  const titleSize = clamp(fontSize + 4, 18, 24)
-  const sectionSize = clamp(fontSize + 1, 16, 20)
-  const bodySize = clamp(fontSize, 14, 19)
-  const helperSize = clamp(fontSize - 1, 13, 17)
+  const titleSize = scaleGlobalFontSize(20, fontSize, 18, 24)
+  const sectionSize = scaleGlobalFontSize(17, fontSize, 16, 20)
+  const bodySize = scaleGlobalFontSize(16, fontSize, 14, 19)
+  const helperSize = scaleGlobalFontSize(15, fontSize, 13, 17)
   const visibleWarnings = (result?.warnings ?? []).filter(
     warning => !/остальн.*лучше не брать/i.test(warning),
   )

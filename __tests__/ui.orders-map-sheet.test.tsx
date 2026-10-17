@@ -124,8 +124,23 @@ describe('карточка заказа на карте', () => {
       paddingBottom: 48,
     });
     expect(screen.getByTestId('map-order-card-169340')).toBeTruthy();
+    expect(screen.getByTestId('order-map-sheet-drag-region')).toHaveStyle({
+      width: '100%',
+      height: 48,
+      paddingVertical: 0,
+      flexShrink: 0,
+    });
+    expect(
+      screen.getByRole('button', {name: 'Свернуть карточку заказа'}),
+    ).toHaveStyle({
+      width: '100%',
+      height: 48,
+    });
+    expect(screen.getByTestId('order-map-sheet-scroll')).toHaveStyle({
+      flexShrink: 1,
+    });
 
-    fireEvent.press(screen.getByTestId('order-map-sheet-handle'));
+    await fireEvent.press(screen.getByTestId('order-map-sheet-handle'));
     expect(mockShowOrdersMap).toHaveBeenCalledWith(-1, 1);
   });
 
@@ -134,8 +149,24 @@ describe('карточка заказа на карте', () => {
     await renderSheet();
 
     expect(screen.getByTestId('order-map-sheet-spinner')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('order-map-sheet-handle'));
+    expect(
+      screen.getByTestId('order-map-sheet-drag-region').props.pointerEvents,
+    ).toBe('none');
+    await fireEvent.press(screen.getByTestId('order-map-sheet-handle'));
+    await act(() => mockSheetCallbacks[mockSheetCallbacks.length - 1]());
     expect(mockShowOrdersMap).not.toHaveBeenCalled();
+  });
+
+  it('закрытие жестом использует ту же защиту сессии, что и нажатие на ручку', async () => {
+    await renderSheet();
+
+    expect(
+      screen.getByTestId('order-map-sheet-drag-region').props.pointerEvents,
+    ).toBe('auto');
+    await act(() => mockSheetCallbacks[mockSheetCallbacks.length - 1]());
+
+    expect(mockShowOrdersMap).toHaveBeenCalledTimes(1);
+    expect(mockShowOrdersMap).toHaveBeenCalledWith(-1, 1);
   });
 
   it('окрашивает всю шторку для удалённого заказа', async () => {
@@ -196,9 +227,7 @@ describe('карточка заказа на карте', () => {
     });
     expect(screen.queryByTestId('map-order-card-900001')).toBeNull();
 
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('order-map-group-order-900002'));
-    });
+    await fireEvent.press(screen.getByTestId('order-map-group-order-900002'));
 
     expect(screen.getByTestId('map-order-card-900002')).toBeTruthy();
     expect(screen.queryByTestId('map-order-card-900001')).toBeNull();
@@ -223,11 +252,50 @@ describe('карточка заказа на карте', () => {
       backgroundColor: '#E9EEF3',
     });
 
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('order-map-group-back'));
-    });
+    await fireEvent.press(screen.getByTestId('order-map-group-back'));
     expect(screen.getByTestId('order-map-group-list')).toBeTruthy();
     expect(screen.queryByTestId('map-order-card-900002')).toBeNull();
+  });
+
+  it('при размере 26 переносит время заказа на отдельную строку', async () => {
+    mockLogic.globalFontSize = 26;
+    mockLogic.showOrders = [
+      {
+        id: 900001,
+        id_text: '#900001 В очереди 0%',
+        addr: 'улица Ленина, 85',
+        pd: '1',
+        et: '5',
+        kv: '12',
+        point_text: '11:51 (48 мин.)',
+        is_delete: 0,
+      },
+      {
+        id: 900002,
+        id_text: '#900002 Готовится 0%',
+        addr: 'улица Ленина, 85',
+        pd: '2',
+        et: '3',
+        kv: '41',
+        point_text: '11:38 (45 мин.)',
+        is_delete: 0,
+      },
+    ];
+
+    await renderSheet();
+
+    expect(screen.getByTestId('order-map-group-title')).toHaveStyle({
+      fontSize: 26,
+    });
+    expect(screen.getByTestId('order-map-group-order-900002')).toHaveStyle({
+      flexDirection: 'column',
+      alignItems: 'stretch',
+    });
+    expect(screen.getByTestId('order-map-group-time-900002')).toHaveStyle({
+      width: '100%',
+      maxWidth: '100%',
+      justifyContent: 'space-between',
+    });
   });
 
   it('не рендерится в закрытом состоянии', async () => {

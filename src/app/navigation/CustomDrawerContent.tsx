@@ -32,6 +32,7 @@ import type { AppPalette } from '@/shared/styles/appPalette'
 import { useGlobalStore, useLoginStore } from '@/shared/store/store'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
+import { scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 type DrawerRouteName =
   | 'List_orders'
@@ -210,6 +211,11 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
   const navigationLabelFontSize = clampFontSize(globalFontSize, 15, 18)
   const contactLabelFontSize = clampFontSize(globalFontSize - 1, 14, 17)
   const contactPhoneFontSize = clampFontSize(globalFontSize - 2, 12, 15)
+  const eyebrowFontSize = scaleGlobalFontSize(13, globalFontSize, 12)
+  const titleFontSize = scaleGlobalFontSize(28, globalFontSize)
+  const averageLabelFontSize = scaleGlobalFontSize(13, globalFontSize, 12)
+  const averageValueFontSize = scaleGlobalFontSize(22, globalFontSize)
+  const sectionTitleFontSize = scaleGlobalFontSize(13, globalFontSize, 12)
 
   const navigationItems = isNeedPageStat
     ? NAVIGATION_ITEMS
@@ -268,8 +274,21 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
     <View style={styles.root} testID="app-drawer">
       <SafeAreaView edges={['top']} style={styles.brandSafeArea}>
         <View style={styles.brandHeader}>
-          <Text style={styles.brandEyebrow}>НАВИГАЦИЯ</Text>
-          <Text numberOfLines={2} style={styles.brandTitle}>
+          <Text
+            style={[
+              styles.brandEyebrow,
+              { fontSize: eyebrowFontSize, lineHeight: Math.round(eyebrowFontSize * 1.25) },
+            ]}
+          >
+            НАВИГАЦИЯ
+          </Text>
+          <Text
+            numberOfLines={2}
+            style={[
+              styles.brandTitle,
+              { fontSize: titleFontSize, lineHeight: Math.round(titleFontSize * 1.12) },
+            ]}
+          >
             {currentTitle}
           </Text>
         </View>
@@ -285,13 +304,34 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
             <Clock3 color={colors.primary} size={25} strokeWidth={2} />
           </View>
           <View style={styles.averageText}>
-            <Text style={styles.averageLabel}>СРЕДНЕЕ ВРЕМЯ</Text>
-            <Text style={styles.averageValue}>{avgTime || '00:00:00'}</Text>
+            <Text
+              style={[
+                styles.averageLabel,
+                { fontSize: averageLabelFontSize, lineHeight: Math.round(averageLabelFontSize * 1.25) },
+              ]}
+            >
+              СРЕДНЕЕ ВРЕМЯ
+            </Text>
+            <Text
+              style={[
+                styles.averageValue,
+                { fontSize: averageValueFontSize, lineHeight: Math.round(averageValueFontSize * 1.15) },
+              ]}
+            >
+              {avgTime || '00:00:00'}
+            </Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>РАЗДЕЛЫ</Text>
+          <Text
+            style={[
+              styles.sectionTitle,
+              { fontSize: sectionTitleFontSize, lineHeight: Math.round(sectionTitleFontSize * 1.25) },
+            ]}
+          >
+            РАЗДЕЛЫ
+          </Text>
           <View style={styles.cardList}>
             {navigationItems.map((item) => (
               <DrawerNavigationCard
@@ -307,7 +347,14 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
 
         {contactItems.length > 0 ? (
           <View style={[styles.section, styles.contactsSection]}>
-            <Text style={styles.sectionTitle}>КОНТАКТЫ</Text>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { fontSize: sectionTitleFontSize, lineHeight: Math.round(sectionTitleFontSize * 1.25) },
+              ]}
+            >
+              КОНТАКТЫ
+            </Text>
             <View style={styles.cardList}>
               {contactItems.map((item) => (
                 <DrawerContactCard

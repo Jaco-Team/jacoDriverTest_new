@@ -6,6 +6,7 @@ import type {
   FeedbackType,
 } from '@/shared/store/FeedbackStoreType'
 import { getLaravelAuthToken } from '@/shared/lib/laravelAuthTokenStorage'
+import { assertFeedbackImages } from '@/shared/lib/feedbackImage'
 
 import { bearerHeaders, laravelHttp } from './connector'
 import { laravelApiRoutes } from './routes'
@@ -78,6 +79,8 @@ export async function createLaravelFeedback(input: {
   is_need_notification: 0 | 1
   images: Asset[]
 }): Promise<LaravelSaveFeedbackResponse> {
+  assertFeedbackImages(input.images)
+
   const token = requireToken(await getLaravelAuthToken())
   const formData = new FormData()
 

@@ -89,10 +89,10 @@ export function getMarkerPalette(theme: Theme, isDark: boolean) {
     };
   if (theme === 'white_border')
     return {
-      background: '#FFFFFF',
-      border: '#000000',
+      background: isDark ? '#000000' : '#FFFFFF',
+      border: isDark ? '#FFFFFF' : '#000000',
       borderWidth: 1,
-      text: '#000000',
+      text: isDark ? '#FFFFFF' : '#000000',
       opacity: 1,
     };
   return {

@@ -7,6 +7,8 @@ const mockSelectMonth = jest.fn()
 const mockShowOrderError = jest.fn()
 const mockShowCameraError = jest.fn()
 let mockMonthOpen = false
+let mockErrorFontSize = 16
+let mockOrderErrors: Array<Record<string, unknown>> = []
 
 jest.mock('@/features/schedule/model/useGraphLogic', () => ({
   useGraphLogic: jest.fn(),
@@ -47,18 +49,12 @@ jest.mock('@/features/schedule/model/useGraphTable', () => ({
 
 jest.mock('@/features/schedule/model/useError', () => ({
   useErrorOrders: () => ({
-    globalFontSize: 16,
-    err_orders: [{
-      err_id: 1,
-      row_id: 2,
-      order_id: 10,
-      date_time_order: '30.08.2026 12:00',
-      pr_name: 'Опоздание',
-    }],
+    globalFontSize: mockErrorFontSize,
+    err_orders: mockOrderErrors,
     showModalErrOrder: mockShowOrderError,
   }),
   useErrorCamera: () => ({
-    globalFontSize: 16,
+    globalFontSize: mockErrorFontSize,
     err_cam: [],
     showModalErrCam: mockShowCameraError,
   }),
@@ -101,6 +97,14 @@ describe('страница графика работы', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockMonthOpen = false
+    mockErrorFontSize = 16
+    mockOrderErrors = [{
+      err_id: 1,
+      row_id: 2,
+      order_id: 10,
+      date_time_order: '30.08.2026 12:00',
+      pr_name: 'Опоздание',
+    }]
   })
 
   it('показывает карточки и таблицы актуального сайта без pull-to-refresh', async () => {
@@ -170,5 +174,25 @@ describe('страница графика работы', () => {
 
     await fireEvent.press(selectedOption)
     expect(mockSelectMonth).toHaveBeenCalledWith('2026-08', 'Август 2026')
+  })
+
+  it('при размере 26 не зажимает пустые сообщения высотой строки 22', async () => {
+    mockErrorFontSize = 26
+    mockOrderErrors = []
+
+    await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <GraphScreen />
+      </SafeAreaProvider>,
+    )
+
+    expect(screen.getByText('Ошибок по заказам за выбранный период нет.')).toHaveStyle({
+      fontSize: 26,
+      lineHeight: 33,
+    })
+    expect(screen.getByText('Ошибок по камерам за выбранный период нет.')).toHaveStyle({
+      fontSize: 26,
+      lineHeight: 33,
+    })
   })
 })

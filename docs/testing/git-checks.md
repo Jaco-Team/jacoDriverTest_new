@@ -63,6 +63,7 @@ on:
   push:
     branches:
       - main
+      - new_architecture
 
 concurrency:
   group: ci-baseline-${{ github.workflow }}-${{ github.ref }}
@@ -112,6 +113,10 @@ jobs:
 5. Добавить required check: `CI Baseline / lint-typecheck-unit`.
 
 После этого merge будет разрешен только при зеленом baseline.
+
+Наличие workflow в репозитории не подтверждает, что branch protection уже
+включён в GitHub. Его настройку проверяют отдельно; зелёные локальные команды
+не являются подтверждением защищённого merge.
 
 ## Как проверять, что Git-gate работает
 

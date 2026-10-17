@@ -31,6 +31,7 @@ export interface DriverOfflineOrders {
   limitSumm: string;
   ordersCache: Record<string, Order[]>;
   typeDop: string[];
+  statusFilterVersion?: 2;
   updateInterval: number;
 }
 

@@ -7,6 +7,7 @@ import { getOrderAddress } from '@/entities/CardOrder/model/getOrderAddress'
 import { getOrderNeedTime } from '@/entities/CardOrder/model/getOrderNeedTime'
 import { CardOrderProps } from '@/entities/CardOrder/model/types'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import { scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 import { CardTagPopover } from './CardTagPopover'
 import { CardTag } from './CardTag'
@@ -31,6 +32,7 @@ export const CardOrderComponent: React.FC<CardOrderProps> = ({
   const onlinePay = toOrderInt(item.online_pay)
   const needTime = getOrderNeedTime(item)
   const textColor = colors.text
+  const titleFontSize = scaleGlobalFontSize(18, globalFontSize)
   const bodyTextStyle = {
     color: textColor,
     fontSize: globalFontSize,
@@ -56,8 +58,8 @@ export const CardOrderComponent: React.FC<CardOrderProps> = ({
           styles.title,
           {
             color: textColor,
-            fontSize: globalFontSize + 2,
-            lineHeight: globalFontSize + 8,
+            fontSize: titleFontSize,
+            lineHeight: Math.round(titleFontSize * 1.35),
           },
         ]}
         testID="order-card-title"

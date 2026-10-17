@@ -93,6 +93,14 @@ describe('ResetPwdScreen', () => {
     expect(screen.getByText('Заглавная латинская буква')).toBeTruthy()
     expect(screen.getByTestId('reset-hint')).toBeTruthy()
     expect(screen.getByTestId('reset-submit').props.disabled).toBe(true)
+    expect(screen.getByTestId('reset-submit-surface')).toHaveStyle({
+      backgroundColor: '#E0E0E0',
+      borderColor: '#C9CDD1',
+      borderWidth: 1,
+    })
+    expect(screen.getByTestId('reset-submit-label')).toHaveStyle({
+      color: '#9E9E9E',
+    })
   })
 
   it('скрывает CAPTCHA только по явному отказу сервера от проверки', async () => {
@@ -113,6 +121,14 @@ describe('ResetPwdScreen', () => {
   it('передаёт ввод первого шага и переход к авторизации', async () => {
     mockResetState.canRequestCode = true
     const screen = await render(<ResetPwdScreen />)
+
+    expect(screen.getByTestId('reset-submit-surface')).toHaveStyle({
+      backgroundColor: '#CC0033',
+      borderColor: '#CC0033',
+    })
+    expect(screen.getByTestId('reset-submit-label')).toHaveStyle({
+      color: '#FFFFFF',
+    })
 
     await fireEvent.changeText(screen.getByTestId('reset-phone-input'), '89003270606')
     await fireEvent.changeText(screen.getByTestId('reset-password-input'), 'Password1')

@@ -238,6 +238,24 @@ const mkHost = (name) =>
     React.createElement(name, { ref, ...props }, props?.children ?? null)
   );
 
+// Match native pressable semantics rather than forwarding disabled handlers
+// as ordinary View props. RNTL uses the responder to decide if a tap is allowed.
+const mkPressableHost = (name) =>
+  React.forwardRef((props, ref) =>
+    React.createElement(name, {
+      ...props,
+      ref,
+      accessible: props.accessible !== false,
+      accessibilityState: props.disabled == null
+        ? props.accessibilityState
+        : { ...props.accessibilityState, disabled: props.disabled },
+      onStartShouldSetResponder: () => !props.disabled,
+      style: typeof props.style === 'function'
+        ? props.style({ pressed: false })
+        : props.style,
+    }, props.children ?? null)
+  );
+
 // Если из requireActual пришло что-то не-функция — подменяем
 if (typeof rn.View !== 'function') {
   def(rn, 'View', mkHost('RN_VIEW'));
@@ -285,7 +303,7 @@ if (typeof rn.TextInput !== 'function') {
 }
 
 if (typeof rn.Pressable !== 'function') {
-  def(rn, 'Pressable', mkHost('RN_PRESSABLE'));
+  def(rn, 'Pressable', mkPressableHost('RN_PRESSABLE'));
 }
 
 if (typeof rn.ActivityIndicator !== 'function') {
@@ -318,14 +336,14 @@ if (typeof rn.StatusBar !== 'function') {
 }
 
 if (typeof rn.TouchableOpacity !== 'function') {
-  def(rn, 'TouchableOpacity', mkHost('RN_TOUCHABLE_OPACITY'));
+  def(rn, 'TouchableOpacity', mkPressableHost('RN_TOUCHABLE_OPACITY'));
 }
 // по желанию — сразу подстрахуем родню:
 if (typeof rn.TouchableWithoutFeedback !== 'function') {
   def(rn, 'TouchableWithoutFeedback', mkHost('RN_TOUCHABLE_WITHOUT_FEEDBACK'));
 }
 if (typeof rn.Pressable !== 'function') {
-  def(rn, 'Pressable', mkHost('RN_PRESSABLE'));
+  def(rn, 'Pressable', mkPressableHost('RN_PRESSABLE'));
 }
 if (typeof rn.ScrollView !== 'function') {
   def(rn, 'ScrollView', mkHost('RN_SCROLL_VIEW'));

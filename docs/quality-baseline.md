@@ -22,7 +22,12 @@ Baseline нужен, чтобы перед заливкой и при прове
 
 - [.github/workflows/ci-baseline.yml](../.github/workflows/ci-baseline.yml)
 
-## Текущий статус на 2026-10-01
+## Текущий baseline
+
+Актуальный стек — RN `0.88.0`, React `19.3.1`, TypeScript `6.0.3` и ESLint 10.
+Число наборов/тестов, результаты последнего прогона, нативных сборок и ручных
+проверок фиксируются только в [журнале тестирования](./testing/testing-progress.md).
+Датированные записи этого журнала не являются проверкой более новой сборки.
 
 ### `lint`
 
@@ -38,13 +43,18 @@ npm run lint
 - проект использует flat config [eslint.config.js](../eslint.config.js);
 - старый [.eslintrc.js](../.eslintrc.js) оставлен как исторический файл, но ESLint 10 берет `eslint.config.js`;
 - `@typescript-eslint`, `eslint-plugin-react-hooks` и `eslint-plugin-react-native` закреплены явными dev-зависимостями; единый TypeScript 6.0.3 используется и как `tsc`, и как compiler API для `typescript-eslint`;
-- текущий lint baseline минимальный: он проверяет парсинг и базовые правила, но строгие RN/hooks правила пока не включены как обязательный gate.
+- текущий lint baseline проверяет парсинг и базовые правила; для TS/TSX
+  `react-hooks/rules-of-hooks` включён как `error`, а `react-hooks/exhaustive-deps`
+  — как `warn`. Строгий набор React Native-правил не включён;
+- команда `eslint .` не задаёт `--max-warnings=0`: предупреждение о зависимостях
+  хука само по себе не делает baseline красным.
 
 Вывод:
 
 - `lint` восстановлен как рабочий gate;
 - проверенная прямая установка TypeScript 7 ломает `typescript-eslint`; итоговый TypeScript 6.0.3 входит в его поддерживаемый диапазон `<6.1.0`;
-- усиление правил стоит делать отдельной задачей, чтобы не смешивать baseline и большую чистку lint-замечаний.
+- усиление остальных правил и перевод предупреждений в ошибки стоит делать
+  отдельной задачей, чтобы не смешивать baseline и большую lint-чистку.
 
 ### `typecheck`
 
@@ -78,15 +88,10 @@ npm run typecheck
 npm run test:unit
 ```
 
-Текущий результат:
-
-- `103` test suites passed;
-- `424` tests passed;
-- `0` snapshots;
-- команда использует `--runInBand --watchman=false`.
-
-Результат 29.09.2026 — 100 наборов / 408 тестов — сохранён в
-[журнале тестирования](./testing/testing-progress.md) как историческая проверка.
+Команда использует `--runInBand --watchman=false`. Свежий результат полного
+набора и отсутствие/наличие пропущенных тестов смотрите в
+[журнале тестирования](./testing/testing-progress.md), а не в исторических
+числах прежних волн.
 
 В этот baseline входят unit/component-тесты, включая синхронизацию офлайн-регионов MapKit. Detox и запуск эмуляторов в него не входят; нативные сборки и ручные проверки ведутся отдельно.
 
@@ -94,7 +99,7 @@ npm run test:unit
 
 - обычный запуск может падать на Watchman-правах в локальной среде.
 
-Что было исправлено:
+Исторические исправления при первоначальной стабилизации:
 
 - `jest.setSystemTime(new Date(...))` заменен на timestamp в миллисекундах в тестах статистики.
 - добавлены тесты:
@@ -164,7 +169,8 @@ npm run test:unit
   - `eslint-plugin-react-hooks`;
   - `eslint-plugin-react-native`.
 
-Важно: текущий config намеренно минимальный. React Native / React Hooks strict rules можно усиливать отдельной задачей после зеленого baseline.
+Важно: действующие hooks-правила и их уровни перечислены выше. Остальные
+React Native / React Hooks strict rules усиливаются отдельной задачей.
 
 ### Этап 5. Сделать baseline обязательным
 
@@ -207,7 +213,8 @@ npm run test:unit
 - e2e;
 - iOS/Android native build;
 - запуск на simulator/emulator;
-- строгий набор RN/hooks lint-правил;
+- полный строгий набор RN/hooks lint-правил (два действующих hooks-правила
+  и их уровни описаны выше);
 - branch protection в настройках GitHub.
 
 ## Следующий организационный шаг

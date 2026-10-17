@@ -8,6 +8,7 @@ import { Analytics, AnalyticsEvent } from '@/analytics/AppMetricaService'
 import type { ActivePricePicker, PriceMetricRow } from './types'
 import {useIsOffline} from '@/shared/ui/ConnectivityLocationIndicator'
 import {useOnlineScreenRefresh} from '@/shared/lib/useOnlineScreenRefresh'
+import {scaleGlobalFontSize} from '@/shared/lib/fontSize'
 
 const API_DATE_FORMAT = 'YYYY-MM-DD'
 const UI_DATE_FORMAT = 'D MMMM YYYY'
@@ -116,7 +117,7 @@ export function usePriceScreen() {
   const pickerTitle = activePicker === 'start' ? 'Дата от' : activePicker === 'end' ? 'Дата до' : ''
 
   const totalPriceFontSize = useMemo(
-    () => Math.max(globalFontSize * 2.6, 48),
+    () => scaleGlobalFontSize(26, globalFontSize),
     [globalFontSize],
   )
 

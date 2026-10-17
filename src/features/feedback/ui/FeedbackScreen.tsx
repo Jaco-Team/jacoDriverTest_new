@@ -17,6 +17,7 @@ import type { FeedbackStatus } from '@/shared/store/FeedbackStoreType'
 import { ScreenLayout } from '@/shared/ui/ScreenLayout'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
+import { normalizeGlobalFontSize, scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 import CreateFeedbackModal from './CreateFeedbackModal'
 import FeedbackList from './FeedbackList'
@@ -29,10 +30,6 @@ const STATUS_OPTIONS: Array<{ value: FeedbackStatus; label: string }> = [
   { value: 'Отклонено', label: 'Отклонено' },
   { value: 'Решено', label: 'Решено' },
 ]
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
-}
 
 export const FeedbackScreen: React.FC = () => {
   const { colors, isDark } = useAppTheme()
@@ -69,10 +66,8 @@ export const FeedbackScreen: React.FC = () => {
     if (isOffline && modal.isViewModalOpen) closeViewModal()
   }, [closeCreateModal, closeViewModal, isOffline, modal.isCreateModalOpen, modal.isViewModalOpen])
 
-  const normalizedFontSize = Number.isFinite(globalFontSize) && globalFontSize > 0
-    ? globalFontSize
-    : 16
-  const chipFontSize = clamp(normalizedFontSize - 1, 13, 19)
+  const normalizedFontSize = normalizeGlobalFontSize(globalFontSize)
+  const chipFontSize = scaleGlobalFontSize(15, normalizedFontSize, 13, 19)
   const filteredFeedbacks = React.useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLocaleLowerCase('ru')
 
@@ -108,8 +103,8 @@ export const FeedbackScreen: React.FC = () => {
       >
         <View style={[styles.filtersCard, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, shadowColor: colors.shadowStrong }]} testID="feedback-filters-card">
           <View style={styles.filtersHeading}>
-            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: clamp(normalizedFontSize + 2, 16, 26) }]}>Статус</Text>
-            <Text style={[styles.selectedStatus, { color: colors.textMuted, fontSize: clamp(normalizedFontSize - 1, 12, 20) }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: scaleGlobalFontSize(18, normalizedFontSize, 16) }]}>Статус</Text>
+            <Text style={[styles.selectedStatus, { color: colors.textMuted, fontSize: scaleGlobalFontSize(15, normalizedFontSize, 12, 20) }]}>
               Выбрано: {selectedStatusLabel}
             </Text>
           </View>
@@ -173,7 +168,7 @@ export const FeedbackScreen: React.FC = () => {
               placeholder="Поиск по заголовку и описанию"
               placeholderTextColor={colors.textMuted}
               ref={searchInputRef}
-              style={[styles.searchInput, { color: colors.text, fontSize: clamp(normalizedFontSize, 14, 22) }]}
+              style={[styles.searchInput, { color: colors.text, fontSize: scaleGlobalFontSize(16, normalizedFontSize, 14, 22) }]}
               testID="feedback-search-input"
               value={searchQuery}
             />
@@ -192,8 +187,8 @@ export const FeedbackScreen: React.FC = () => {
         </View>
 
         <View style={styles.listHeading}>
-          <Text style={[styles.listHeadingText, { color: colors.textMuted, fontSize: clamp(normalizedFontSize + 1, 14, 24) }]}>Лента предложений</Text>
-          <Text style={[styles.listCount, { color: colors.textMuted, fontSize: clamp(normalizedFontSize - 1, 12, 20) }]}>Всего: {isOffline ? 0 : filteredFeedbacks.length}</Text>
+          <Text style={[styles.listHeadingText, { color: colors.textMuted, fontSize: scaleGlobalFontSize(17, normalizedFontSize, 14, 24) }]}>Лента предложений</Text>
+          <Text style={[styles.listCount, { color: colors.textMuted, fontSize: scaleGlobalFontSize(15, normalizedFontSize, 12, 20) }]}>Всего: {isOffline ? 0 : filteredFeedbacks.length}</Text>
         </View>
 
         <FeedbackList

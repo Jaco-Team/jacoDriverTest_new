@@ -9,6 +9,7 @@ import { useAppTheme } from '@/shared/theme/AppThemeProvider'
 import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
 import { useOnlineScreenRefresh } from '@/shared/lib/useOnlineScreenRefresh'
 import { useScrollToTopOnFocus } from '@/shared/lib/useScrollToTopOnFocus'
+import { scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 import FeedbackItem from './FeedbackItem'
 
@@ -47,10 +48,10 @@ const FeedbackList: React.FC<FeedbackListProps> = ({
       keyExtractor={item => String(item.id)}
       ListEmptyComponent={
         <View style={[styles.emptyCard, { borderColor: colors.border, backgroundColor: colors.surfaceRaised }]}>
-          <Text style={[styles.emptyTitle, { color: colors.text, fontSize: Math.min(28, globalFontSize + 3) }]}>
+          <Text style={[styles.emptyTitle, { color: colors.text, fontSize: scaleGlobalFontSize(19, globalFontSize, 18) }]}>
             {!isOffline && error ? 'Не удалось загрузить данные' : 'Ничего не найдено'}
           </Text>
-          <Text style={[styles.emptyText, { color: colors.textMuted, fontSize: Math.max(14, globalFontSize) }]}>
+          <Text style={[styles.emptyText, { color: colors.textMuted, fontSize: scaleGlobalFontSize(16, globalFontSize, 14) }]}>
             {!isOffline && error ? error : 'Попробуйте изменить фильтр или текст поиска'}
           </Text>
         </View>

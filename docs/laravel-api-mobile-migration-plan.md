@@ -1,6 +1,11 @@
 # План подключения мобильного приложения к Laravel API
 
-Дата обновления: 04.09.2026.
+Статус миграции зафиксирован 04.09.2026; инструкции и ссылки уточнены 16.10.2026.
+
+Датированные результаты ниже — история перехода API, а не проверка текущей
+сборки RN `0.88.0`. Свежие автоматические/ручные результаты ведутся в
+[журнале тестирования](./testing/testing-progress.md), открытые release-сценарии —
+в [релизном чек-листе](./testing/release-checklist.md).
 
 Статус: `мобильный код реализован и локально проверен; production-развёртывание и финальная внешняя проверка не выполнены`.
 
@@ -72,9 +77,10 @@ React Native-приложение с legacy API `api2.jacochef.ru/driver/public/
 
 ## 3. Локальный запуск Laravel API
 
-В текущей локальной копии `.env` уже существует, подключения `main` и `system`
-заполнены, а демо-режим включён. Повторно копировать `.env.example` поверх `.env`
-нельзя.
+Локальный `.env` backend не перезаписывать копированием `.env.example`.
+Наличие файла не означает, что его БД локальные или демо-режим включён:
+это проверяется отдельно без вывода секретов. Не запускать миграции, генерацию
+ключа или меняющие данные проверки в рабочем окружении ради мобильного smoke.
 
 На текущем Mac установлен PHP 8.2, а проект требует PHP `^8.4`. Поэтому первый
 `composer install` нужно выполнять внутри Docker, либо сначала установить локальный
@@ -91,17 +97,19 @@ docker compose -f compose.yaml run --rm --no-deps laravel.test composer install
 # Запуск API:
 docker compose -f compose.yaml up -d laravel.test
 
-# Однократно для нового .env:
+# Только при подготовке нового .env без APP_KEY; существующий ключ не менять:
 docker compose -f compose.yaml exec laravel.test php artisan key:generate
 
-# Миграции выполняются только в служебной system-БД:
+# Только для согласованной тестовой system-БД, не рабочей БД:
 docker compose -f compose.yaml exec laravel.test php artisan migrate --database=system
 
-# Проверка:
+# Read-only проверка запуска:
 curl http://localhost:8080/api/v1/health
 docker compose -f compose.yaml exec laravel.test php artisan route:list
-docker compose -f compose.yaml exec laravel.test php artisan test
 ```
+
+Backend-тесты запускают отдельно по правилам backend в изолированном тестовом
+окружении. Они не являются частью `npm run test:unit` мобильного приложения.
 
 Ежедневные команды:
 
@@ -113,25 +121,13 @@ docker compose -f compose.yaml logs -f laravel.test
 docker compose -f compose.yaml down
 ```
 
-Если нужна локальная web-проверка тем же контрактом:
-
-```bash
-cd /Users/denis/Public/work/jaco_driver_site
-git switch api-laravel
-npm ci
-npm run dev
-```
-
-Сайт откроется на `http://localhost:3225`, а `.env.development` уже направляет
-его на `http://localhost:8080`.
-
-Проверка production-сборки сайта:
-
-```bash
-cd /Users/denis/Public/work/jaco_driver_site
-npm run build
-PORT=3225 npm run start
-```
+Если нужна локальная web-проверка того же контракта, использовать актуальную
+[инструкцию запуска сайта](../../jaco_driver_site/docs/development.md).
+Не переключать его ветку и не переустанавливать зависимости только ради
+мобильной проверки. Сайт (`localhost:3225`) и Laravel (`localhost:8080`) —
+разные процессы. Web `dev`, production/standalone и `preview:offline` читают
+окружение по своим правилам; мобильный Metro их env не использует.
+Режим web-preview не запускает backend и не определяет адрес API приложения.
 
 Адрес Laravel API для мобильного клиента выбирается явным режимом:
 
@@ -285,7 +281,8 @@ mobile callback.
 ## 7. Открытые решения до завершения
 
 - [ ] QR-оплата: подключать сейчас или скрыть до отдельного согласования.
-- [ ] Тёмная тема приложения.
+- [x] Системная, светлая и тёмная темы реализованы; актуальные ручные проверки
+  и их границы — в [журнале тестирования](./testing/testing-progress.md).
 - [ ] Развернуть подготовленные mobile CAPTCHA/SSO-изменения Laravel API ответственным
   за production; до этого release SSO открывает существующий web-сценарий без возврата
   в приложение.

@@ -11,11 +11,8 @@ import {useShallow} from 'zustand/react/shallow';
 
 import {useAppTheme} from '@/shared/theme/AppThemeProvider';
 import {useGlobalStore, useOrdersStore} from '@/shared/store/store';
+import {scaleGlobalFontSize} from '@/shared/lib/fontSize';
 import {groupOrdersByMapLocation} from '../model/mapEdgeIndicators';
-
-function clampFontSize(value: number, min: number, max: number): number {
-  return Math.max(Math.min(value, max), min);
-}
 
 function getOrderCountLabel(count: number): string {
   const lastTwoDigits = count % 100;
@@ -41,10 +38,10 @@ export function OrdersMapOfflineList({topInset}: {topInset: number}) {
     () => groupOrdersByMapLocation(orders, type.id === 5),
     [orders, type.id],
   );
-  const titleFontSize = clampFontSize(globalFontSize + 4, 20, 28);
-  const hintFontSize = clampFontSize(globalFontSize - 1, 13, 16);
-  const addressFontSize = clampFontSize(globalFontSize, 14, 20);
-  const metaFontSize = clampFontSize(globalFontSize - 2, 12, 15);
+  const titleFontSize = scaleGlobalFontSize(20, globalFontSize, 20);
+  const hintFontSize = scaleGlobalFontSize(15, globalFontSize, 13, 16);
+  const addressFontSize = scaleGlobalFontSize(16, globalFontSize, 14, 20);
+  const metaFontSize = scaleGlobalFontSize(14, globalFontSize, 12, 15);
 
   return (
     <ScrollView

@@ -46,6 +46,7 @@ import {
 import {isAppOffline} from '@/shared/lib/connectivityState';
 import {OFFLINE_ORDER_ACTION_MESSAGE} from '@/shared/lib/offlineOrderAction';
 import {getOrderMapLocationKey} from '@/shared/lib/orderMapLocation';
+import {normalizeGlobalFontSize} from '@/shared/lib/fontSize';
 import {Theme, ShowType} from '@/shared/types/globalTypes';
 import {
   migrateAppThemeFromNightMap,
@@ -196,7 +197,7 @@ export const useGlobalStore = create<globalTypes>()((set, get) => ({
   },
 
   setFontSize: (size: number) => {
-    set({globalFontSize: size});
+    set({globalFontSize: normalizeGlobalFontSize(size)});
   },
   setTheme: (theme: Theme) => {
     set({theme: theme});
@@ -230,7 +231,21 @@ function isOrdersCacheKeyForOwner(cacheKey: string, ownerKey: string): boolean {
   }
 }
 
+const ORDER_STATUS_FILTER_OPTIONS = [
+  {id: 1, text: 'В очереди'},
+  {id: 2, text: 'Готовится'},
+  {id: 4, text: 'На сборке'},
+  {id: 3, text: 'Собран'},
+];
+
+let settingsRevision = 0;
+
+function getAllOrderStatusFilterIds(): string[] {
+  return ORDER_STATUS_FILTER_OPTIONS.map(item => String(item.id));
+}
+
 function resetDriverOfflineState(): void {
+  settingsRevision += 1;
   useGlobalStore.setState({
     globalFontSize: 16,
     mapScale: 1,
@@ -241,6 +256,7 @@ function resetDriverOfflineState(): void {
   });
 
   useSettingsStore.setState({
+    isClick: false,
     action_centered_map: 0,
     color: '',
     fontSize: 16,
@@ -263,7 +279,8 @@ function resetDriverOfflineState(): void {
 
   useOrdersStore.setState({
     type: {id: 1, text: 'Активные'},
-    type_dop: ['1', '2', '3'],
+    type_dop: getAllOrderStatusFilterIds(),
+    is_showModalTypeDop: false,
     orders: [],
     ordersCache: {},
     ordersContextKey: '',
@@ -289,6 +306,7 @@ async function clearDriverOfflineState(): Promise<void> {
 
 async function hydrateDriverOfflineState(cache: DriverOfflineCache): Promise<void> {
   const settings = cache.settings;
+  const fontSize = normalizeGlobalFontSize(settings.fontSize);
   const ownerKey = getDriverOfflineOwnerKey(cache.owner);
   const ordersState = useOrdersStore.getState();
   const activeType =
@@ -300,11 +318,20 @@ async function hydrateDriverOfflineState(cache: DriverOfflineCache): Promise<voi
     activeType.id,
   ]);
   const cachedOrders = cache.orders.ordersCache[contextKey] ?? [];
+  const savedTypeDop = cache.orders.typeDop;
+  // Only legacy caches treat the old three selected options as "all".
+  // A new selection of those same three intentionally excludes assembly.
+  const isLegacyAll = cache.orders.statusFilterVersion !== 2 &&
+    savedTypeDop.length === 3 &&
+    ['1', '2', '3'].every(id => savedTypeDop.includes(id));
+  const restoredTypeDop = savedTypeDop.length === 0 || isLegacyAll
+    ? ordersState.types_dop.map(item => String(item.id))
+    : savedTypeDop;
 
   useSettingsStore.setState({
     action_centered_map: settings.action_centered_map,
     color: settings.color,
-    fontSize: settings.fontSize,
+    fontSize,
     mapScale: settings.mapScale,
     theme: settings.theme,
     type_data_map: settings.type_data_map,
@@ -323,7 +350,7 @@ async function hydrateDriverOfflineState(cache: DriverOfflineCache): Promise<voi
   });
 
   useGlobalStore.setState({
-    globalFontSize: settings.fontSize,
+    globalFontSize: fontSize,
     mapScale: settings.mapScale,
     theme: settings.theme,
     phones: cache.phones,
@@ -339,11 +366,11 @@ async function hydrateDriverOfflineState(cache: DriverOfflineCache): Promise<voi
 
   useOrdersStore.setState({
     type: activeType,
-    type_dop: cache.orders.typeDop,
+    type_dop: restoredTypeDop,
     orders: getVisibleOrders(
       cachedOrders,
       activeType,
-      cache.orders.typeDop,
+      restoredTypeDop,
       ordersState.types_dop,
       ordersState.typeToStatus,
     ),
@@ -373,6 +400,25 @@ async function restoreDriverOfflineStateForUser(
   }
 
   await hydrateDriverOfflineState(cache);
+}
+
+async function applyDriverSessionUser(user: LaravelAuthUser): Promise<boolean> {
+  const previousUser = useLoginStore.getState().currentUser;
+  const accountChanged = previousUser != null &&
+    !isDriverOfflineOwnerMatch(getDriverOfflineOwner(previousUser), user);
+
+  if (accountChanged) {
+    await clearDriverOfflineState();
+  } else if (!previousUser) {
+    // Cold-start hydration below may restore the same account's saved choice.
+    useOrdersStore.setState({
+      type_dop: getAllOrderStatusFilterIds(),
+      is_showModalTypeDop: false,
+    });
+  }
+
+  useLoginStore.setState({currentUser: user});
+  return accountChanged;
 }
 
 async function persistDriverOfflineState(): Promise<void> {
@@ -424,6 +470,7 @@ async function persistDriverOfflineState(): Promise<void> {
       limitSumm: orders.limit_summ,
       ordersCache,
       typeDop: orders.type_dop,
+      statusFilterVersion: 2,
       updateInterval: orders.update_interval,
     },
   });
@@ -462,7 +509,7 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
       await saveLaravelAuthToken(laravelSession.token);
       await useGlobalStore.getState().setTokenAuth(laravelSession.token);
       const currentUser = await fetchLaravelMe(laravelSession.token);
-      set({currentUser});
+      await applyDriverSessionUser(currentUser);
 
       await restoreDriverOfflineStateForUser(currentUser);
       await useSettingsStore.getState().getSettings();
@@ -509,7 +556,7 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
       await saveLaravelAuthToken(laravelSession.token);
       await useGlobalStore.getState().setTokenAuth(laravelSession.token);
       const currentUser = await fetchLaravelMe(laravelSession.token);
-      set({currentUser});
+      await applyDriverSessionUser(currentUser);
 
       await restoreDriverOfflineStateForUser(currentUser);
       await useSettingsStore.getState().getSettings();
@@ -603,7 +650,7 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
         await saveLaravelAuthToken(session.token);
         await useGlobalStore.getState().setTokenAuth(session.token);
         const currentUser = await fetchLaravelMe(session.token);
-        set({currentUser});
+        await applyDriverSessionUser(currentUser);
         await restoreDriverOfflineStateForUser(currentUser);
         await useSettingsStore.getState().getSettings();
       } catch (error) {
@@ -695,10 +742,10 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
 
     try {
       const currentUser = await fetchLaravelMe(laravelToken);
-      set({currentUser});
+      const accountChanged = await applyDriverSessionUser(currentUser);
       await useAppThemeStore.getState().hydrateForOwner(getDriverOfflineOwnerKey(getDriverOfflineOwner(currentUser)));
 
-      if (offlineCache) {
+      if (offlineCache && !accountChanged) {
         if (isDriverOfflineOwnerMatch(offlineCache.owner, currentUser)) {
           await hydrateDriverOfflineState(offlineCache);
         } else {
@@ -1144,7 +1191,8 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
   },
 
   getSettings: async (silent = false) => {
-    if (isAppOffline()) return;
+    if (isAppOffline() || get().isClick) return;
+    const requestRevision = settingsRevision;
 
     if (!silent) useGlobalStore.getState().setSpinner(true);
 
@@ -1157,7 +1205,7 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
 
     const res = await api<MySettingsResponse>('settings', data);
 
-    if (res.st === false || useGlobalStore.getState().tokenAuth !== token) {
+    if (res.st === false || requestRevision !== settingsRevision || useGlobalStore.getState().tokenAuth !== token) {
       if (!silent) useGlobalStore.getState().setSpinner(false);
       return;
     }
@@ -1167,7 +1215,7 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
     const savedPointIdValue = await AsyncStorage.getItem(
       SELECTED_POINT_STORAGE_KEY,
     );
-    if (useGlobalStore.getState().tokenAuth !== token) {
+    if (requestRevision !== settingsRevision || useGlobalStore.getState().tokenAuth !== token) {
       if (!silent) useGlobalStore.getState().setSpinner(false);
       return;
     }
@@ -1183,9 +1231,9 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
     set({points, point_id: pointId});
     get().getPhoneCafe();
 
-    useGlobalStore
-      .getState()
-      .setFontSize(parseInt(String(res.data?.fontSize ?? 16), 10));
+    const fontSize = normalizeGlobalFontSize(res.data?.fontSize);
+
+    useGlobalStore.getState().setFontSize(fontSize);
     useGlobalStore.getState().setTheme(res.data?.theme ?? 'white');
     //useGlobalStore.getState().setMapScale( parseFloat(res.data?.mapScale ?? 1) );
     useGlobalStore
@@ -1207,7 +1255,7 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
     set({
       action_centered_map: res.data?.action_centered_map,
       color: res.data?.color,
-      fontSize: res.data?.fontSize,
+      fontSize,
       //mapScale: parseFloat(res.data?.mapScale ?? 1),
       mapScale: res.data?.mapScale,
       theme: res.data?.theme,
@@ -1256,15 +1304,22 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
     app_theme: AppThemePreference | undefined = useAppThemeStore.getState().preference,
     map_hints = true,
     ai_recommend = false,
+    successMessage = 'Настройки сохранены',
   ) => {
-    if (isAppOffline()) return;
+    if (isAppOffline()) return false;
+
+    const normalizedFontSize = normalizeGlobalFontSize(fontSize);
 
     const token = await useGlobalStore.getState().getAuthToken();
+    const owner = useLoginStore.getState().currentUser;
+    const isCurrentSession = () => useGlobalStore.getState().tokenAuth === token &&
+      useLoginStore.getState().currentUser?.user_id === owner?.user_id &&
+      useLoginStore.getState().currentUser?.login === owner?.login;
 
     if (get().isClick === false) {
       set({isClick: true});
     } else {
-      return;
+      return false;
     }
 
     useGlobalStore.getState().setSpinner(true);
@@ -1283,13 +1338,15 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
       is_scaleMap: is_scaleMap.length == 1 ? 1 : 0,
       map_hints: map_hints ? 1 : 0,
       ai_recommend: ai_recommend ? 1 : 0,
-      fontSize: fontSize,
+      fontSize: normalizedFontSize,
       theme,
       mapScale,
     };
 
     try {
       const result = await api<SaveSettingsResponse>('settings', data);
+
+      if (!isCurrentSession()) return false;
 
       if (result.st === false) {
         throw new Error(result.text || 'Не удалось сохранить настройки');
@@ -1300,10 +1357,11 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
         'Успешное сохранение настроек',
       );
 
+      settingsRevision += 1;
       set({
         action_centered_map: data.action_centered_map,
         color,
-        fontSize,
+        fontSize: normalizedFontSize,
         mapScale,
         theme,
         type_data_map: groupTypeTime as MySettingsResponse['type_data_map'],
@@ -1316,15 +1374,17 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
         ai_recommend: data.ai_recommend,
       });
 
-      useGlobalStore.getState().showAlertText(true, 'Настройки сохранены');
-      useGlobalStore.getState().setFontSize(fontSize);
+      useGlobalStore.getState().showAlertText(true, successMessage);
+      useGlobalStore.getState().setFontSize(normalizedFontSize);
       useGlobalStore.getState().setTheme(theme);
       useGlobalStore.getState().setMapScale(mapScale);
       useOrdersStore.getState().setUpdateInterval(update_interval);
       void useAppThemeStore.getState().setPreference(data.app_theme).catch(() => undefined);
       useAppThemeStore.getState().clearPreviewPreference();
       void persistDriverOfflineState().catch(() => undefined);
+      return true;
     } catch (e) {
+      if (!isCurrentSession()) return false;
       Analytics.log(
         AnalyticsEvent.SettingsSaveFail,
         'Ошибка в сохранение настроек',
@@ -1332,8 +1392,10 @@ export const useSettingsStore = create<SettingsStore>()((set, get) => ({
       useGlobalStore
         .getState()
         .showModalText(true, 'Не удалось сохранить настройки');
+      return false;
     } finally {
       setTimeout(() => {
+        if (!isCurrentSession()) return;
         set({isClick: false});
         useGlobalStore.getState().setSpinner(false);
       }, 300);
@@ -1781,18 +1843,15 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
     {id: 6, text: 'Мои завершенные'}, //мои завершенеы
   ],
 
-  types_dop: [
-    {id: 1, text: 'В очереди'},
-    {id: 2, text: 'Готовится'},
-    {id: 3, text: 'Собран'},
-  ],
+  types_dop: ORDER_STATUS_FILTER_OPTIONS,
   typeToStatus: {
     '1': 'В очереди',
     '2': 'Готовится',
     '3': 'Собран',
+    '4': 'Готов на кухне',
   },
 
-  type_dop: ['1', '2', '3'],
+  type_dop: getAllOrderStatusFilterIds(),
   is_showModalTypeDop: false,
 
   limit_summ: '',
@@ -1836,11 +1895,11 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
   },
 
   setTypeDop: (type: string[]) => {
+    const state = get();
     if (type.length == 0) {
-      type = ['1', '2', '3'];
+      type = state.types_dop.map(item => String(item.id));
     }
 
-    const state = get();
     const cacheKey = getOrdersCacheKey(state.type.id);
     const cachedOrders = state.ordersCache[cacheKey];
     set({
@@ -1859,8 +1918,6 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
     });
 
     void persistDriverOfflineState().catch(() => undefined);
-
-    void get().getOrders(false);
   },
 
   filterOrdersByTypes: <T extends {status: string}>(
@@ -1989,12 +2046,13 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
       if (json.data?.orders) {
         const responseOrders = json.data.orders;
+        const currentState = get();
         const orders = getVisibleOrders(
           responseOrders,
-          type,
-          type_dop,
-          types_dop,
-          get().typeToStatus,
+          currentState.type,
+          currentState.type_dop,
+          currentState.types_dop,
+          currentState.typeToStatus,
         );
         const ordersCache = {
           ...get().ordersCache,
@@ -2228,15 +2286,18 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
   switchPoint: (pointId: number | null) => {
     const state = get();
+    const typeDop = getAllOrderStatusFilterIds();
     const cacheKey = getOrdersCacheKey(state.type.id, pointId);
     const cachedOrders = state.ordersCache[cacheKey];
 
     set({
+      type_dop: typeDop,
+      is_showModalTypeDop: false,
       orders: cachedOrders
         ? getVisibleOrders(
             cachedOrders,
             state.type,
-            state.type_dop,
+            typeDop,
             state.types_dop,
             state.typeToStatus,
           )

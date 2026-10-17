@@ -20,10 +20,7 @@ import { appPalette } from '@/shared/styles/appPalette'
 import { useCreateFeedbackModal } from '../model/useCreateFeedbackModal'
 import { FeedbackSheet } from './FeedbackSheet'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
-}
+import { normalizeGlobalFontSize, scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 function FeedbackTextInput(props: TextInputProps): React.JSX.Element {
   if (Platform.OS === 'ios') return <BottomSheetTextInput {...props} />
@@ -53,11 +50,10 @@ const CreateFeedbackModal: React.FC = () => {
   } = useCreateFeedbackModal()
   const [isImageViewerOpen, setIsImageViewerOpen] = React.useState(false)
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0)
-  const normalizedFontSize = Number.isFinite(globalFontSize) && globalFontSize > 0
-    ? globalFontSize
-    : 16
-  const bodyFontSize = clamp(normalizedFontSize, 14, 20)
-  const sectionFontSize = clamp(bodyFontSize + 1, 15, 24)
+  const normalizedFontSize = normalizeGlobalFontSize(globalFontSize)
+  const bodyFontSize = scaleGlobalFontSize(16, normalizedFontSize, 14, 20)
+  const sectionFontSize = scaleGlobalFontSize(17, normalizedFontSize, 15, 24)
+  const titleFontSize = scaleGlobalFontSize(22, normalizedFontSize, 20)
   const previewImages = images
     .filter(image => Boolean(image.uri))
     .map(image => ({ uri: image.uri as string }))
@@ -69,7 +65,7 @@ const CreateFeedbackModal: React.FC = () => {
       onClose={handleClose}
       testID="feedback-create-sheet"
     >
-      <Text style={[styles.title, { color: colors.text, fontSize: clamp(bodyFontSize + 6, 20, 30) }]}>Новое предложение</Text>
+      <Text style={[styles.title, { color: colors.text, fontSize: titleFontSize }]}>Новое предложение</Text>
       <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
       <Text style={[styles.sectionTitle, { color: colors.text, fontSize: sectionFontSize }]}>Тип</Text>
@@ -97,7 +93,10 @@ const CreateFeedbackModal: React.FC = () => {
                 style={[
                   styles.typeChipText,
                   selected && styles.typeChipTextSelected,
-                  { color: selected ? '#FFFFFF' : colors.text, fontSize: clamp(bodyFontSize - 1, 13, 19) },
+                  {
+                    color: selected ? '#FFFFFF' : colors.text,
+                    fontSize: scaleGlobalFontSize(15, normalizedFontSize, 13, 19),
+                  },
                 ]}
               >
                 {feedbackType}
@@ -165,7 +164,7 @@ const CreateFeedbackModal: React.FC = () => {
         style={[styles.imagePicker, { borderColor: colors.border, backgroundColor: colors.surfaceRaised }]}
         testID="feedback-image-picker"
       >
-        <Text style={[styles.imagePickerText, { color: colors.textMuted, fontSize: clamp(bodyFontSize - 1, 13, 18) }]}>
+        <Text style={[styles.imagePickerText, { color: colors.textMuted, fontSize: scaleGlobalFontSize(15, normalizedFontSize, 13, 18) }]}>
           {images.length > 0 ? 'Добавить еще изображения' : 'Нажмите, чтобы добавить изображения'}
         </Text>
       </Pressable>
@@ -202,7 +201,7 @@ const CreateFeedbackModal: React.FC = () => {
         {isSaving ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text style={[styles.submitText, { fontSize: clamp(bodyFontSize + 2, 15, 24) }]}>Отправить</Text>
+          <Text style={[styles.submitText, { fontSize: scaleGlobalFontSize(18, normalizedFontSize, 15, 24) }]}>Отправить</Text>
         )}
       </Pressable>
 

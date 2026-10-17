@@ -29,9 +29,11 @@ const mockMapMount = jest.fn()
 const mockMapUnmount = jest.fn()
 const mockHomeMarkerMount = jest.fn()
 const mockHomeMarkerUnmount = jest.fn()
+const mockGetOrders = jest.fn()
 
 const mockTheme = {
   colors: {
+    brand: '#CC0033',
     surface: '#F4F7FA',
     surfaceRaised: '#FFFFFF',
     softStrong: 'rgba(66, 98, 125, 0.14)',
@@ -71,6 +73,17 @@ jest.mock('@fortawesome/react-native-fontawesome', () => {
   return {
     FontAwesomeIcon: (props: any) => React.createElement(View, props),
   }
+})
+
+jest.mock('lucide-react-native', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+  const icons = jest.requireActual('lucide-react-native')
+  const RefreshCcw = (props: any) => React.createElement(View, props)
+
+  return new Proxy(icons, {
+    get: (target, name) => name === 'RefreshCcw' ? RefreshCcw : target[name],
+  })
 })
 
 jest.mock('@/components/ui/slider', () => {
@@ -138,6 +151,9 @@ describe('экран карты заказов', () => {
     mockMapLogic.type_location = 'none'
     mockMapLogic.driver_location_requesting = false
     mockMapLogic.trafficVisible = false
+    mockMapLogic.is_scaleMap = 1
+    mockMapLogic.is_showModalTypeDop = false
+    mockMapLogic.isOpenOrderMap = false
     mockMapLogic.set_type_location.mockClear()
     mockTheme.isDark = false
     mockMapLogic.isOffline = false
@@ -147,12 +163,19 @@ describe('экран карты заказов', () => {
     mockHomeMarkerMount.mockClear()
     mockHomeMarkerUnmount.mockClear()
     useSettingsStore.setState({map_hints: 1, ai_recommend: 0})
+    mockGetOrders.mockClear()
+    useOrdersStore.setState({
+      getOrders: mockGetOrders,
+      is_check: false,
+      isClick: false,
+      is_load: false,
+    })
   })
 
   it('занимает всю доступную область и сохраняет собственные элементы карты', async () => {
     await render(<MapScreen />)
     await act(async () => {
-      fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
+      await fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
         nativeEvent: { layout: { width: 390, height: 700 } },
       })
     })
@@ -178,7 +201,7 @@ describe('экран карты заказов', () => {
 
     await render(<MapScreen />)
     await act(async () => {
-      fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
+      await fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
         nativeEvent: {layout: {width: 390, height: 700}},
       })
     })
@@ -189,7 +212,7 @@ describe('экран карты заказов', () => {
   it('использует тот же трёхрежимный обработчик геолокации, что и сайт', async () => {
     await render(<MapScreen />)
 
-    fireEvent.press(screen.getByTestId('orders-map-driver-location'))
+    await fireEvent.press(screen.getByTestId('orders-map-driver-location'))
 
     expect(mockMapLogic.set_type_location).toHaveBeenCalledTimes(1)
   })
@@ -223,11 +246,91 @@ describe('экран карты заказов', () => {
     expect(screen.getByTestId('orders-map-driver-location').props.disabled).toBe(true)
   })
 
-  it('не добавляет локальные кнопки фильтра и обновления поверх карты', async () => {
+  it('добавляет нижнюю кнопку обновления, но не дублирует фильтр', async () => {
     await render(<MapScreen />)
 
     expect(screen.queryByTestId('orders-map-filter')).toBeNull()
+    expect(screen.getByTestId('orders-map-refresh')).toHaveStyle({
+      bottom: 112,
+      width: 44,
+      height: 44,
+      borderWidth: 0,
+      backgroundColor: 'transparent',
+    })
+    expect(screen.queryByTestId('orders-map-refresh-background')).toBeNull()
+    expect(screen.getByTestId('orders-map-refresh-icon').props.color).toBe('#1F2D38')
+    expect(screen.getByTestId('orders-map-refresh-icon').props.strokeWidth).toBe(2.7)
+    await fireEvent.press(screen.getByTestId('orders-map-refresh'))
+    expect(mockGetOrders).toHaveBeenCalledWith(true)
+  })
+
+  it('оставляет кнопку снизу при выключенном ползунке и в тёмной теме', async () => {
+    mockMapLogic.is_scaleMap = 0
+    mockTheme.isDark = true
+    await render(<MapScreen />)
+
+    expect(screen.queryByTestId('map-zoom-slider')).toBeNull()
+    expect(screen.getByTestId('orders-map-refresh')).toHaveStyle({bottom: 112})
+    expect(screen.getByTestId('orders-map-refresh-icon').props.color).toBe('#FFFFFF')
+  })
+
+  it('скрывает обновление без интернета и возвращает после восстановления сети', async () => {
+    const view = await render(<MapScreen />)
+    mockMapLogic.isOffline = true
+    await view.rerender(<MapScreen />)
     expect(screen.queryByTestId('orders-map-refresh')).toBeNull()
+
+    mockMapLogic.isOffline = false
+    await view.rerender(<MapScreen />)
+    expect(screen.getByTestId('orders-map-refresh')).toBeTruthy()
+  })
+
+  it.each(['is_check', 'is_load'] as const)(
+    'принимает нажатие обновления во время обычной загрузки %s',
+    async flag => {
+      useOrdersStore.setState({[flag]: true})
+      await render(<MapScreen />)
+
+      expect(screen.getByTestId('orders-map-refresh').props.disabled).toBe(false)
+      expect(screen.getByTestId('orders-map-refresh')).toHaveStyle({opacity: 1})
+      expect(screen.getByTestId('orders-map-refresh-icon').props.color).toBe('#1F2D38')
+      await fireEvent.press(screen.getByTestId('orders-map-refresh'))
+      expect(mockGetOrders).toHaveBeenCalledWith(true)
+    },
+  )
+
+  it('блокирует обновление только во время действия с заказом', async () => {
+    useOrdersStore.setState({isClick: true})
+    await render(<MapScreen />)
+
+    expect(screen.getByTestId('orders-map-refresh').props.disabled).toBe(true)
+    await fireEvent.press(screen.getByTestId('orders-map-refresh'))
+    expect(mockGetOrders).not.toHaveBeenCalled()
+  })
+
+  it.each(['is_showModalTypeDop', 'isOpenOrderMap'] as const)(
+    'не перекрывает открытую шторку %s',
+    async flag => {
+      mockMapLogic[flag] = true
+      await render(<MapScreen />)
+
+      expect(screen.queryByTestId('orders-map-refresh')).toBeNull()
+    },
+  )
+
+  it('учитывает нижнюю безопасную область', async () => {
+    const {SafeAreaProvider} = require('react-native-safe-area-context')
+    await render(
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: {x: 0, y: 0, width: 390, height: 844},
+          insets: {top: 47, right: 0, bottom: 34, left: 0},
+        }}>
+        <MapScreen />
+      </SafeAreaProvider>,
+    )
+
+    expect(screen.getByTestId('orders-map-refresh')).toHaveStyle({bottom: 146})
   })
 
   it('скрывает круги-подсказки за границей карты по настройке курьера', async () => {
@@ -243,7 +346,7 @@ describe('экран карты заказов', () => {
 
     await render(<MapScreen />)
     await act(async () => {
-      fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
+      await fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
         nativeEvent: { layout: { width: 390, height: 700 } },
       })
     })
@@ -257,7 +360,7 @@ describe('экран карты заказов', () => {
 
     await render(<MapScreen />)
     await act(async () => {
-      fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
+      await fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
         nativeEvent: { layout: { width: 390, height: 700 } },
       })
     })
@@ -340,7 +443,7 @@ describe('экран карты заказов', () => {
     expect(screen.queryByTestId('native-yandex-map')).toBeNull()
     expect(screen.queryByTestId('orders-map-rotation-lock')).toBeNull()
 
-    fireEvent.press(screen.getByTestId('orders-map-offline-order-71'))
+    await fireEvent.press(screen.getByTestId('orders-map-offline-order-71'))
     expect(showOrdersMap).toHaveBeenCalledWith(71)
   })
 
@@ -384,7 +487,7 @@ describe('экран карты заказов', () => {
       </ConnectivityContext.Provider>,
     )
     await act(async () => {
-      fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
+      await fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
         nativeEvent: {layout: {width: 390, height: 700}},
       })
     })

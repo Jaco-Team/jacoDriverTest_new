@@ -152,6 +152,57 @@ describe('useCreateFeedbackModal: форма и image picker', () => {
     expect(api!.images).toEqual([second]);
   });
 
+  it('не добавляет видео, даже если picker вернул его в ответе', async () => {
+    const video = { uri: 'file://clip.mp4', fileName: 'clip.mp4', type: 'video/mp4' };
+    await render(<Probe />);
+
+    await act(async () => {
+      api!.handleImagePickerResponse({ assets: [video] } as any);
+    });
+
+    expect(api!.images).toEqual([]);
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Неподдерживаемый файл',
+      'Можно загружать только изображения.',
+    );
+  });
+
+  it('из смешанного выбора добавляет только фото и показывает одно предупреждение', async () => {
+    const existing = {uri: 'file://existing.jpg', type: 'image/jpeg'};
+    const photo = {uri: 'file://new.PNG?preview=1'};
+    const video = {uri: 'file://clip.mp4', type: 'video/mp4'};
+    const disguisedVideo = {uri: 'file://clip.jpg', type: 'video/mp4'};
+    await render(<Probe />);
+
+    await act(async () => {
+      api!.handleImagePickerResponse({assets: [existing]});
+    });
+    await act(async () => {
+      api!.handleImagePickerResponse({assets: [photo, video, disguisedVideo]});
+    });
+
+    expect(api!.images).toEqual([existing, photo]);
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Неподдерживаемый файл',
+      'Можно загружать только изображения.',
+    );
+    expect(mockCreateFeedback).not.toHaveBeenCalled();
+
+    await act(async () => {
+      api!.setTitle('Изображения');
+      api!.setDescription('Отправить только выбранные фотографии');
+    });
+    await act(async () => {
+      api!.handleSubmit();
+    });
+
+    expect(mockCreateFeedback).toHaveBeenCalledTimes(1);
+    expect(mockCreateFeedback).toHaveBeenCalledWith(expect.objectContaining({
+      images: [existing, photo],
+    }));
+  });
+
   it('вызывает gallery picker с ожидаемыми photo options', async () => {
     await render(<Probe />);
 

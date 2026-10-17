@@ -1,6 +1,7 @@
 import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { Check } from 'lucide-react-native'
+import Svg, { Path } from 'react-native-svg'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import {
@@ -9,19 +10,17 @@ import {
   ActionsheetContent,
   ActionsheetDragIndicator,
   ActionsheetDragIndicatorWrapper,
+  ActionsheetScrollView,
 } from '@/components/ui/actionsheet'
 import { appPalette } from '@/shared/styles/appPalette'
 
 import { useModalFilterOrdersLogic } from '../model/useModalOrderLogic'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
-
-function clampFontSize(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
-}
+import { scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 export const ModalFilterOrders = (): React.JSX.Element => {
   const insets = useSafeAreaInsets()
-  const { colors } = useAppTheme()
+  const { colors, isDark } = useAppTheme()
   const {
     globalFontSize,
     types_dop: typesDop,
@@ -29,10 +28,12 @@ export const ModalFilterOrders = (): React.JSX.Element => {
     is_showModalTypeDop: isOpen,
     showModalTypeDop,
     setTypeDop,
+    statusCounts,
   } = useModalFilterOrdersLogic()
-  const titleFontSize = clampFontSize(globalFontSize + 4, 18, 24)
-  const helperFontSize = clampFontSize(globalFontSize - 1, 13, 16)
-  const actionFontSize = clampFontSize(globalFontSize + 1, 14, 18)
+  const titleFontSize = scaleGlobalFontSize(20, globalFontSize, 18, 24)
+  const helperFontSize = scaleGlobalFontSize(15, globalFontSize, 13, 18)
+  const actionFontSize = scaleGlobalFontSize(17, globalFontSize, 14, 22)
+  const isFilterActive = typeDop.length < typesDop.length
 
   function close(): void {
     showModalTypeDop(false)
@@ -70,72 +71,149 @@ export const ModalFilterOrders = (): React.JSX.Element => {
           </ActionsheetDragIndicator>
         </ActionsheetDragIndicatorWrapper>
 
-        <Text
-          style={[
-            styles.title,
-            {
-              color: colors.text,
-              fontSize: titleFontSize,
-              lineHeight: Math.round(titleFontSize * 1.2),
-            },
-          ]}
-        >
-          Активные заказы
-        </Text>
-        <Text
-          style={[
-            styles.helper,
-            {
-              color: colors.textMuted,
-              fontSize: helperFontSize,
-              lineHeight: Math.round(helperFontSize * 1.4),
-            },
-          ]}
-        >
-          Какие статусы показывать
-        </Text>
-
-        <View style={styles.options}>
-          {typesDop.map((item) => {
-            const value = String(item.id)
-            const selected = typeDop.includes(value)
-
-            return (
+        <View style={styles.header}>
+          <View style={styles.headingText}>
+            <Text
+              style={[
+                styles.title,
+                {
+                  color: colors.text,
+                  fontSize: titleFontSize,
+                  lineHeight: Math.round(titleFontSize * 1.2),
+                },
+              ]}
+            >
+              Активные заказы
+            </Text>
+            <Text
+              style={[
+                styles.helper,
+                {
+                  color: colors.textMuted,
+                  fontSize: helperFontSize,
+                  lineHeight: Math.round(helperFontSize * 1.4),
+                },
+              ]}
+            >
+              Какие статусы показывать
+            </Text>
+          </View>
+          <View style={styles.resetSlot}>
+            {isFilterActive ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityState={{ selected }}
-                key={item.id}
-                style={[
-                  styles.option,
-                  {
-                    backgroundColor: selected
-                      ? colors.brand
-                      : colors.surfaceAlt,
-                  },
+                accessibilityLabel="Сбросить фильтр"
+                testID="orders-filter-reset"
+                onPress={() => setTypeDop(typesDop.map((item) => String(item.id)))}
+                style={({ pressed }) => [
+                  styles.resetButton,
+                  { backgroundColor: pressed ? colors.surfaceAlt : 'transparent' },
                 ]}
-                testID={`orders-filter-option-${item.id}`}
-                onPress={() => toggle(value)}
               >
-                <Text
+                <Svg
+                  width={26}
+                  height={26}
+                  viewBox="0 0 24 24"
+                  testID="orders-filter-reset-icon"
+                >
+                  <Path
+                    d="M3 4H14M3 4L10 13V20L14 22V13L16 11M17 3L22 8M22 3L17 8"
+                    fill="none"
+                    stroke={colors.text}
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    testID="orders-filter-reset-icon-path"
+                  />
+                </Svg>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+
+        <ActionsheetScrollView
+          style={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          testID="orders-filter-sheet-scroll"
+        >
+          <View style={styles.options}>
+            {typesDop.map((item) => {
+              const value = String(item.id)
+              const selected = typeDop.includes(value)
+
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  key={item.id}
                   style={[
-                    styles.optionText,
+                    styles.option,
                     {
-                      color: selected ? '#FFFFFF' : colors.text,
-                      fontSize: actionFontSize,
+                      backgroundColor: selected
+                        ? colors.brand
+                        : colors.surfaceAlt,
                     },
                   ]}
+                  testID={`orders-filter-option-${item.id}`}
+                  onPress={() => toggle(value)}
                 >
-                  {item.text}
-                </Text>
-                {selected ? (
-                  <Check color="#FFFFFF" size={20} strokeWidth={2.5} />
-                ) : (
-                  <View style={styles.checkPlaceholder} />
-                )}
-              </Pressable>
-            )
-          })}
-        </View>
+                  <Text
+                    style={[
+                      styles.optionText,
+                      {
+                        color: selected ? '#FFFFFF' : colors.text,
+                        fontSize: actionFontSize,
+                        lineHeight: Math.round(actionFontSize * 1.25),
+                      },
+                    ]}
+                  >
+                    {item.text}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.count,
+                      {
+                        color: selected ? '#FFFFFF' : colors.textMuted,
+                        fontSize: actionFontSize,
+                        lineHeight: Math.round(actionFontSize * 1.25),
+                      },
+                    ]}
+                    testID={`orders-filter-count-${item.id}`}
+                  >
+                    {statusCounts[value] ?? 0}
+                  </Text>
+                  {selected ? (
+                    <Check color="#FFFFFF" size={20} strokeWidth={2.5} />
+                  ) : (
+                    <View style={styles.checkPlaceholder} />
+                  )}
+                </Pressable>
+              )
+            })}
+          </View>
+        </ActionsheetScrollView>
+        <Pressable
+          accessibilityRole="button"
+          onPress={close}
+          style={[styles.doneButton, {
+            borderColor: colors.border,
+            backgroundColor: isDark ? undefined : '#E0E0E0',
+          }]}
+          testID="orders-filter-done"
+        >
+          <Text
+            style={[
+              styles.doneText,
+              {
+                color: colors.text,
+                fontSize: actionFontSize,
+                lineHeight: Math.round(actionFontSize * 1.25),
+              },
+            ]}
+          >
+            Готово
+          </Text>
+        </Pressable>
       </ActionsheetContent>
     </Actionsheet>
   )
@@ -179,23 +257,52 @@ const styles = StyleSheet.create({
   },
   helper: {
     width: '100%',
-    marginBottom: 16,
     color: appPalette.textMuted,
     fontFamily: 'Roboto-Regular',
     textAlign: 'left',
+  },
+  header: {
+    width: '100%',
+    flexShrink: 0,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 16,
+  },
+  headingText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  resetSlot: {
+    width: 44,
+    height: 44,
+    flexShrink: 0,
+  },
+  resetButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 2,
   },
   options: {
     width: '100%',
     gap: 8,
   },
+  scroll: {
+    width: '100%',
+    flexGrow: 0,
+    flexShrink: 1,
+  },
   option: {
     width: '100%',
-    height: 44,
     minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 12,
   },
   optionSelected: {
@@ -207,7 +314,27 @@ const styles = StyleSheet.create({
   optionText: {
     flex: 1,
     fontFamily: 'Roboto-Bold',
-    lineHeight: 21,
+  },
+  count: {
+    marginHorizontal: 12,
+    fontFamily: 'Roboto-Bold',
+    fontVariant: ['tabular-nums'],
+  },
+  doneButton: {
+    width: '100%',
+    flexShrink: 0,
+    minHeight: 44,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneText: {
+    fontFamily: 'Roboto-Bold',
+    textAlign: 'center',
   },
   checkPlaceholder: {
     width: 20,

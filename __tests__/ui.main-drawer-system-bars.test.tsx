@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, render } from '@testing-library/react-native';
+import { cleanup, fireEvent, render } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
 const mockSystemBars = jest.fn();
@@ -15,9 +15,10 @@ const mockGlobalState = {
 };
 
 const mockOrdersState = {
+  type: { id: 1, text: 'Активные' },
   getOrders: jest.fn(),
-  types_dop: [],
-  type_dop: [],
+  types_dop: [] as Array<{ id: number }>,
+  type_dop: [] as string[],
   showModalTypeDop: jest.fn(),
   prefetchOrders: jest.fn(async () => undefined),
   ordersContextKey: '',
@@ -96,6 +97,10 @@ jest.mock('@fortawesome/react-native-fontawesome', () => ({
   FontAwesomeIcon: () => null,
 }));
 
+jest.mock('lucide-react-native', () => ({
+  RefreshCcw: () => null,
+}));
+
 jest.mock('@fortawesome/free-solid-svg-icons', () => ({
   faBars: {},
   faFilter: {},
@@ -146,6 +151,7 @@ jest.mock('@/features/feedback/ui/FeedbackScreen', () => ({
 
 import { MainDrawerNavigator } from '@/app/navigation/MainDrawerNavigator';
 import {ConnectivityContext} from '@/shared/lib/connectivityContext';
+import {useOrderRecommendationStore} from '@/features/order-recommendation/model/orderRecommendation.store';
 
 function setPlatform(os: 'android' | 'ios'): void {
   Object.defineProperty(Platform, 'OS', {
@@ -165,6 +171,10 @@ describe('системные области бокового меню', () => {
     jest.clearAllMocks();
     mockDrawerStatus = 'closed';
     mockDrawerNavigatorProps = undefined;
+    mockOrdersState.type = { id: 1, text: 'Активные' };
+    mockOrdersState.types_dop = [];
+    mockOrdersState.type_dop = [];
+    useOrderRecommendationStore.getState().reset();
     setPlatform('android');
   });
 
@@ -226,5 +236,70 @@ describe('системные области бокового меню', () => {
     } else {
       expect(view.getByTestId('offline-status-banner')).toBeTruthy();
     }
+  });
+
+  it('скрывает фильтр вне «Активных», сохраняя обновление заказов', async () => {
+    mockOrdersState.type = { id: 2, text: 'Мои отмеченные' };
+    const view = await render(<MainDrawerNavigator />);
+    const options = mockDrawerNavigatorProps.screenOptions({navigation: {openDrawer: jest.fn()}});
+    await view.rerender(options.headerRight());
+
+    expect(view.queryByTestId('orders-status-filter')).toBeNull();
+    await fireEvent.press(view.getByTestId('orders-refresh'));
+    expect(mockOrdersState.getOrders).toHaveBeenCalledWith(true);
+  });
+
+  it.each([
+    {selected: ['3']},
+    {selected: ['1', '2', '3']},
+  ])('в «Активных» отмечает частичный выбор $selected синим фоном без галочки', async ({selected}) => {
+    mockOrdersState.types_dop = [{id: 1}, {id: 2}, {id: 4}, {id: 3}];
+    mockOrdersState.type_dop = selected;
+    const view = await render(<MainDrawerNavigator />);
+    const options = mockDrawerNavigatorProps.screenOptions({navigation: {openDrawer: jest.fn()}});
+    await view.rerender(options.headerRight());
+
+    const filter = view.getByTestId('orders-status-filter');
+    expect(filter.props.accessibilityState).toEqual({ selected: true });
+    expect(view.getByTestId('orders-status-filter-background')).toHaveStyle({
+      width: 32, height: 32, backgroundColor: '#2196F3', borderRadius: 8,
+    });
+    expect(view.queryByTestId('orders-status-filter-check')).toBeNull();
+    await fireEvent.press(filter);
+    expect(mockOrdersState.showModalTypeDop).toHaveBeenCalledWith(true);
+  });
+
+  it('при выборе всех четырёх статусов фильтр имеет прозрачный фон', async () => {
+    mockOrdersState.types_dop = [{id: 1}, {id: 2}, {id: 4}, {id: 3}];
+    mockOrdersState.type_dop = ['1', '2', '4', '3'];
+    const view = await render(<MainDrawerNavigator />);
+    const options = mockDrawerNavigatorProps.screenOptions({navigation: {openDrawer: jest.fn()}});
+    await view.rerender(options.headerRight());
+
+    const filter = view.getByTestId('orders-status-filter');
+    expect(filter.props.accessibilityState).toEqual({selected: false});
+    expect(view.getByTestId('orders-status-filter-background')).toHaveStyle({backgroundColor: 'transparent'});
+  });
+
+  it.each([
+    {isLoading: true, result: null, isOpen: false, isRouteVisible: false},
+    {isLoading: false, result: {st: true}, isOpen: true, isRouteVisible: true},
+    {isLoading: false, result: {st: true}, isOpen: false, isRouteVisible: true},
+    {isLoading: false, result: {st: true}, isOpen: false, isRouteVisible: false},
+  ])('скрывает фильтр во время анализа или пока существует подборка: %o', async state => {
+    useOrderRecommendationStore.setState(state);
+    const view = await render(<MainDrawerNavigator />);
+    const options = mockDrawerNavigatorProps.screenOptions({navigation: {openDrawer: jest.fn()}});
+    await view.rerender(options.headerRight());
+    expect(view.queryByTestId('orders-status-filter')).toBeNull();
+    expect(view.getByTestId('orders-refresh')).toBeTruthy();
+  });
+
+  it('показывает фильтр, когда анализ завершён без подборки', async () => {
+    useOrderRecommendationStore.setState({isLoading: false, result: null});
+    const view = await render(<MainDrawerNavigator />);
+    const options = mockDrawerNavigatorProps.screenOptions({navigation: {openDrawer: jest.fn()}});
+    await view.rerender(options.headerRight());
+    expect(view.getByTestId('orders-status-filter')).toBeTruthy();
   });
 });

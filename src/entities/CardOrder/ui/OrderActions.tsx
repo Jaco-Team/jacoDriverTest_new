@@ -6,6 +6,7 @@ import { toOrderInt } from '@/entities/CardOrder/model/normalizeOrderValue'
 import { OrderActionsProps } from '@/entities/CardOrder/model/types'
 import { appPalette } from '@/shared/styles/appPalette'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import { scaleGlobalFontSize } from '@/shared/lib/fontSize'
 
 const BUTTON_HEIGHT = 44
 const BUTTON_FONT_SIZE = 14
@@ -218,7 +219,7 @@ export function OrderActions({
               styles.driverLabel,
               {
                 color: colors.textMuted,
-                fontSize: Math.min(Math.max(globalFontSize - 4, 11), 13),
+                fontSize: scaleGlobalFontSize(12, globalFontSize, 11, 13),
               },
             ]}
           >
@@ -230,7 +231,7 @@ export function OrderActions({
               styles.driverName,
               {
                 color: colors.text,
-                fontSize: Math.min(Math.max(globalFontSize - 1, 13), 17),
+                fontSize: scaleGlobalFontSize(15, globalFontSize, 13, 17),
               },
             ]}
           >

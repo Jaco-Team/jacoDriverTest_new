@@ -39,6 +39,7 @@ export interface MapPointType{
   theme: Theme;
   text?: string;
   isActive: boolean;
+  fontSize: number;
 }
 
 export interface MapPointTimeType extends MapPointType {
@@ -73,6 +74,6 @@ export interface SettingsStore extends MySettingsResponse {
 
   getSettings: (silent?: boolean) => Promise<void>,
 
-  saveSettings: (type_show_del: string, centered_map: string[], fontSize: number, update_interval: number, color: string, mapScale: number, groupTypeTime: string, theme: Theme, night_map: string[], is_scaleMap: string[], app_theme?: AppThemePreference, map_hints?: boolean, ai_recommend?: boolean) => Promise<void>,
+  saveSettings: (type_show_del: string, centered_map: string[], fontSize: number, update_interval: number, color: string, mapScale: number, groupTypeTime: string, theme: Theme, night_map: string[], is_scaleMap: string[], app_theme?: AppThemePreference, map_hints?: boolean, ai_recommend?: boolean, successMessage?: string) => Promise<boolean>,
   getPhoneCafe: () => Promise<void>,
 }
