@@ -16,9 +16,9 @@ def node_require(script)
     )", __dir__]).strip
 end
 
-$RNFirebaseAsStaticFramework = true
-$RNFirebaseDisableSPM = true
 ENV['RCT_NEW_ARCH_ENABLED'] = '1'
+# Keep RN's framework-dependent settings aligned even if the shell exports another value.
+ENV['USE_FRAMEWORKS'] = 'dynamic'
 
 def cleanup_finder_duplicates!(root_dir)
   return unless Dir.exist?(root_dir)
@@ -31,11 +31,6 @@ end
 
 cleanup_finder_duplicates!(File.join(__dir__, 'Pods'))
 cleanup_finder_duplicates!(File.join(__dir__, 'build', 'generated'))
-
-pod 'Firebase', :modular_headers => true
-pod 'FirebaseCoreInternal', :modular_headers => true
-pod 'GoogleUtilities', :modular_headers => true
-pod 'FirebaseCore', :modular_headers => true
 
 node_require('react-native/scripts/react_native_pods.rb')
 node_require('react-native-permissions/scripts/setup.rb')
@@ -66,14 +61,10 @@ setup_permissions([
   # 'StoreKit',
 ])
 
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  # use_frameworks! :linkage => linkage.to_sym
-  use_frameworks! :linkage => :static
-end
-
 target 'jacoDriverTest' do
+  # RNFirebase 27 resolves Firebase 13 through SPM and requires dynamic pod frameworks.
+  use_frameworks! :linkage => :dynamic
+
   config = use_native_modules!(['node', '../node_modules/.bin/react-native', 'config', '--platform', 'ios'])
 
   use_react_native!(
@@ -90,6 +81,12 @@ target 'jacoDriverTest' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # These pods use UTI APIs but omit the system frameworks from their podspecs.
+    system_frameworks_by_target = {
+      'react-native-image-picker' => ['MobileCoreServices', 'UniformTypeIdentifiers'],
+      'RNCClipboard' => ['MobileCoreServices'],
+    }
 
     # Xcode 26.x / modern toolchain workarounds for RN 0.77 native deps.
     installer.pods_project.targets.each do |target|
@@ -114,6 +111,16 @@ target 'jacoDriverTest' do
           ldflags = build_config.build_settings['OTHER_LDFLAGS']
           flags = ldflags.is_a?(Array) ? ldflags.dup : [ldflags || '$(inherited)']
           flags << '-ObjC' unless flags.include?('-ObjC')
+          build_config.build_settings['OTHER_LDFLAGS'] = flags
+        end
+
+        frameworks = system_frameworks_by_target[target.name]
+        if frameworks
+          ldflags = build_config.build_settings['OTHER_LDFLAGS']
+          flags = ldflags.is_a?(Array) ? ldflags.dup : [ldflags || '$(inherited)']
+          frameworks.each do |framework|
+            flags.concat(['-framework', framework]) unless flags.include?(framework)
+          end
           build_config.build_settings['OTHER_LDFLAGS'] = flags
         end
       end

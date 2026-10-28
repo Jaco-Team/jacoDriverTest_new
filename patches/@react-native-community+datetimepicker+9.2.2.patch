@@ -1,0 +1,18 @@
+diff --git a/node_modules/@react-native-community/datetimepicker/android/build.gradle b/node_modules/@react-native-community/datetimepicker/android/build.gradle
+index c03bdec..d390f9f 100644
+--- a/node_modules/@react-native-community/datetimepicker/android/build.gradle
++++ b/node_modules/@react-native-community/datetimepicker/android/build.gradle
+@@ -75,8 +75,11 @@ android {
+             }
+         }
+     }
+-    kotlinOptions {
+-        jvmTarget = '17'
++}
++
++kotlin {
++    compilerOptions {
++        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+     }
+ }
+ 

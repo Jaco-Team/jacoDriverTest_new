@@ -1,0 +1,92 @@
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+import javax.inject.Inject
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
+
+/** Produces an APK asset from the actual variant and resolved native artifacts. */
+abstract class GenerateCodePushRuntime extends DefaultTask {
+    @Input abstract Property<String> getFactsJson()
+    @Input abstract Property<String> getTrustedKeysPath()
+    @Internal abstract DirectoryProperty getRepositoryDirectory()
+    @OutputDirectory abstract DirectoryProperty getOutputDirectory()
+    @Inject abstract ExecOperations getExecOperations()
+
+    @TaskAction
+    void generate() {
+        def factsFile = new File(temporaryDir, 'facts.json')
+        factsFile.parentFile.mkdirs()
+        factsFile.setText(factsJson.get(), 'UTF-8')
+        def resource = outputDirectory.file('codepush-runtime.json').get().asFile
+        execOperations.exec {
+            workingDir repositoryDirectory.get().asFile
+            environment 'CODEPUSH_TRUSTED_KEYS', trustedKeysPath.get()
+            commandLine 'node', 'scripts/codepush-runtime.cjs', 'generate', factsFile.absolutePath, resource.absolutePath
+        }
+    }
+}
+
+def codePushRoot = rootProject.projectDir.parentFile
+def fileSha256 = { File source ->
+    def hash = MessageDigest.getInstance('SHA-256')
+    source.withInputStream { stream ->
+        byte[] buffer = new byte[65536]
+        int count
+        while ((count = stream.read(buffer)) > 0) hash.update(buffer, 0, count)
+    }
+    hash.digest().encodeHex().toString()
+}
+
+androidComponents.onVariants(androidComponents.selector().all()) { variant ->
+    def runtime = configurations.named("${variant.name}RuntimeClasspath")
+    def task = tasks.register("generate${variant.name.capitalize()}CodePushRuntime", GenerateCodePushRuntime) {
+        repositoryDirectory.set(codePushRoot)
+        outputDirectory.set(layout.buildDirectory.dir("generated/codepush/${variant.name}"))
+        trustedKeysPath.set(providers.environmentVariable('CODEPUSH_TRUSTED_KEYS').orElse(''))
+        // Native input hashes are computed by Node every build, including public
+        // key files and native modules; a stale up-to-date asset is never reused.
+        outputs.upToDateWhen { false }
+        factsJson.set(providers.provider {
+            def configuration = runtime.get()
+            def components = configuration.incoming.resolutionResult.allComponents.collect { component ->
+                def id = component.id
+                id instanceof ModuleComponentIdentifier ? "${id.group}:${id.module}:${id.version}" :
+                    (id instanceof ProjectComponentIdentifier ? "project:${id.projectPath}" : id.displayName)
+            }.sort()
+            def externalArtifacts = configuration.incoming.artifactView {
+                componentFilter { it instanceof ModuleComponentIdentifier }
+            }.artifacts.artifacts.collect { artifact ->
+                "${artifact.id.componentIdentifier.displayName}:${artifact.file.name}:${fileSha256(artifact.file)}"
+            }.sort()
+            def rn = components.find { it.startsWith('com.facebook.react:react-android:') }
+            def hermes = components.find { it.startsWith('com.facebook.hermes:hermes-android:') }
+            if (!rn || !hermes) throw new GradleException('CodePush requires resolved RN and Hermes artifacts')
+            JsonOutput.toJson([
+                platform: 'android',
+                applicationIdentifier: variant.applicationId.get(),
+                nativeBuild: variant.outputs.first().versionCode.get().toString(),
+                rnVersion: rn.split(':').last(),
+                hermesVersion: hermes.split(':').last(),
+                variant: variant.name,
+                architecture: 'new',
+                abis: android.defaultConfig.ndk.abiFilters.toList().sort(),
+                minSdk: android.defaultConfig.minSdk.toString(),
+                targetSdk: android.defaultConfig.targetSdk.toString(),
+                compileSdk: android.compileSdk.toString(),
+                ndkVersion: android.ndkVersion,
+                agpVersion: androidComponents.pluginVersion.toString(),
+                kotlinVersion: rootProject.ext.kotlinVersion,
+                dependencies: components,
+                artifactHashes: externalArtifacts,
+            ])
+        })
+    }
+    variant.sources.assets.addGeneratedSourceDirectory(task) { it.outputDirectory }
+}

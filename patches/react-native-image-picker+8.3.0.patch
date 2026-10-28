@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native-image-picker/android/build.gradle b/node_modules/react-native-image-picker/android/build.gradle
+index cecc20d..b8e438f 100644
+--- a/node_modules/react-native-image-picker/android/build.gradle
++++ b/node_modules/react-native-image-picker/android/build.gradle
+@@ -27,8 +27,6 @@ android {
+     defaultConfig {
+         minSdkVersion safeExtGet('minSdkVersion', 24)
+         targetSdkVersion 34
+-        versionCode 1
+-        versionName "1.0"
+         buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
+     }
+ 

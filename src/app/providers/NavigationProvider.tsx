@@ -19,6 +19,7 @@ import { Analytics, AnalyticsEvent } from '@/analytics/AppMetricaService';
 import { RU_SCREEN_NAMES } from '@/app/navigation/types';
 import { useGlobalStore } from '@/shared/store/store'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import {codePushReadiness} from '@/codePush/readiness'
 
 import { createNavigationContainerRef } from '@react-navigation/native';
 export const navigationRef = createNavigationContainerRef<ParamListBase>();
@@ -99,6 +100,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
             const route = navigationRef.getCurrentRoute();
             const name = route?.name ?? 'Unknown';
             setActiveRouteName(name)
+            codePushReadiness.setRoute(name)
             const screen = RU_SCREEN_NAMES[name] ?? name;
             Analytics.setErrorContext?.('screen', screen);
             Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${screen}`);
@@ -107,6 +109,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
             if (!state) return;
             const name = getActiveRouteName(state)
             setActiveRouteName(name)
+            codePushReadiness.setRoute(name)
             const screen = RU_SCREEN_NAMES[name] ?? name;
             Analytics.setErrorContext?.('screen', screen);
             Analytics.log(AnalyticsEvent.ScreenOpen, `Открытие страницы ${screen}`);

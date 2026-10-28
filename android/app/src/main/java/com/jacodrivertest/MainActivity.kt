@@ -6,6 +6,7 @@ import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
+import com.jacodrivertest.codepush.CodePushStartup
 
 class MainActivity : ReactActivity() {
 
@@ -16,6 +17,11 @@ class MainActivity : ReactActivity() {
   override fun getMainComponentName(): String = "jacoDriverTest"
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    if (!BuildConfig.DEBUG) {
+      // Only the asynchronous native launcher can authorize a new OTA attempt.
+      // Direct/restored/deep-link entry keeps local code and never waits on network here.
+      CodePushStartup.recordLaunchIntent(false)
+    }
     installSplashScreen()
     super.onCreate(null) // Передайте null вместо savedInstanceState
   }

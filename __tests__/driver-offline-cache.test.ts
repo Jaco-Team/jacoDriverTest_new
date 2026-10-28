@@ -41,6 +41,7 @@ import {
   useSettingsStore,
 } from '@/shared/store/store';
 import {setAppOffline} from '@/shared/lib/connectivityState';
+import {codePushReadiness} from '@/codePush/readiness';
 
 const asyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 const netInfo = NetInfo as jest.Mocked<typeof NetInfo>;
@@ -165,6 +166,24 @@ describe('driver offline cache', () => {
       limit_count: '',
       home: null,
     });
+  });
+
+  it('records a failed boot restoration when secure token storage cannot be read', async () => {
+    mockGetLaravelAuthToken.mockRejectedValueOnce(new Error('Keychain unavailable'));
+    expect(await useLoginStore.getState().check_token()).toBe(false);
+    expect(codePushReadiness.getSnapshot().outcome).toBe('error');
+  });
+
+  it('distinguishes healthy offline Auth from failed local cache restoration', async () => {
+    mockFetchLaravelMe.mockRejectedValue({code: 'ERR_NETWORK', message: 'Network Error'});
+    expect(await useLoginStore.getState().check_token()).toBe(false);
+    expect(codePushReadiness.getSnapshot().outcome).toBe('auth-screen');
+    asyncStorage.getItem.mockImplementation(async key => {
+      if (key === DRIVER_OFFLINE_CACHE_STORAGE_KEY) throw new Error('Storage unavailable');
+      return null;
+    });
+    expect(await useLoginStore.getState().check_token()).toBe(false);
+    expect(codePushReadiness.getSnapshot().outcome).toBe('error');
   });
 
   afterEach(() => {

@@ -9,6 +9,9 @@ const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
 const exclusionList =
   require("metro-config/private/defaults/exclusionList").default;
 const { withNativeWind } = require("nativewind/metro");
+const {
+  resolveExpoHtmlElements,
+} = require("./scripts/metro-expo-html-elements.cjs");
 
 const {
   withSentryConfig
@@ -21,6 +24,7 @@ const sourceExts = defaultConfig.resolver.sourceExts.includes("mjs")
 
 const config = mergeConfig(defaultConfig, {
   resolver: {
+    resolveRequest: resolveExpoHtmlElements,
     blockList: exclusionList([
       /\/android\/\.gradle\/.*/,
       /\/android\/app\/build\/.*/,

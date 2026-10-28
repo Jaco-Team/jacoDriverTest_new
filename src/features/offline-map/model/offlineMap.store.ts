@@ -30,6 +30,7 @@ interface Runtime {
 }
 interface OfflineMapState {
   hydrated: boolean;
+  restorationStatus: 'pending' | 'ready' | 'error';
   selectedCityId: string;
   cities: Partial<Record<OfflineCityId, CityDownload>>;
   busyCityId: OfflineCityId | null;
@@ -189,6 +190,7 @@ async function readStatus(id: OfflineCityId) {
 
 export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
   hydrated: false,
+  restorationStatus: 'pending',
   selectedCityId: '',
   cities: {},
   busyCityId: null,
@@ -199,14 +201,15 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
     if (get().hydrated) return Promise.resolve();
     if (!hydration)
       hydration = (async () => {
+        let restored = true;
         try {
           const raw = await AsyncStorage.getItem(OFFLINE_CITY_STORAGE_KEY);
-          if (raw) {
+          if (raw !== null) {
             const parsed = JSON.parse(raw);
             if (
               parsed.version === 1 &&
               parsed.cities &&
-              typeof parsed.cities === 'object'
+              typeof parsed.cities === 'object' && !Array.isArray(parsed.cities)
             ) {
               const cities: OfflineMapState['cities'] = {};
               for (const city of OFFLINE_MAP_CITIES) {
@@ -222,8 +225,11 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
                     'outdated',
                     'error',
                   ].includes(entry.status)
-                )
+                ) {
+                  // Missing cities are normal; an existing malformed record is not.
+                  if (entry !== undefined) restored = false;
                   continue;
+                }
                 cities[city.id] = {
                   ...entry,
                   status:
@@ -241,12 +247,15 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
                 selectedCityId:
                   getOfflineMapCity(parsed.selectedCityId)?.id ?? '',
               });
+            } else {
+              restored = false;
             }
           }
         } catch {
+          restored = false;
           set({error: 'Не удалось прочитать сохранённые карты.'});
         }
-        set({hydrated: true});
+        set({hydrated: true, restorationStatus: restored ? 'ready' : 'error'});
       })().finally(() => {
         hydration = null;
       });

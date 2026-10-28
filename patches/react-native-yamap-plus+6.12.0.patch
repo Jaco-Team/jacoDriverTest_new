@@ -1255,3 +1255,56 @@ index 0e9471c..db101ca 100644
    initialRegion?: InitialRegion;
    followUser?: boolean;
    logoPosition?: YandexLogoPosition;
+diff --git a/node_modules/react-native-yamap-plus/android/build.gradle b/node_modules/react-native-yamap-plus/android/build.gradle
+index 49d74ad..7d5e6a5 100644
+--- a/node_modules/react-native-yamap-plus/android/build.gradle
++++ b/node_modules/react-native-yamap-plus/android/build.gradle
+@@ -23,7 +23,9 @@ println "play_services_location_version=" + play_services_location_version
+ println "use_yandex_maps_lite=" + use_yandex_maps_lite
+ 
+ apply plugin: "com.android.library"
+-apply plugin: "kotlin-android"
++if (!extensions.findByName("kotlin")) {
++  apply plugin: "kotlin-android"
++}
+ 
+ apply plugin: "com.facebook.react"
+ 
+@@ -41,25 +43,33 @@ android {
+     targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
+   }
+ 
+-  kotlinOptions {
+-    jvmTarget = "17"
+-  }
+-
+   sourceSets {
+     main {
+       if (use_yandex_maps_lite.toBoolean()) {
+         java.srcDirs += [
+                 'src/mapkit/lite'
+         ]
++        kotlin.srcDirs += [
++                'src/mapkit/lite'
++        ]
+       } else {
+         java.srcDirs += [
+                 'src/mapkit/full'
+         ]
++        kotlin.srcDirs += [
++                'src/mapkit/full'
++        ]
+       }
+     }
+   }
+ }
+ 
++kotlin {
++  compilerOptions {
++    jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
++  }
++}
++
+ repositories {
+   mavenCentral()
+ }

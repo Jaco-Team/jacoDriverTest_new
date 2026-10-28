@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native-screens/android/build.gradle b/node_modules/react-native-screens/android/build.gradle
+index fb16bb0..d8ef5c3 100644
+--- a/node_modules/react-native-screens/android/build.gradle
++++ b/node_modules/react-native-screens/android/build.gradle
+@@ -142,8 +142,6 @@ android {
+     defaultConfig {
+         minSdkVersion safeExtGet(['minSdkVersion', 'minSdk'], rnsDefaultMinSdkVersion)
+         targetSdkVersion safeExtGet(['targetSdkVersion', 'targetSdk'], rnsDefaultTargetSdkVersion)
+-        versionCode 1
+-        versionName "1.0"
+         buildConfigField "boolean", "RNS_GAMMA_ENABLED", isGammaEnabled().toString()
+         buildConfigField "boolean", "RNS_DEBUG_LOGGING", areDebugLogsEnabled().toString()
+         consumerProguardFiles "consumer-rules.pro"

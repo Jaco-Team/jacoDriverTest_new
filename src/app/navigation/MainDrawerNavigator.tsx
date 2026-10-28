@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useGlobalStore, useOrdersStore, useGEOStore } from '@/shared/store/store';
@@ -40,6 +40,7 @@ import { useOrdersBackgroundUpdater } from '@/shared/lib/useOrdersBackgroundUpda
 import { initializeNotifications, requestNotificationPermission } from '@/shared/lib/notifications'
 import { ConnectivityLocationIndicator } from '@/shared/ui/ConnectivityLocationIndicator'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import {useCodePushDebug} from '@/features/codepush-debug/ui/CodePushDebugProvider'
 
 const Drawer = createDrawerNavigator();
 
@@ -61,6 +62,7 @@ function EdgeToEdgeDrawerContent(
 export function MainDrawerNavigator() {
   const insets = useSafeAreaInsets()
   const { colors } = useAppTheme()
+  const {open: openCodePushDebug} = useCodePushDebug()
   const [ globalFontSize, is_need_avg_time, is_need_page_stat, setNotifToken ] = useGlobalStore(useShallow( state => [ state.globalFontSize, state.is_need_avg_time, state.is_need_page_stat, state.setNotifToken ]));
   
   const [
@@ -187,17 +189,28 @@ export function MainDrawerNavigator() {
                     canGoBack: false,
                     tintColor: '#fff',
                   })}
-                  <Text
-                    numberOfLines={1}
+                  <Pressable
+                    accessible={false}
+                    delayLongPress={3000}
+                    onLongPress={openCodePushDebug}
+                    testID="header-diagnostics-trigger"
                     style={{
                       flex: 1,
-                      color: '#fff',
-                      fontSize: globalFontSize,
-                      fontWeight: '600',
+                      alignSelf: 'stretch',
+                      justifyContent: 'center',
                     }}
                   >
-                    {options.title ?? route.name}
-                  </Text>
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        color: '#fff',
+                        fontSize: globalFontSize,
+                        fontWeight: '600',
+                      }}
+                    >
+                      {options.title ?? route.name}
+                    </Text>
+                  </Pressable>
                   {options.headerRight?.({
                     canGoBack: false,
                     tintColor: '#fff',

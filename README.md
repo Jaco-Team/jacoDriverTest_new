@@ -1,10 +1,10 @@
 # Курьерское приложение Jaco
 
-Мобильное приложение для курьеров на React Native 0.88.0 (Android и iOS). Рабочая документация и текущее состояние проекта — в [docs/README.md](./docs/README.md).
+Мобильное приложение для курьеров на React Native 0.88.1 (Android и iOS). Рабочая документация и текущее состояние проекта — в [docs/README.md](./docs/README.md).
 
 ## Локальный запуск
 
-Нужен Node.js `>=24 <25`, Android SDK или Xcode с настроенным окружением React Native. Установите зависимости из корня проекта:
+Нужен Node.js `>=24.12.0 <25`, Android SDK или Xcode с настроенным окружением React Native. Минимум Node 24.12 требуется зависимостями Firebase 27. Установите зависимости из корня проекта:
 
 ```bash
 npm ci
@@ -105,7 +105,10 @@ AAB: `android/app/build/outputs/bundle/release/app-release.aab`.
 Локальный AAB подписан debug-ключом; публикация требует релизной подписи.
 
 В Xcode открывайте [ios/jacoDriverTest.xcworkspace](./ios/jacoDriverTest.xcworkspace),
-чтобы сборка подключала CocoaPods. Если Xcode сообщает, что Node не найден,
+чтобы сборка подключала CocoaPods. Firebase SDK 13 подключается через SwiftPM,
+RN и остальные библиотеки — через Pods; для Firebase 27 в Podfile нужны
+dynamic frameworks. При первой сборке Xcode скачает SwiftPM-зависимости;
+сохранённый `Package.resolved` закрепляет их версии. Если Xcode сообщает, что Node не найден,
 обновите игнорируемый `ios/.xcode.env.local`, указав актуальный абсолютный путь
 из `command -v node` в `export NODE_BINARY=...`.
 

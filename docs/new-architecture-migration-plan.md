@@ -1,5 +1,154 @@
 # План миграции на React Native / Fabric
 
+## Встроенный Kotlin и новый Android DSL — 22.10.2026
+
+По разрешению пользователя Android переведён на встроенный Kotlin AGP 9:
+`android.builtInKotlin=true`, `android.newDsl=true`. Применение внешнего
+`org.jetbrains.kotlin.android` из app-модуля удалено. Kotlin `2.4.21` остаётся
+в buildscript classpath: так выбирается версия компилятора встроенного Kotlin,
+необходимая Firebase BoM 35. KSP `2.3.12`, AGP `9.2.1`, Gradle `9.4.1`,
+minSdk/targetSdk, NDK и версии npm-пакетов сохранены.
+
+Миграция библиотек закреплена в [patch-package](../patches/README.md):
+условное подключение старого плагина, новый `compilerOptions`, явные дополнительные
+Kotlin-каталоги и удаление app-only `versionCode/versionName` из library-модулей.
+Это сохраняет Kotlin-классы Firebase, карты, Permissions и EdgeToEdge в сборке.
+Прежние исправления карты сохранены целиком; новые изменения её патча касаются
+только `android/build.gradle`.
+
+[Копирование MaterialIcons](../android/gradle/vector-icon-fonts.gradle)
+подключено через `androidComponents` и generated assets вместо старого
+`applicationVariants`. Имя и содержимое шрифта, путь `assets/fonts/MaterialIcons.ttf`
+и набор иконок сохранены. Автоматическая зависимость нужна и для упаковки APK,
+и для анализа assets при lint.
+
+Предупреждение `Deprecated 'org.jetbrains.kotlin.android' plugin usage`
+устранено переходом на встроенный Kotlin. Сообщения об отдельных устаревших
+API React Native внутри библиотек могут оставаться; их подавление не добавлялось.
+Это не обновление до AGP 10 и не изменение startup, данных или экранов приложения.
+Проверки — в [журнале](testing/testing-progress.md) и
+[чек-листе](testing/release-checklist.md).
+
+Основания: [миграция built-in Kotlin](https://developer.android.com/build/migrate-to-built-in-kotlin),
+[версия компилятора](https://developer.android.com/build/releases/agp-9-0-0-release-notes#runtime-dependency-on-kotlin-gradle-plugin),
+[публичный Android DSL](https://developer.android.com/build/releases/agp-9-0-0-release-notes#new-dsl).
+Прежние opt-out-флаги в датированных разделах ниже описывают исторические сборки.
+
+## Sentry 8.32 — 22.10.2026
+
+По отдельному разрешению пользователя `@sentry/react-native` обновлён с
+`8.31.0` до `8.32.0`. Вместе с ним обновлены его зависимости:
+CLI `3.8.1`, Expo upload helper `8.32.0`, iOS Cocoa SDK `9.31.0`.
+Android SDK `8.61.0` и JS SDK `10.76.2` сохранены.
+
+В [релизе](https://github.com/getsentry/sentry-react-native/releases/tag/8.32.0)
+нет обязательной миграции текущих `init`, `beforeSend`, `wrap`, `captureException`
+и Metro. По умолчанию интеграция TurboModule context больше не оборачивает
+собственный RNSentry: это уменьшает служебную работу на iOS. Приложение эту
+интеграцию отдельно не настраивает; настройки аналитики и startup не менялись.
+Сохранён выбор исходников HTML Elements для NativeWind 4.
+
+Результаты проверок и сборок — в [журнале](testing/testing-progress.md),
+ручная проверка запуска — в [чек-листе](testing/release-checklist.md).
+
+## Expo HTML Elements — 22.10.2026
+
+По отдельному разрешению пользователя `@expo/html-elements` обновлён с
+`0.13.8` до `58.0.3`. Остальные версии npm-пакетов этой операцией не менялись;
+установка Expo SDK и обновление Pods не требуются.
+
+Обнаружена особенность новой упаковки: основной export ведёт в готовый JS
+`build/`, где уже выбран `react/jsx-runtime`. NativeWind 4 не переписывает
+такой JSX, поэтому одних успешных типов и UI-тестов с моками недостаточно
+для сохранения обработки `className` внутри библиотеки.
+
+В [Metro](../metro.config.js) добавлен
+[селектор](../scripts/metro-expo-html-elements.cjs) официального условия
+`expo-source` только для `@expo/html-elements` и его публичных `primitives/*`.
+Это возвращает обработку TSX через существующий NativeWind/Babel, как в
+прежней версии. Настройка не меняет условия остальных пакетов и сохраняет
+обёртки NativeWind/Sentry. Компоненты и их стили не переписывались.
+Основание: [exports пакета](https://github.com/expo/expo/blob/main/packages/html-elements/package.json)
+и [условия разрешения Metro](https://metrobundler.dev/docs/package-exports/).
+
+Предыдущее предположение, что Gluestack закрепляет HTML Elements на `0.13`,
+не подтвердилось. Реальная доработка совместимости относится к обработке JSX
+в NativeWind 4, а не к объявленному ограничению Gluestack.
+Проверки реального resolver/Babel, сборки и оставшиеся ручные сценарии —
+в [журнале](testing/testing-progress.md) и
+[чек-листе](testing/release-checklist.md).
+
+## Обновление зависимостей — 22.10.2026
+
+Пользователь разрешил обновить все пакеты с предоставленных скриншотов, включая
+Firebase 27 и resolvers 6. Работа выполняется в текущем checkout с сохранением
+незакоммиченного первого этапа CodePush; коммиты и публикация не входят в задачу.
+
+| Пакет | Установленная версия |
+| --- | --- |
+| `@hookform/resolvers` | `6.0.0` |
+| `@react-native-community/datetimepicker` | `9.2.2` |
+| `@react-native-firebase/app`, `messaging` | `27.0.0` |
+| `lucide-react-native` | `1.61.0` |
+| `react-native-gesture-handler` | `3.4.0` |
+| `react-native-permissions` | `5.6.3` |
+| `zustand` | `5.0.16` |
+| `@typescript-eslint/eslint-plugin`, `parser`, `typescript-eslint` | `8.72.0` |
+| `baseline-browser-mapping` | `2.11.30` |
+| `eslint` | `10.13.0` |
+
+RN `0.88.0`, React `19.3.1`, NativeWind `4.2.7`, Tailwind `3.4.19`, Babel 7,
+TypeScript `6.0.3`, Reanimated/Worklets и версия карты сохранены.
+Минимальная версия Node 24 уточнена до `>=24.12.0 <25`: это требование
+обновлённого `@firebase/app@0.16.3`. Установленный Node `24.15.0` подходит;
+системные версии Node не переключались.
+Gesture Handler 3.4 поддерживает RN 0.88 по
+[официальной таблице](https://docs.swmansion.com/react-native-gesture-handler/docs/fundamentals/getting-started/).
+Старый postinstall-скрипт исправления Android paper-интерфейсов удалён: в
+Gesture Handler 3.4 этих файлов и `ViewManagerWithGeneratedInterface` больше нет.
+Патч `react-native-yamap-plus@6.12.0` сохранён и применяется.
+
+[Изменение resolvers 6](https://github.com/react-hook-form/resolvers/releases/tag/v6.0.0)
+касается Effect 4; приложение не использует Effect или его resolver.
+Изменения `sound`, `sentTime`, `badge`, `onMessageSent` из Messaging 27
+также не требуют правок текущего обработчика `title`/`body`.
+
+### Firebase 27: нативное подключение
+
+По [миграции v27](https://rnfirebase.io/migrating-to-v27) оба RNFirebase-пакета
+обновлены вместе. Firebase Apple SDK закреплён RNFirebase на `13.0.0`,
+Android BoM — на `35.0.0`, Firebase JS — на `13.0.0`.
+
+- iOS: удалены `$RNFirebaseDisableSPM`, `$RNFirebaseAsStaticFramework` и
+  ручные Firebase/GoogleUtilities Pods. В app target установлен
+  `use_frameworks! :linkage => :dynamic`, переменная `USE_FRAMEWORKS` согласована
+  с ним. RN и остальные библиотеки продолжают подключаться через CocoaPods;
+  Firebase SDK получает SwiftPM. Автоматические hooks RNFirebase добавляют
+  FirebaseCore в app target и фазу встраивания SPM frameworks. Генерируемые
+  `project.pbxproj`, `Podfile.lock` и `Package.resolved` входят в миграцию.
+  Для `react-native-image-picker@8.3.0` явно добавлена линковка системных
+  `MobileCoreServices` и `UniformTypeIdentifiers`, для `RNCClipboard@1.16.3` —
+  `MobileCoreServices`: модули используют эти API, но не объявляют frameworks
+  в podspec. Это требуется их собственному link step при динамической сборке;
+  исходники выбора фото и буфера обмена не менялись.
+  Однострочный patch-package для AppMetrica `4.2.0` объявляет её RN bridge
+  статическим framework. Сам SDK остаётся динамическим: его Core/Crashes
+  подключаются один раз в app target. Это устраняет unresolved `AMA*` symbols
+  при отдельной линковке bridge с umbrella-модулем; версия, код и настройки
+  аналитики сохранены.
+- Android: Kotlin поднят с `2.2.10` до `2.4.21`. AGP `9.2.1`, Gradle `9.4.1`
+  и minSdk `26` сохранены. `AsyncStorage_kspVersion=2.3.12` явно выбирает KSP2:
+  встроенная таблица AsyncStorage 3.1.1 не знает Kotlin 2.4 и без этого выбирает
+  устаревший fallback. Проверка Kotlin metadata не отключается.
+
+Совместимость инструментов: [Kotlin/Gradle/AGP](https://kotlinlang.org/docs/gradle-configure-project.html),
+[KSP 2.3.12](https://github.com/google/ksp/releases/tag/2.3.12),
+[Kotlin/R8](https://developer.android.com/build/kotlin-support).
+Результаты автоматических и нативных проверок, а также оставшиеся ручные
+сценарии ведутся в [журнале](testing/testing-progress.md) и
+[релизном чек-листе](testing/release-checklist.md). Приложения и эмуляторы
+агент не запускает; публикация и отправка артефактов в Sentry отключены.
+
 ## Уточнение iOS и исправление ядра — 16.10.2026
 
 Первоначальное обновление оставило закешированный `React-Core-prebuilt` 0.87.1
@@ -235,7 +384,7 @@ SSO/CAPTCHA с сервером, доставку push и проверку за�
 
 Разделы 1–7 ниже сохраняют исходный план, его прежние версии и результаты.
 Их пины, ветки и статус smoke не описывают текущую волну RN `0.88.0`.
-Актуальный стек сверять по разделу «Обновление зависимостей — 16.10.2026» и
+Актуальный стек сверять по разделу «Обновление зависимостей — 22.10.2026» и
 [package.json](../package.json), результаты — по
 [журналу тестирования](testing/testing-progress.md).
 
@@ -519,7 +668,7 @@ MiniCodePush в этом проекте нет.
 
 ### Что не обновляли и почему
 
-Актуализировано 16.10.2026 для RN `0.88.0`: перечисленные ниже переходы
+Актуализировано 22.10.2026 для RN `0.88.0`: перечисленные ниже переходы
 остаются отдельными миграциями, а не обычной заменой номера версии.
 
 **Отдельно оцениваемые переходы**
@@ -531,28 +680,37 @@ MiniCodePush в этом проекте нет.
 - `@react-navigation/*` 8 (`@next`) — alpha. Используется семёрка
   (drawer `^7.14.4`); shim `InteractionManager` оставляем.
 - `nativewind` 5 / Tailwind 4 — отдельная миграция UI-инфраструктуры, не
-  drop-in обновление. Проект остаётся на NativeWind `4.2.7` / Tailwind `3.4.19`.
+  drop-in обновление. NativeWind 5 всё ещё `5.0.0-rc.0`; официальный
+  [путь миграции](https://www.nativewind.dev/v5/guides/migrate-from-v4)
+  обозначен как pre-release и не предназначен для production. Проект остаётся
+  на NativeWind `4.2.7` / Tailwind `3.4.19`.
   Перед переходом заново проверить статус выпуска и официальный путь миграции;
   локальным компонентам Gluestack, Babel/Metro и CSS-interop потребуется
   согласованная адаптация. Наличие инструкции Gluestack само по себе не
   означает совместимость текущих локальных компонентов без изменений.
+- `@expo/html-elements` `58.0.3` обновлён отдельно 22.10.2026; больше не отложен.
+  Настройка Metro для NativeWind 4 и проверки описаны в начале документа.
+  Expo SDK целиком не требуется.
 
 **Ломает текущий стек**
 
 - `tailwindcss` 4 — другой движок. NativeWind 4 и Gluestack `className` заточены под Tailwind 3. `^3.4.19` = последний 3.x (npm `v3-lts`).
 - `@babel/core` 8 — пресет `@react-native/babel-preset@0.88.0` использует
   Babel 7 и плагины семёрки; текущий core оставлен на `^7.29.7`.
-- прямая замена пакета `typescript` на 7 — нативный Go-`tsc` не предоставляет
-  прежний JS compiler API; `typescript-eslint@8` требует `>=4.8.4 <6.1.0` и
-  на 7 падает. Рекомендованный Microsoft side-by-side TS7/TS6 технически
+- прямая замена пакета `typescript` на стабильный `7.0.2` не сохраняет
+  прежний JS compiler API; даже обновлённый `typescript-eslint@8.72.0` требует
+  `>=4.8.4 <6.1.0`. В [TypeScript 7.1 Beta от 20 октября](https://devblogs.microsoft.com/typescript/announcing-typescript-7-1-beta/)
+  появился новый compiler API, но это не означает готовность текущего lint-стека.
+  Рекомендованный Microsoft side-by-side TS7/TS6 технически
   работает, но для этого проекта пока избыточен; оставлен единый TypeScript
   `6.0.3`.
-- `@expo/html-elements` 55+ — нумерация Expo SDK, не drop-in с `^0.13.8`. Gluestack (Heading / Table / Actionsheet) сидит на 0.13.
 - Android `edgeToEdgeEnabled` / splash — не npm, флаг вёрстки; ломает системные инсеты (шапка, карта). С клиентского приложения не копировать.
 
 **Не пакеты этой волны**
 
-- SwiftPM вместо CocoaPods — экспериментальная сборка iOS; Firebase/RN оставляем на pods (`$RNFirebaseDisableSPM = true`).
+- Перевод всего RN-приложения с CocoaPods на SwiftPM остаётся вне задачи.
+  Firebase SDK уже переведён на SPM в волне 22 октября; это не требует
+  экспериментального SwiftPM-пути для самого React Native.
 - усиление ESLint-правил (движок уже 10)
 - e2e
 - переписывание шитов «под клиентскую схему»

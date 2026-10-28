@@ -1,4 +1,5 @@
 import AppMetrica, {AppMetricaConfig} from '@appmetrica/react-native-analytics';
+import {delegateFatalAfterCodePushRecord} from '@/codePush/fatal';
 
 const CONFIG: AppMetricaConfig = {
   apiKey: '3a2ee98f-b748-47d7-9222-39b2b71a7f24',
@@ -237,7 +238,10 @@ export function installJsCrashHandler() {
     } catch (e) {
       console.error('[AppMetrica] JS Global Error report failed:', e);
     } finally {
-      previousGlobalHandler?.(error, isFatal);
+      const previous = previousGlobalHandler;
+      const delegate = () => previous?.(error, isFatal);
+      if (isFatal) delegateFatalAfterCodePushRecord(delegate);
+      else delegate();
     }
   });
 

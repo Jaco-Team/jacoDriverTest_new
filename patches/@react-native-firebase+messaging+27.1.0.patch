@@ -1,0 +1,24 @@
+diff --git a/node_modules/@react-native-firebase/messaging/android/build.gradle b/node_modules/@react-native-firebase/messaging/android/build.gradle
+index c562656..d27eb4f 100644
+--- a/node_modules/@react-native-firebase/messaging/android/build.gradle
++++ b/node_modules/@react-native-firebase/messaging/android/build.gradle
+@@ -21,7 +21,9 @@ plugins {
+   id "io.invertase.gradle.build" version "1.5"
+ }
+ 
+-apply plugin: "org.jetbrains.kotlin.android"
++if (!project.extensions.findByName('kotlin')) {
++  apply plugin: "org.jetbrains.kotlin.android"
++}
+ 
+ def appProject
+ if (findProject(':@react-native-firebase_app')) {
+@@ -130,7 +132,7 @@ android {
+     buildConfig = true
+   }
+ 
+-  lintOptions {
++  lint {
+     disable 'GradleCompatible'
+     abortOnError = false
+   }

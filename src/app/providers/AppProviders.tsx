@@ -17,6 +17,8 @@ import {ConnectivityProvider} from '@/shared/ui/ConnectivityLocationIndicator';
 import {AppThemeProvider, useAppTheme} from '@/shared/theme/AppThemeProvider';
 import {useGlobalStore} from '@/shared/store/store';
 import {useOfflineCityDownloads} from '@/features/offline-map/model/useOfflineCityDownloads';
+import {CodePushReadinessLifecycle} from '@/codePush/useCodePushReadiness';
+import {CodePushDebugProvider} from '@/features/codepush-debug/ui/CodePushDebugProvider';
 
 function OfflineCityDownloads() {
   useOfflineCityDownloads();
@@ -46,13 +48,16 @@ function ThemedAppProviders({children}: {children: ReactNode}) {
           <UiProvider>
             <ConnectivityProvider>
               <OfflineCityDownloads />
+              <CodePushReadinessLifecycle />
               <NavigationProvider>
-                {children}
+                <CodePushDebugProvider>
+                  {children}
 
-                <CustomSpinner />
-                <CustomSpinner_hidden />
-                <CustomAlert bannerRef={alertBannerRef} />
-                <ModalText />
+                  <CustomSpinner />
+                  <CustomSpinner_hidden />
+                  <CustomAlert bannerRef={alertBannerRef} />
+                  <ModalText />
+                </CodePushDebugProvider>
               </NavigationProvider>
             </ConnectivityProvider>
           </UiProvider>

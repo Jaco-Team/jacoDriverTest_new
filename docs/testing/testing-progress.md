@@ -1,6 +1,185 @@
 # Статус тестирования и baseline
 
-## Актуальный baseline и дополнительные регрессии — 16.10.2026
+Документация и результаты проверок CodePush находятся в [едином документе](./codepush-checks.md).
+
+## Запуск Android Debug — 22.10.2026
+
+По отдельному разрешению пользователя приложение установлено и запущено
+в `Pixel_9` (Android 15), после миграции Kotlin. Для освобождения места по
+явному разрешению удалены старые тестовые `com.jaco_test_app_site` и
+`ru.jaco.nativepilot`. Сброс эмулятора не выполнялся.
+
+Установка — `Success`; холодный запуск MainActivity — `Status: ok`.
+Процесс остаётся в foreground, JavaScript подтвердил запуск `jacoDriverTest`
+с `fabric: true`; стартовых ошибок AndroidRuntime/ReactNativeJS не обнаружено.
+Вход, карта, действия с заказами и сохранение данных прежней установки
+этим запуском не проверялись. Предыдущие записи «не запускалось» относятся
+к этапам до отдельного разрешения пользователя.
+
+## Встроенный Kotlin — 22.10.2026
+
+По разрешению пользователя включены built-in Kotlin и новый Android DSL.
+Причина, настройки и границы — в
+[плане миграции](../new-architecture-migration-plan.md),
+перечень изменений библиотек — в [описании патчей](../../patches/README.md).
+
+- Debug и localRelease собраны для `arm64-v8a` / `x86_64`, без установки
+  и запуска. После дополнительной проверки формата патчей итоговый Debug
+  также повторно собран с аудитом реально настроенных Gradle-модулей.
+- Аудит подтвердил **26 Android-модулей** со встроенным Kotlin и новым DSL;
+  внешний `org.jetbrains.kotlin.android` / `kotlin-android` нигде не применён.
+  Предупреждений `Deprecated 'org.jetbrains.kotlin.android' plugin usage`
+  в итоговых Debug/localRelease логах — **0**. Другие deprecated API сторонних
+  библиотек остаются видимыми; их диагностика не подавлялась.
+- Оба APK прошли `zipalign -c -P 16 4`. В localRelease есть встроенный
+  JS/Hermes bundle — 10 831 224 байта.
+- В обоих APK `assets/fonts/MaterialIcons.ttf` побайтово совпадает с исходником;
+  другие icon fonts не добавлены. Прежние Roboto assets сохранены.
+- В DEX Debug APK проверены именно определения семи Kotlin-классов:
+  MainApplication, ReactNativeFirebaseApp, NativeRNFBTurboApp,
+  RNPermissionsModule, EdgeToEdgeModule, TransportModuleImpl, AsyncStorageModule.
+  Это проверка попадания дополнительных Kotlin-каталогов в компиляцию,
+  а не только наличия их имён в строках или исходниках.
+- `npm run postinstall` успешно применяет все **16** патчей проекта.
+  Дополнительно **15 Gradle-патчей / 32 файла** проверены настоящим patch-package
+  на чистых npm-архивах тех же версий; результат побайтово совпадает с установленными
+  файлами. Прежние 17 файлов патча карты сохранены; AppMetrica patch не менялся.
+- `npm run lint`, `npm run typecheck` — успешно.
+  `npm run test:unit -- --ci --silent --verbose=false` —
+  **131 набор / 991 тест**, все прошли; snapshots: 0.
+  Существующий контракт настроек обновлён на built-in Kotlin / новый DSL.
+- Статическое ревью Gradle, generated assets и сохранения версий — без замечаний.
+
+Приложения и эмуляторы не запускались; Sentry upload отключён. Версии npm,
+Kotlin/KSP, minSdk/targetSdk/NDK и версия приложения сохранены. iOS/Pods на этом
+этапе не менялись и не пересобирались. Ручной запуск и проверка поведения —
+в [чек-листе](./release-checklist.md).
+
+## Sentry 8.32 — 22.10.2026
+
+По отдельному разрешению пользователя `@sentry/react-native` обновлён с
+`8.31.0` до `8.32.0`, Sentry CLI — до `3.8.1`, Cocoa SDK — до `9.31.0`.
+Обязательной миграции настроек приложения нет; подробности и официальный
+релиз — в [плане миграции](../new-architecture-migration-plan.md).
+
+- В npm lock изменились только Sentry и его зависимости. Прочие пакеты,
+  настройки `Sentry.init`, обработка ошибок и Metro сохранены.
+- `npm run ios:pods -- --no-repo-update` — успешно: `RNSentry 8.32.0`;
+  среди версий Pods изменился только RNSentry. Prebuilt Sentry SDK загружен
+  штатным скриптом с проверкой SHA-256; версия framework — `9.31.0`.
+  Сохранены Firebase SwiftPM pins и файл проекта Xcode. Проверка RN подтверждает
+  совпадение JS / iOS `0.88.0`.
+- `npm run lint`, `npm run typecheck`, `npm ls --depth=0` — успешно.
+  `sentry-cli --version` подтверждает `3.8.1`.
+- `npm run test:unit -- --ci --silent --verbose=false` —
+  **131 набор / 991 тест**, все прошли; snapshots: 0.
+- Android localRelease собран для `arm64-v8a` / `x86_64`, APK прошёл
+  `zipalign -c -P 16 4`, встроенный bundle присутствует. Source map подтверждает
+  сохранение source exports HTML Elements для NativeWind 4.
+- iOS Release собран для generic iPhone без подписи:
+  `.xcresult`: `status=succeeded`, `errorCount=0`. В приложении встроен
+  `RNSentry.framework 8.32.0`, bundle — 10 828 492 байта; source map также
+  подтверждает прежнюю обработку HTML Elements. Сохраняются предупреждения
+  сторонних модулей и скриптов сборки.
+
+Приложения и эмуляторы не запускались. Sentry upload при сборках отключён;
+доставка событий и символикация вручную не проверены. Эти сценарии остаются
+в [релизном чек-листе](./release-checklist.md).
+
+## Expo HTML Elements 58 — 22.10.2026
+
+По отдельному разрешению пользователя `@expo/html-elements` обновлён с
+`0.13.8` до `58.0.3`. Другие npm-версии этой операцией не менялись.
+Для совместимости с NativeWind 4 Metro выбирает официальный `expo-source`
+только у этого пакета: причина и устройство — в
+[плане миграции](../new-architecture-migration-plan.md).
+
+- [26 новых тестов](../../__tests__/expo-html-elements-resolution.test.ts)
+  используют реальный Metro resolver и установленный Babel, обходя UI-моки.
+  Проверены Android/iOS, публичные exports, выбор `.native.tsx`, обработка
+  JSX через CSS interop, неизменность контекста и разрешения других пакетов.
+  Контрольный сценарий подтверждает, что `build/` сохраняет обычный JSX runtime
+  и сам по себе не получает преобразование NativeWind.
+- `npm run lint`, `npm run typecheck` — успешно, без ошибок и предупреждений.
+- `npm run test:unit -- --ci --silent --verbose=false` —
+  **131 набор / 991 тест**, все прошли; snapshots: 0. Прежние 965 тестов сохранены.
+- Android localRelease собран для `arm64-v8a` / `x86_64`; APK прошёл
+  `zipalign -c -P 16 4`, встроенный bundle — 10 826 612 байт.
+- iOS Release собран для generic iPhone без подписи:
+  `.xcresult`: `status=succeeded`, `errorCount=0`; bundle — 10 816 468 байт.
+  Сохраняются предупреждения сторонних модулей и скриптов сборки.
+- В source maps обеих Release-сборок все 14 файлов HTML Elements происходят
+  из `src/`, из `build/` нет ни одного. Это подтверждает работу настройки
+  в настоящих сборках с обёртками NativeWind/Sentry, а не только в unit-тесте.
+- Статическое ревью селектора и порядка обёрток — без блокирующих замечаний.
+
+Приложения и эмуляторы не запускались; отправка артефактов в Sentry отключена.
+Визуальная проверка шторок и тем остаётся пользователю в
+[чек-листе](./release-checklist.md). Общие Heading/Table и SectionHeaderText
+сейчас не используются на экранах; их наличие не выдаётся за ручной сценарий.
+Проверки resolver/Babel не подтверждают визуальное совпадение интерфейса.
+
+## Обновления со скриншотов — 22.10.2026
+
+По явному разрешению пользователя обновлены все 13 прямых пакетов со
+скриншотов, включая Firebase app/messaging `27.0.0` и resolvers `6.0.0`.
+Версии и необходимые изменения подключения Firebase описаны в
+[плане миграции](../new-architecture-migration-plan.md).
+На момент этого этапа CodePush ещё не был подключён к startup; актуальное
+устройство описано в едином документе, указанном в начале журнала.
+
+Автоматические проверки:
+
+- `npm run lint` — успешно, без ошибок и предупреждений. Один промежуточный
+  запуск пересёкся с удалением старых Firebase Pods и завершился `ENOENT`;
+  после окончания установки Pods повторный запуск прошёл.
+- `npm run typecheck` — успешно.
+- `npm run test:unit -- --ci --silent --verbose=false` — **130 наборов / 965 тестов**,
+  все прошли; snapshots: 0. Сценарии первого этапа CodePush сохранены.
+- `npm ls --depth=0` — версии согласованы, ошибок зависимостей нет.
+- `npm run postinstall` — применяются патч карты `react-native-yamap-plus@6.12.0`
+  и однострочный патч линковки RN-моста `@appmetrica/react-native-analytics@4.2.0`.
+  Устаревшее исправление удалённых Android paper-интерфейсов RNGH больше
+  не вызывается, скрипт удалён.
+- `npm run ios:pods -- --no-repo-update` — успешно: RNFBApp/Messaging `27.0.0`,
+  Firebase SDK подключён через SPM. `node scripts/check-ios-rn-version.cjs`
+  подтверждает совпадение JS / iOS RN `0.88.0`.
+- Статическое ревью нативной конфигурации выполнено. Замечание о минимуме
+  Node исправлено: `>=24.12.0 <25`, локальная `24.15.0` подходит.
+
+Нативные проверки:
+
+- Android Debug и localRelease успешно собраны для `arm64-v8a` / `x86_64`.
+  Оба APK прошли `zipalign -c -P 16 4`; localRelease содержит встроенный bundle.
+  Сохранились предупреждения о старых Gradle/Kotlin API, Google Sign-In/D8
+  и лимите metaspace; они не остановили сборку.
+- SwiftPM resolve завершился успешно. В сохранённом workspace `Package.resolved`
+  закреплены 13 зависимостей, Firebase SDK — ровно `13.0.0`. Первая загрузка
+  GitHub-кеша оборвалась по HTTP/2; повторная загрузка завершилась.
+- Контрактный тест дополнительно проверяет FirebaseCore в app target,
+  фазу встраивания SPM frameworks и версию SDK в `Package.resolved`.
+- iOS Debug собран для generic iPhone (`arm64`, Xcode 27), без подписи и запуска.
+  Итоговый `.xcresult`: `status=succeeded`, `errorCount=0`. В процессе проверки
+  исправлена линковка UTI frameworks у ImagePicker/Clipboard и RN-моста
+  AppMetrica; настройки и код аналитики не менялись. Сохраняются предупреждения
+  сторонних модулей и скриптов сборки, включая deprecated `RCTAppDelegate`.
+- iOS Release также успешно собран для generic iPhone (`arm64`), без подписи
+  и запуска: `.xcresult` подтверждает `status=succeeded`, `errorCount=0`.
+  Встроенный JS готовится обычным Release pipeline; отправка source maps и
+  нативных debug symbols в Sentry отключена.
+- Release-артефакт дополнительно проверен без запуска: `main.jsbundle`
+  содержит **10 816 280 байт**. У 60 встроенных frameworks / 61 Mach-O образа
+  все 320 ссылок `@rpath` разрешаются внутри приложения. AppMetrica Core/Crashes
+  и FirebaseCore встроены по одному экземпляру; статический RN-мост AppMetrica
+  отдельно не встраивается. Класс `FIRMessaging` определён ровно один раз внутри
+  `RNFBMessaging.framework`: отдельный `FirebaseMessaging.framework` для этого
+  automatic SPM product не требуется.
+
+Ручные сценарии остаются в [релизном чек-листе](./release-checklist.md).
+Приложения и эмуляторы не запускались; Sentry upload при сборке отключён.
+Реальные API, заказы, S3, публикация и `npm audit fix` не использовались.
+
+## Предыдущий baseline и дополнительные регрессии — 16.10.2026
 
 Это единый источник свежих числовых результатов; датированные разделы ниже
 сохраняют историю предыдущих этапов и не заменяют текущую проверку.

@@ -8,15 +8,15 @@ function read(rel: string) {
 }
 
 describe('New Architecture contract', () => {
-  it('включает Fabric в native flags', () => {
+  it('включает Fabric, встроенный Kotlin и новый Android DSL', () => {
     expect(read('android/gradle.properties')).toMatch(
       /newArchEnabled\s*=\s*true/,
     );
     expect(read('android/gradle.properties')).toMatch(
-      /android\.builtInKotlin\s*=\s*false/,
+      /android\.builtInKotlin\s*=\s*true/,
     );
     expect(read('android/gradle.properties')).toMatch(
-      /android\.newDsl\s*=\s*false/,
+      /android\.newDsl\s*=\s*true/,
     );
     expect(read('ios/Podfile')).toMatch(
       /ENV\['RCT_NEW_ARCH_ENABLED'\]\s*=\s*'1'/,
@@ -32,12 +32,12 @@ describe('New Architecture contract', () => {
     };
     const deps = pkg.dependencies;
 
-    expect(deps['react-native']).toBe('0.88.0');
+    expect(deps['react-native']).toBe('0.88.1');
     expect(deps['react-native-reanimated']).toBe('4.7.1');
-    expect(deps['react-native-worklets']).toBe('0.13.0');
+    expect(deps['react-native-worklets']).toBe('0.13.1');
     expect(deps['react-native-yamap-plus']).toBe('6.12.0');
     expect(deps['react-native-screens']).toBe('4.30.0');
-    expect(deps['react-native-gesture-handler']).toMatch(/^\^?3\.3/);
+    expect(deps['react-native-gesture-handler']).toMatch(/^\^?3\.4/);
     expect(deps['react-native-safe-area-context']).toMatch(/^\^?5\.10/);
     expect(deps['react-native-yamap']).toBeUndefined();
     expect(deps['react-native-worklets-core']).toBeUndefined();
@@ -82,7 +82,7 @@ describe('New Architecture contract', () => {
     }
   });
 
-  it('держит Navigation 7, Sentry 8, Firebase 26 и CocoaPods Firebase', () => {
+  it('держит Navigation 7, Sentry 8 и согласованные Firebase 27 через SPM', () => {
     const pkg = JSON.parse(read('package.json')) as {
       dependencies: Record<string, string>;
       devDependencies: Record<string, string>;
@@ -93,8 +93,10 @@ describe('New Architecture contract', () => {
     expect(deps['@react-navigation/native']).toMatch(/^\^?7\.5/);
     expect(deps['@react-navigation/native-stack']).toMatch(/^\^?7\.21/);
     expect(deps['@sentry/react-native']).toMatch(/^\^?8\./);
-    expect(deps['@react-native-firebase/app']).toMatch(/^\^?26\./);
-    expect(deps['@react-native-firebase/messaging']).toMatch(/^\^?26\./);
+    expect(deps['@react-native-firebase/app']).toBe('27.1.0');
+    expect(deps['@react-native-firebase/messaging']).toBe(
+      deps['@react-native-firebase/app'],
+    );
     expect(pkg.devDependencies.eslint).toMatch(/^\^?10\./);
     expect(pkg.devDependencies['@babel/core']).toMatch(/^\^?7\.29/);
     expect(pkg.devDependencies['@typescript/native']).toBeUndefined();
@@ -105,10 +107,28 @@ describe('New Architecture contract', () => {
     );
     expect(deps['@react-native-community/datetimepicker']).toMatch(/^\^?9\.2/);
     expect(deps['@fortawesome/react-native-fontawesome']).toMatch(/^\^?1\.0/);
-    expect(deps['lucide-react-native']).toMatch(/^\^?1\.58/);
+    expect(deps['lucide-react-native']).toMatch(/^\^?1\.62/);
     expect(deps['@react-native-community/netinfo']).toMatch(/^\^?12\.0/);
     expect(deps['react-native-device-info']).toMatch(/^\^?15\.0/);
-    expect(read('ios/Podfile')).toMatch(/\$RNFirebaseDisableSPM\s*=\s*true/);
+    const podfile = read('ios/Podfile');
+    expect(podfile).toMatch(/use_frameworks!\s*:linkage\s*=>\s*:dynamic/);
+    expect(podfile).not.toMatch(/\$RNFirebaseDisableSPM\s*=\s*true/);
+    expect(podfile).not.toMatch(/\$RNFirebaseAsStaticFramework\s*=\s*true/);
+    expect(podfile).not.toMatch(
+      /^\s*pod\s+['"](?:Firebase(?:\/[^'"]+)?|FirebaseCore(?:Internal)?|GoogleUtilities)['"]/m,
+    );
+    const appProject = read('ios/jacoDriverTest.xcodeproj/project.pbxproj');
+    expect(appProject).toContain('productName = FirebaseCore;');
+    expect(appProject).toContain('[RNFB] Embed Firebase SPM Frameworks');
+    const resolved = JSON.parse(
+      read(
+        'ios/jacoDriverTest.xcworkspace/xcshareddata/swiftpm/Package.resolved',
+      ),
+    ) as {pins: {identity: string; state: {version: string}}[]};
+    expect(
+      resolved.pins.find(pin => pin.identity === 'firebase-ios-sdk')?.state
+        .version,
+    ).toBe('13.1.1');
     expect(
       fs.existsSync(
         path.join(root, 'patches/@sentry+react-native+7.13.0.patch'),

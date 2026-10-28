@@ -81,12 +81,19 @@ export function createOfflineUser(owner: DriverOfflineOwner): LaravelAuthUser {
   };
 }
 
-export async function readDriverOfflineCache(): Promise<DriverOfflineCache | null> {
+export type DriverOfflineCacheRead =
+  | {status: 'missing'}
+  | {status: 'ready'; cache: DriverOfflineCache}
+  | {status: 'invalid' | 'error'};
+
+/** Unlike the UI fallback API, preserves failed restoration as failed evidence. */
+export async function readDriverOfflineCacheDetailed(): Promise<DriverOfflineCacheRead> {
   try {
     const raw = await AsyncStorage.getItem(DRIVER_OFFLINE_CACHE_KEY);
-    if (!raw) return null;
+    if (raw === null) return {status: 'missing'};
 
-    const parsed: unknown = JSON.parse(raw);
+    let parsed: unknown;
+    try { parsed = JSON.parse(raw); } catch { return {status: 'invalid'}; }
     if (
       !isRecord(parsed) ||
       parsed.version !== DRIVER_OFFLINE_CACHE_VERSION ||
@@ -97,13 +104,18 @@ export async function readDriverOfflineCache(): Promise<DriverOfflineCache | nul
       !Array.isArray(parsed.orders.typeDop) ||
       !Array.isArray(parsed.settings.points)
     ) {
-      return null;
+      return {status: 'invalid'};
     }
 
-    return parsed as unknown as DriverOfflineCache;
+    return {status: 'ready', cache: parsed as unknown as DriverOfflineCache};
   } catch {
-    return null;
+    return {status: 'error'};
   }
+}
+
+export async function readDriverOfflineCache(): Promise<DriverOfflineCache | null> {
+  const result = await readDriverOfflineCacheDetailed();
+  return result.status === 'ready' ? result.cache : null;
 }
 
 export function writeDriverOfflineCache(cache: DriverOfflineCache): Promise<void> {

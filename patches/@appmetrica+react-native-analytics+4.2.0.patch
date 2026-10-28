@@ -1,0 +1,11 @@
+diff --git a/node_modules/@appmetrica/react-native-analytics/appmetrica-react-native-analytics.podspec b/node_modules/@appmetrica/react-native-analytics/appmetrica-react-native-analytics.podspec
+--- a/node_modules/@appmetrica/react-native-analytics/appmetrica-react-native-analytics.podspec
++++ b/node_modules/@appmetrica/react-native-analytics/appmetrica-react-native-analytics.podspec
+@@ -15,6 +15,7 @@ Pod::Spec.new do |s|
+   s.source       = { :git => "https://github.com/appmetrica/appmetrica-react-native-plugin.git", :tag => "#{s.version}" }
+ 
+   s.source_files = "ios/**/*.{h,m,mm}"
++  s.static_framework = true
+ 
+   s.dependency "AppMetricaAnalytics", ">= 5.16.0", "< 7.0.0"
+ 

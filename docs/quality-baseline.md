@@ -195,7 +195,7 @@ npm run test:unit
 
 - name: `CI Baseline`
 - job name: `lint-typecheck-unit`
-- Node.js: `24`
+- Node.js: `>=24.12.0 <25` (Firebase 27)
 - install: `npm ci`
 - checks:
   - `npm run lint`

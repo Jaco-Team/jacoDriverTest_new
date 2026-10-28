@@ -1,0 +1,32 @@
+diff --git a/node_modules/@react-native-firebase/app/android/build.gradle b/node_modules/@react-native-firebase/app/android/build.gradle
+index aef8e6c..37e0c7b 100644
+--- a/node_modules/@react-native-firebase/app/android/build.gradle
++++ b/node_modules/@react-native-firebase/app/android/build.gradle
+@@ -23,7 +23,9 @@ plugins {
+   id "io.invertase.gradle.build" version "1.5"
+ }
+ 
+-apply plugin: "org.jetbrains.kotlin.android"
++if (!project.extensions.findByName('kotlin')) {
++  apply plugin: "org.jetbrains.kotlin.android"
++}
+ 
+ def packageJson = PackageJson.getForProject(project)
+ def firebaseBomVersion = packageJson['sdkVersions']['android']['firebase']
+@@ -81,7 +83,7 @@ android {
+     buildConfig = true
+   }
+ 
+-  lintOptions {
++  lint {
+     disable 'GradleCompatible'
+     abortOnError = false
+   }
+@@ -95,6 +97,7 @@ android {
+   sourceSets {
+     main {
+       java.srcDirs = ['src/main/java', 'src/reactnative/java']
++      kotlin.srcDirs += ['src/main/java', 'src/reactnative/java']
+       java.excludes = ['**/generated/jni/**']
+     }
+   }

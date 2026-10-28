@@ -1,0 +1,24 @@
+diff --git a/node_modules/@react-native-async-storage/async-storage/android/build.gradle b/node_modules/@react-native-async-storage/async-storage/android/build.gradle
+index 2e4ac94..d3c3ce2 100644
+--- a/node_modules/@react-native-async-storage/async-storage/android/build.gradle
++++ b/node_modules/@react-native-async-storage/async-storage/android/build.gradle
+@@ -18,7 +18,9 @@ buildscript {
+ 
+ apply from: "config.gradle"
+ apply plugin: "com.android.library"
+-apply plugin: "kotlin-android"
++if (!project.extensions.findByName('kotlin')) {
++    apply plugin: "kotlin-android"
++}
+ apply plugin: "com.facebook.react"
+ 
+ // ksp/room is required to support legacy storage
+@@ -45,7 +47,7 @@ android {
+         }
+     }
+ 
+-    lintOptions {
++    lint {
+         disable "GradleCompatible"
+     }
+ 

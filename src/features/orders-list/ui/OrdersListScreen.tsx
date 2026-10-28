@@ -9,6 +9,7 @@ import { useDialCall } from '@/shared/lib/useDialCall';
 import { useOrdersUpdater } from '@/shared/lib/useOrdersUpdater';
 
 import { ScreenLayout } from '@/shared/ui/ScreenLayout'
+import {useCodePushScreenCommit} from '@/codePush/useCodePushReadiness'
 
 export function OrdersListScreen() {
   const dialCall = useDialCall();
@@ -16,6 +17,7 @@ export function OrdersListScreen() {
   const { orders, hasCachedOrders, isChecking, isGlobalLoading, getOrders, getSettings, update_interval, actionButtonOrder, setActiveConfirm, FormatPrice, showAlertText, globalFontSize } = useOrdersList()
 
   useOrdersUpdater(getOrders, update_interval, getSettings)
+  useCodePushScreenCommit('List_orders')
 
   return (
     <ScreenLayout>

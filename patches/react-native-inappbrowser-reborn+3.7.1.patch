@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native-inappbrowser-reborn/android/build.gradle b/node_modules/react-native-inappbrowser-reborn/android/build.gradle
+index cf451f6..2c2df9b 100644
+--- a/node_modules/react-native-inappbrowser-reborn/android/build.gradle
++++ b/node_modules/react-native-inappbrowser-reborn/android/build.gradle
+@@ -36,8 +36,6 @@ android {
+   defaultConfig {
+     minSdkVersion safeExtGet('minSdkVersion', DEFAULT_MIN_SDK_VERSION)
+     targetSdkVersion safeExtGet('targetSdkVersion', DEFAULT_TARGET_SDK_VERSION)
+-    versionCode 1
+-    versionName "1.0"
+   }
+   lintOptions {
+     abortOnError false

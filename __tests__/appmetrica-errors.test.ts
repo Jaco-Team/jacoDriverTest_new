@@ -1,5 +1,9 @@
 jest.unmock('@/analytics/AppMetricaService');
 
+jest.mock('@/codePush/fatal', () => ({
+  delegateFatalAfterCodePushRecord: jest.fn((delegate: () => void) => delegate()),
+}));
+
 jest.mock('@appmetrica/react-native-analytics', () => {
   const api = {
     activate: jest.fn(),
@@ -13,6 +17,7 @@ jest.mock('@appmetrica/react-native-analytics', () => {
 });
 
 import AppMetrica from '@appmetrica/react-native-analytics';
+import {delegateFatalAfterCodePushRecord} from '@/codePush/fatal';
 import {
   Analytics,
   installJsCrashHandler,
@@ -98,6 +103,9 @@ describe('AppMetrica error reporting', () => {
     expect(AppMetrica.reportError).toHaveBeenNthCalledWith(1, 'JSFatal', expect.any(String), fatal);
     expect(AppMetrica.reportUnhandledException).toHaveBeenCalledWith(fatal);
     expect(AppMetrica.reportError).toHaveBeenNthCalledWith(2, 'JSError', expect.any(String), nonFatal);
+    expect(delegateFatalAfterCodePushRecord).toHaveBeenCalledTimes(1);
+    expect(passthrough).toHaveBeenCalledWith(fatal, true);
+    expect(passthrough).toHaveBeenCalledWith(nonFatal, false);
     expect(passthrough).toHaveBeenCalledTimes(2);
   });
 

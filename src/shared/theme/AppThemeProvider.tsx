@@ -24,6 +24,7 @@ interface AppThemeState {
   previewPreference: AppThemePreference | null
   ownerKey: string | null
   hydrated: boolean
+  restorationStatus: 'pending' | 'ready' | 'error'
   hasStoredPreference: boolean
   hydrate: () => Promise<void>
   hydrateForOwner: (ownerKey: string) => Promise<void>
@@ -36,6 +37,7 @@ interface AppThemeState {
 }
 
 let hydrationPromise: Promise<void> | null = null
+let ownerHydration: {ownerKey: string; promise: Promise<void>} | null = null
 
 function isThemePreference(value: unknown): value is AppThemePreference {
   return value === 'system' || value === 'light' || value === 'dark'
@@ -55,21 +57,27 @@ export const useAppThemeStore = create<AppThemeState>()((set, get) => ({
   previewPreference: null,
   ownerKey: null,
   hydrated: false,
+  restorationStatus: 'pending',
   hasStoredPreference: false,
 
   hydrate: async () => {
-    if (get().hydrated) return
+    if (get().hydrated && get().restorationStatus !== 'pending') return
 
     if (!hydrationPromise) {
       hydrationPromise = (async () => {
         try {
           const storedPreference = await AsyncStorage.getItem(APP_THEME_STORAGE_KEY)
-          if (get().ownerKey === null && isThemePreference(storedPreference)) {
+          if (!get().hydrated && get().ownerKey === null && isThemePreference(storedPreference)) {
             set({
               preference: storedPreference,
               hasStoredPreference: true,
             })
           }
+          if (get().ownerKey === null) set({restorationStatus:
+            storedPreference === null || storedPreference === '' || isThemePreference(storedPreference)
+              ? 'ready' : 'error'})
+        } catch {
+          if (get().ownerKey === null) set({restorationStatus: 'error'})
         } finally {
           if (get().ownerKey === null) set({ hydrated: true })
         }
@@ -82,16 +90,28 @@ export const useAppThemeStore = create<AppThemeState>()((set, get) => ({
   },
 
   hydrateForOwner: async ownerKey => {
-    if (get().ownerKey === ownerKey) return
-    set({ ownerKey, preference: 'system', previewPreference: null, hydrated: true, hasStoredPreference: false })
-    const stored = await AsyncStorage.getItem(`${APP_THEME_STORAGE_KEY}:${ownerKey}`).catch(() => null)
-    if (get().ownerKey === ownerKey && isThemePreference(stored)) {
-      set({ preference: stored, hasStoredPreference: true })
+    if (get().ownerKey === ownerKey) {
+      if (ownerHydration?.ownerKey === ownerKey) await ownerHydration.promise
+      return
     }
+    set({ ownerKey, preference: 'system', previewPreference: null, hydrated: true, hasStoredPreference: false, restorationStatus: 'pending' })
+    const promise = (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(`${APP_THEME_STORAGE_KEY}:${ownerKey}`)
+        if (get().ownerKey !== ownerKey) return
+        set({restorationStatus: stored === null || stored === '' || isThemePreference(stored) ? 'ready' : 'error'})
+        if (isThemePreference(stored)) set({ preference: stored, hasStoredPreference: true })
+      } catch {
+        if (get().ownerKey === ownerKey) set({restorationStatus: 'error'})
+      }
+    })()
+    ownerHydration = {ownerKey, promise}
+    await promise
+    if (ownerHydration?.promise === promise) ownerHydration = null
   },
 
   clearOwner: () => {
-    set({ ownerKey: null, preference: 'system', previewPreference: null, hydrated: true, hasStoredPreference: false })
+    set({ ownerKey: null, preference: 'system', previewPreference: null, hydrated: true, hasStoredPreference: false, restorationStatus: 'pending' })
   },
 
   setPreference: async preference => {
@@ -188,4 +208,6 @@ export async function migrateAppThemeFromNightMap(nightMap: unknown): Promise<vo
 
 export function resetAppThemeHydrationForTests(): void {
   hydrationPromise = null
+  ownerHydration = null
+  useAppThemeStore.setState({restorationStatus: 'pending'})
 }

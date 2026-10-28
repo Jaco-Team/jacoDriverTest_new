@@ -1,0 +1,23 @@
+diff --git a/node_modules/react-native-edge-to-edge/android/build.gradle b/node_modules/react-native-edge-to-edge/android/build.gradle
+index 5e3c9ef..74137d8 100644
+--- a/node_modules/react-native-edge-to-edge/android/build.gradle
++++ b/node_modules/react-native-edge-to-edge/android/build.gradle
+@@ -42,15 +42,17 @@ android {
+         minSdkVersion safeExtGet("minSdkVersion", 24)
+         targetSdkVersion safeExtGet("targetSdkVersion", 35)
+     }
+-    lintOptions {
++    lint {
+         abortOnError false
+     }
+     sourceSets {
+         main {
+             if (isNewArchitectureEnabled()) {
+                 java.srcDirs += ["src/newarch"]
++                kotlin.srcDirs += ["src/newarch"]
+             } else {
+                 java.srcDirs += ["src/oldarch"]
++                kotlin.srcDirs += ["src/oldarch"]
+             }
+         }
+     }

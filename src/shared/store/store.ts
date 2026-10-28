@@ -40,10 +40,12 @@ import {
   getDriverOfflineOwnerKey,
   isDriverOfflineOwnerMatch,
   readDriverOfflineCache,
+  readDriverOfflineCacheDetailed,
   writeDriverOfflineCache,
   type DriverOfflineCache,
 } from '@/shared/lib/driverOfflineCache';
 import {isAppOffline} from '@/shared/lib/connectivityState';
+import {codePushReadiness, type CodePushRestoreOutcome} from '@/codePush/readiness';
 import {OFFLINE_ORDER_ACTION_MESSAGE} from '@/shared/lib/offlineOrderAction';
 import {getOrderMapLocationKey} from '@/shared/lib/orderMapLocation';
 import {normalizeGlobalFontSize} from '@/shared/lib/fontSize';
@@ -681,103 +683,116 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
   },
 
   check_token: async () => {
-    let laravelToken = '';
-
+    const restoreEpoch = codePushReadiness.beginRestore();
+    let restoreOutcome: CodePushRestoreOutcome = 'error';
     try {
-      laravelToken = await getLaravelAuthToken();
-    } catch {
-      // Secure storage can be temporarily unavailable (for example, in an
-      // unsigned iOS simulator build). Startup must still leave Greeting.
-      await useGlobalStore
-        .getState()
-        .setTokenAuth('')
-        .catch(() => undefined);
-      useGlobalStore.getState().setSpinner(false);
-      useGlobalStore.getState().setSpinnerHidden(false);
-      set({currentUser: null, is_load: false});
-      useAppThemeStore.getState().clearOwner();
-      return false;
-    }
+      let laravelToken = '';
 
-    if (!laravelToken) {
-      set({currentUser: null, is_load: false});
-      useAppThemeStore.getState().clearOwner();
-      await Promise.all([
-        clearLaravelAuthToken().catch(() => undefined),
-        useGlobalStore
+      try {
+        laravelToken = await getLaravelAuthToken();
+      } catch {
+        // Secure storage can be temporarily unavailable (for example, in an
+        // unsigned iOS simulator build). Startup must still leave Greeting.
+        await useGlobalStore
           .getState()
           .setTokenAuth('')
-          .catch(() => undefined),
-        clearDriverOfflineState(),
-      ]);
-      useGlobalStore.getState().setSpinner(false);
-      useGlobalStore.getState().setSpinnerHidden(false);
-      return false;
-    }
-
-    const offlineCache = await readDriverOfflineCache();
-
-    const restoreOfflineSession = async () => {
-      if (!offlineCache) return false;
-
-      set({currentUser: createOfflineUser(offlineCache.owner)});
-      await useGlobalStore.getState().setTokenAuth(laravelToken);
-      await useAppThemeStore.getState().hydrateForOwner(getDriverOfflineOwnerKey(offlineCache.owner));
-      await hydrateDriverOfflineState(offlineCache);
-      useGlobalStore.getState().setSpinner(false);
-      useGlobalStore.getState().setSpinnerHidden(false);
-      set({is_load: false});
-      return true;
-    };
-
-    if (offlineCache) {
-      const networkState = await NetInfo.fetch().catch(() => null);
-      if (
-        networkState?.isConnected === false ||
-        networkState?.isInternetReachable === false
-      ) {
-        return restoreOfflineSession();
-      }
-    }
-
-    try {
-      const currentUser = await fetchLaravelMe(laravelToken);
-      const accountChanged = await applyDriverSessionUser(currentUser);
-      await useAppThemeStore.getState().hydrateForOwner(getDriverOfflineOwnerKey(getDriverOfflineOwner(currentUser)));
-
-      if (offlineCache && !accountChanged) {
-        if (isDriverOfflineOwnerMatch(offlineCache.owner, currentUser)) {
-          await hydrateDriverOfflineState(offlineCache);
-        } else {
-          await clearDriverOfflineState();
-        }
-      }
-    } catch (error) {
-      const errorInfo = getLaravelApiErrorInfo(error);
-
-      if (errorInfo.status === null && offlineCache) {
-        return restoreOfflineSession();
+          .catch(() => undefined);
+        useGlobalStore.getState().setSpinner(false);
+        useGlobalStore.getState().setSpinnerHidden(false);
+        set({currentUser: null, is_load: false});
+        useAppThemeStore.getState().clearOwner();
+        return false;
       }
 
-      if (errorInfo.status === 401) {
+      const offlineRead = await readDriverOfflineCacheDetailed();
+      const localCacheReadable = offlineRead.status === 'ready' || offlineRead.status === 'missing';
+
+      if (!laravelToken) {
+        set({currentUser: null, is_load: false});
+        useAppThemeStore.getState().clearOwner();
         await Promise.all([
-          clearLaravelAuthToken(),
-          useGlobalStore.getState().setTokenAuth(''),
+          clearLaravelAuthToken().catch(() => undefined),
+          useGlobalStore
+            .getState()
+            .setTokenAuth('')
+            .catch(() => undefined),
           clearDriverOfflineState(),
         ]);
+        useGlobalStore.getState().setSpinner(false);
+        useGlobalStore.getState().setSpinnerHidden(false);
+        restoreOutcome = localCacheReadable ? 'auth-screen' : 'error';
+        return false;
       }
 
-      useGlobalStore.getState().setSpinner(false);
-      useGlobalStore.getState().setSpinnerHidden(false);
-      set({currentUser: null, is_load: false});
-      useAppThemeStore.getState().clearOwner();
+      const offlineCache = offlineRead.status === 'ready' ? offlineRead.cache : null;
 
-      return false;
+      const restoreOfflineSession = async () => {
+        if (!offlineCache) return false;
+
+        set({currentUser: createOfflineUser(offlineCache.owner)});
+        await useGlobalStore.getState().setTokenAuth(laravelToken);
+        await useAppThemeStore.getState().hydrateForOwner(getDriverOfflineOwnerKey(offlineCache.owner));
+        await hydrateDriverOfflineState(offlineCache);
+        useGlobalStore.getState().setSpinner(false);
+        useGlobalStore.getState().setSpinnerHidden(false);
+        set({is_load: false});
+        restoreOutcome = 'authenticated';
+        return true;
+      };
+
+      if (offlineCache) {
+        const networkState = await NetInfo.fetch().catch(() => null);
+        if (
+          networkState?.isConnected === false ||
+          networkState?.isInternetReachable === false
+        ) {
+          return restoreOfflineSession();
+        }
+      }
+
+      try {
+        const currentUser = await fetchLaravelMe(laravelToken);
+        const accountChanged = await applyDriverSessionUser(currentUser);
+        await useAppThemeStore.getState().hydrateForOwner(getDriverOfflineOwnerKey(getDriverOfflineOwner(currentUser)));
+
+        if (offlineCache && !accountChanged) {
+          if (isDriverOfflineOwnerMatch(offlineCache.owner, currentUser)) {
+            await hydrateDriverOfflineState(offlineCache);
+          } else {
+            await clearDriverOfflineState();
+          }
+        }
+      } catch (error) {
+        const errorInfo = getLaravelApiErrorInfo(error);
+
+        if (errorInfo.status === null && offlineCache) {
+          return restoreOfflineSession();
+        }
+
+        if (errorInfo.status === 401) {
+          await Promise.all([
+            clearLaravelAuthToken(),
+            useGlobalStore.getState().setTokenAuth(''),
+            clearDriverOfflineState(),
+          ]);
+        }
+
+        useGlobalStore.getState().setSpinner(false);
+        useGlobalStore.getState().setSpinnerHidden(false);
+        set({currentUser: null, is_load: false});
+        useAppThemeStore.getState().clearOwner();
+
+        restoreOutcome = localCacheReadable ? 'auth-screen' : 'error';
+        return false;
+      }
+
+      await useGlobalStore.getState().setTokenAuth(laravelToken);
+      await useSettingsStore.getState().getSettings();
+      restoreOutcome = localCacheReadable ? 'authenticated' : 'error';
+      return true;
+    } finally {
+      codePushReadiness.finishRestore(restoreEpoch, restoreOutcome);
     }
-
-    await useGlobalStore.getState().setTokenAuth(laravelToken);
-    await useSettingsStore.getState().getSettings();
-    return true;
   },
 
   logogout: async () => {

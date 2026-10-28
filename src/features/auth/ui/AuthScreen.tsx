@@ -16,9 +16,12 @@ import { AuthSmartCaptcha } from '@/shared/ui/auth/AuthSmartCaptcha'
 import { AuthScreenLayout } from '@/shared/ui/auth/AuthScreenLayout'
 import { AuthTextField } from '@/shared/ui/auth/AuthTextField'
 import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import {useCodePushScreenCommit} from '@/codePush/useCodePushReadiness'
+import {useCodePushDebug} from '@/features/codepush-debug/ui/CodePushDebugProvider'
 
 export function AuthScreen(): React.JSX.Element {
   const { colors } = useAppTheme()
+  const {open: openCodePushDebug} = useCodePushDebug()
   const passwordRef = useRef<React.ElementRef<typeof TextInput>>(null)
   const resetLinkTextWidth = useRef(0)
   const resetLinkUnderlineWidth = useRef(new Animated.Value(0)).current
@@ -40,6 +43,7 @@ export function AuthScreen(): React.JSX.Element {
     LoginWithSSO,
     GoToResetPWD,
   } = useAuthLogic()
+  useCodePushScreenCommit('Auth')
 
   function animateResetLinkUnderline(isPressed: boolean): void {
     const textWidth = resetLinkTextWidth.current
@@ -60,7 +64,13 @@ export function AuthScreen(): React.JSX.Element {
 
   return (
     <AuthScreenLayout>
-      <View style={[styles.logoBadge, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, shadowColor: colors.shadowStrong }]}>
+      <Pressable
+        accessible={false}
+        delayLongPress={3000}
+        onLongPress={openCodePushDebug}
+        style={[styles.logoBadge, { borderColor: colors.border, backgroundColor: colors.surfaceRaised, shadowColor: colors.shadowStrong }]}
+        testID="auth-diagnostics-trigger"
+      >
         <Image
           accessibilityLabel="Логотип Жако"
           resizeMode="contain"
@@ -68,7 +78,7 @@ export function AuthScreen(): React.JSX.Element {
           style={styles.logo}
           testID="auth-logo"
         />
-      </View>
+      </Pressable>
 
       <Text style={[styles.eyebrow, { color: colors.textMuted }]}>АВТОРИЗАЦИЯ</Text>
       <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]} testID="auth-title">

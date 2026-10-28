@@ -5,8 +5,8 @@ buildscript {
         compileSdkVersion = 37
         targetSdkVersion  = 36
         ndkVersion        = "29.0.14206865"
-        // AGP resolves Kotlin 2.2.10; AsyncStorage selects matching KSP from this value.
-        kotlinVersion     = "2.2.10"
+        // Also selects the compiler for AGP's built-in Kotlin (Firebase BoM 35 needs 2.4+).
+        kotlinVersion     = "2.4.21"
     }
     repositories {
         google()
