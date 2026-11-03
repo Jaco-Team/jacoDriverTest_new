@@ -36,9 +36,9 @@ describe('New Architecture contract', () => {
     expect(deps['react-native-reanimated']).toBe('4.7.1');
     expect(deps['react-native-worklets']).toBe('0.13.1');
     expect(deps['react-native-yamap-plus']).toBe('6.12.0');
-    expect(deps['react-native-screens']).toBe('4.30.0');
+    expect(deps['react-native-screens']).toBe('4.30.1');
     expect(deps['react-native-gesture-handler']).toMatch(/^\^?3\.4/);
-    expect(deps['react-native-safe-area-context']).toMatch(/^\^?5\.10/);
+    expect(deps['react-native-safe-area-context']).toBe('5.11.1');
     expect(deps['react-native-yamap']).toBeUndefined();
     expect(deps['react-native-worklets-core']).toBeUndefined();
   });
@@ -107,7 +107,7 @@ describe('New Architecture contract', () => {
     );
     expect(deps['@react-native-community/datetimepicker']).toMatch(/^\^?9\.2/);
     expect(deps['@fortawesome/react-native-fontawesome']).toMatch(/^\^?1\.0/);
-    expect(deps['lucide-react-native']).toMatch(/^\^?1\.62/);
+    expect(deps['lucide-react-native']).toBe('^1.67.0');
     expect(deps['@react-native-community/netinfo']).toMatch(/^\^?12\.0/);
     expect(deps['react-native-device-info']).toMatch(/^\^?15\.0/);
     const podfile = read('ios/Podfile');

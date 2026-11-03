@@ -1,6 +1,6 @@
 import React from 'react'
 import { Alert } from 'react-native'
-import { fireEvent, render, screen } from '@testing-library/react-native'
+import { fireEvent, render, screen, within } from '@testing-library/react-native'
 
 jest.mock('@/shared/store/store', () => ({
   useGlobalStore: (selector: any) => selector({ globalFontSize: 16 }),
@@ -155,5 +155,17 @@ describe('временный DEV-предпросмотр заказов', () =>
       minHeight: 48,
       alignSelf: 'stretch',
     })
+  })
+
+  it('открывает и закрывает модалку удалённого заказа на DEV-странице', async () => {
+    await render(<OrdersUiPreviewScreen />)
+
+    await fireEvent.press(screen.getByTestId('preview-deleted-orders'))
+    const sheet = screen.getByTestId('deleted-orders-sheet')
+    expect(within(sheet).getByText('Заказ №910005')).toBeTruthy()
+    expect(within(sheet).getByText('Адрес: Пугачёвская улица, 40')).toBeTruthy()
+
+    await fireEvent.press(screen.getByTestId('deleted-orders-confirm'))
+    expect(screen.queryByTestId('deleted-orders-sheet')).toBeNull()
   })
 })

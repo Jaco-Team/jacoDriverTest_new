@@ -13,6 +13,7 @@ import {CustomSpinner} from '@/shared/ui/CustomSpinner';
 import {CustomSpinner_hidden} from '@/shared/ui/CustomSpinner_hidden';
 import {CustomAlert} from '@/shared/ui/CustomAlert';
 import {ModalText} from '@/shared/ui/ModalText';
+import {DeletedOrdersNotification} from '@/entities/deleted-order/ui/DeletedOrdersSheet';
 import {ConnectivityProvider} from '@/shared/ui/ConnectivityLocationIndicator';
 import {AppThemeProvider, useAppTheme} from '@/shared/theme/AppThemeProvider';
 import {useGlobalStore} from '@/shared/store/store';
@@ -57,6 +58,7 @@ function ThemedAppProviders({children}: {children: ReactNode}) {
                   <CustomSpinner_hidden />
                   <CustomAlert bannerRef={alertBannerRef} />
                   <ModalText />
+                  <DeletedOrdersNotification />
                 </CodePushDebugProvider>
               </NavigationProvider>
             </ConnectivityProvider>

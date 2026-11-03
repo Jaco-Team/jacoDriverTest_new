@@ -23,6 +23,8 @@ export interface OrdersStore {
   limit_summ: string,
   limit_count: string,
   orders: Array<Order>,
+  del_orders: Array<DeletedOrderNotice>,
+  isHidingDelOrders: boolean,
   ordersCache: Record<string, Array<Order>>,
   ordersContextKey: string,
   is_prefetching: boolean,
@@ -58,6 +60,7 @@ export interface OrdersStore {
   filterOrdersByTypes: ( orders: Array<Order>, types: string[] ) => Array<Order>,
 
   getOrders: (is_reload?: boolean) => Promise<void>;
+  hideDelOrders: () => Promise<void>;
   prefetchOrders: (warmAll?: boolean) => Promise<void>;
   selectType: (item: {id: number, text: string}) => Promise<void>;
   switchPoint: (pointId: number | null) => void;
@@ -75,10 +78,15 @@ export interface GetOrdersResponse {
   update_interval: number,
   limit: string,
   limit_count: string,
-  arr_del_list: Array<number>,
+  arr_del_list: Array<DeletedOrderNotice>,
   driver_pay: number,
   home: XY,
   driver_need_gps: number,
+}
+
+export type DeletedOrderNotice = {
+  id: number,
+  addr: string,
 }
 
 export type Order = {

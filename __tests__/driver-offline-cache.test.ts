@@ -157,6 +157,8 @@ describe('driver offline cache', () => {
       type: {id: 1, text: 'Активные'},
       type_dop: ['1', '2', '4', '3'],
       orders: [],
+      del_orders: [],
+      isHidingDelOrders: false,
       ordersCache: {},
       ordersContextKey: '',
       is_check: false,
@@ -228,6 +230,44 @@ describe('driver offline cache', () => {
     expect(saved.settings.point_id).toBe(15);
     expect(saved.phones.phone_center).toBe('+70000000000');
     expect(serialized).not.toContain('laravel-token');
+  });
+
+  it('показывает удалённый заказ из ответа и подтверждает его просмотр', async () => {
+    mockApi.mockResolvedValueOnce({
+      st: true,
+      text: '',
+      data: {
+        orders: [],
+        arr_del_list: [{id: '900005', addr: 'улица Советская, 22'}],
+        update_interval: 30,
+        home: {lat: 53.1, lon: 50.2},
+      },
+    });
+
+    await useOrdersStore.getState().getOrders(false);
+    expect(useOrdersStore.getState().del_orders).toEqual([
+      {id: 900005, addr: 'улица Советская, 22'},
+    ]);
+
+    mockApi.mockResolvedValueOnce({st: true, text: 'Заказы скрыты'});
+    await useOrdersStore.getState().hideDelOrders();
+
+    expect(mockApi).toHaveBeenLastCalledWith('orders', expect.objectContaining({
+      type: 'hide_del_orders',
+      id_list: [900005],
+      point_id: 15,
+    }));
+    expect(useOrdersStore.getState().del_orders).toEqual([]);
+  });
+
+  it('оставляет уведомление открытым при ошибке подтверждения', async () => {
+    useOrdersStore.setState({del_orders: [{id: 900005, addr: 'улица Советская, 22'}]});
+    mockApi.mockResolvedValueOnce({st: false, text: 'Ошибка сервера'});
+
+    await useOrdersStore.getState().hideDelOrders();
+
+    expect(useOrdersStore.getState().del_orders).toHaveLength(1);
+    expect(useOrdersStore.getState().isHidingDelOrders).toBe(false);
   });
 
   it.each([

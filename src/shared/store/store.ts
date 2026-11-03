@@ -801,6 +801,7 @@ export const useLoginStore = create<LoginTypes>()((set, get) => ({
 
     const laravelToken = await getLaravelAuthToken();
     set({currentUser: null});
+    useOrdersStore.setState({del_orders: [], isHidingDelOrders: false});
     useAppThemeStore.getState().clearOwner();
 
     await Promise.all([
@@ -1873,6 +1874,8 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
   limit_count: '',
 
   orders: [],
+  del_orders: [],
+  isHidingDelOrders: false,
   ordersCache: {},
   ordersContextKey: '',
   is_prefetching: false,
@@ -2098,7 +2101,11 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
                 update_interval: json.data?.update_interval,
                 driver_need_gps: json.data?.driver_need_gps == 1 ? true : false,
                 home: effectiveHome,
-                //del_orders: json?.arr_del_list,
+                del_orders: Array.isArray(json.data?.arr_del_list)
+                  ? json.data.arr_del_list
+                      .map(item => ({id: Number(item?.id), addr: String(item?.addr ?? '')}))
+                      .filter(item => Number.isInteger(item.id) && item.id > 0)
+                  : [],
                 //driver_pay: json?.driver_pay,
               }
             : {}),
@@ -2318,6 +2325,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
           )
         : [],
       ordersContextKey: cacheKey,
+      del_orders: [],
       limit_summ: '',
       limit_count: '',
       home: null,
@@ -2336,6 +2344,39 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
   },
 
   // интервал обновления заказов
+  hideDelOrders: async () => {
+    if (get().isHidingDelOrders || get().del_orders.length === 0) return;
+    if (isAppOffline()) {
+      useGlobalStore.getState().showModalText(true, OFFLINE_ORDER_ACTION_MESSAGE);
+      return;
+    }
+
+    const ids = get().del_orders.map(item => item.id);
+    set({isHidingDelOrders: true});
+    try {
+      const pointId = useSettingsStore.getState().point_id;
+      const response = await api<StatusTextType>('orders', {
+        type: 'hide_del_orders',
+        id_list: ids,
+        ...(pointId ? {point_id: pointId} : {}),
+      });
+
+      if (!response.st) {
+        useGlobalStore.getState().showModalText(true, response.text || 'Не удалось скрыть удалённые заказы.');
+        return;
+      }
+
+      set(state => ({del_orders: state.del_orders.filter(item => !ids.includes(item.id))}));
+    } catch (error) {
+      useGlobalStore.getState().showModalText(
+        true,
+        error instanceof Error ? error.message : 'Не удалось скрыть удалённые заказы.',
+      );
+    } finally {
+      set({isHidingDelOrders: false});
+    }
+  },
+
   setUpdateInterval: (interval: number) => {
     set({update_interval: interval});
   },

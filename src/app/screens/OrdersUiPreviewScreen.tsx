@@ -10,6 +10,7 @@ import { CardOrder } from '@/entities/CardOrder/ui/CardOrder'
 import { ModalErrCam } from '@/features/schedule/ui/ModalErrCam'
 import { ModalErrOrder } from '@/features/schedule/ui/ModalErrOrder'
 import { NoSuitableOrdersSheet } from '@/features/order-recommendation/ui/NoSuitableOrdersSheet'
+import { DeletedOrdersSheet } from '@/entities/deleted-order/ui/DeletedOrdersSheet'
 import { appPalette } from '@/shared/styles/appPalette'
 import { OFFLINE_ORDER_ACTION_MESSAGE } from '@/shared/lib/offlineOrderAction'
 import { useGlobalStore } from '@/shared/store/store'
@@ -249,6 +250,7 @@ export function OrdersUiPreviewScreen(): React.JSX.Element {
     'order' | 'camera' | null
   >(null)
   const [isNoSuitablePreviewOpen, setIsNoSuitablePreviewOpen] = useState(false)
+  const [isDeletedOrdersPreviewOpen, setIsDeletedOrdersPreviewOpen] = useState(false)
 
   useEffect(() => () => clearPreviewPreference(), [clearPreviewPreference])
 
@@ -335,6 +337,23 @@ export function OrdersUiPreviewScreen(): React.JSX.Element {
               onPress={() => setIsNoSuitablePreviewOpen(true)}
             >
               <Text style={styles.previewButtonText}>Нет подходящих заказов</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={[styles.modalPreview, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Удаленные заказы</Text>
+          <Text style={[styles.sectionDescription, { color: colors.textMuted }]}>
+            Та же модалка, что при удалении заказа. Здесь она открывается без API.
+          </Text>
+          <View style={styles.graphPreviewActions}>
+            <Pressable
+              accessibilityRole="button"
+              style={[styles.previewButton, { backgroundColor: colors.brand }]}
+              testID="preview-deleted-orders"
+              onPress={() => setIsDeletedOrdersPreviewOpen(true)}
+            >
+              <Text style={styles.previewButtonText}>Показать удалённый заказ</Text>
             </Pressable>
           </View>
         </View>
@@ -427,6 +446,12 @@ export function OrdersUiPreviewScreen(): React.JSX.Element {
         fontSize={globalFontSize}
         isOpen={isNoSuitablePreviewOpen}
         onClose={() => setIsNoSuitablePreviewOpen(false)}
+      />
+
+      <DeletedOrdersSheet
+        orders={[{id: 910005, addr: 'Пугачёвская улица, 40'}]}
+        isOpen={isDeletedOrdersPreviewOpen}
+        onConfirm={() => setIsDeletedOrdersPreviewOpen(false)}
       />
 
       <ModalErrOrder

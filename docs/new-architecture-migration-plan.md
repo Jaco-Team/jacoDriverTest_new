@@ -1,5 +1,33 @@
 # План миграции на React Native / Fabric
 
+## Точечное обновление зависимостей — 03.11.2026
+
+Обновлены пакеты из актуального отчёта npm:
+
+| Пакет | Было | Стало |
+| --- | --- | --- |
+| `@hookform/resolvers` | `6.0.1` | `7.0.1` |
+| `@sentry/react-native` | `8.32.0` | `8.33.0` |
+| `react-native-safe-area-context` | `5.10.1` | `5.11.1` |
+| `react-native-screens` | `4.30.0` | `4.30.1` |
+| `baseline-browser-mapping` | `2.11.33` | `2.11.35` |
+| `eslint` | `10.13.0` | `10.14.0` |
+| override `@grpc/grpc-js` | `1.14.6` | `1.14.7` |
+| `lucide-react-native` | `1.62.0` | `1.67.0` |
+
+`lucide-react-native` добавлен после повторной проверки npm registry: запись
+`^1.62.0` допускала более новую версию, но lock-файл удерживал `1.62.0`.
+Tailwind сохранён на ветке `3.4.x`: проект использует NativeWind 4,
+и переход на Tailwind 4 является отдельной миграцией, а не patch-обновлением.
+В исходниках приложения нет использования `@hookform/resolvers`, поэтому
+изменение TypeBox API в major-версии 7 текущий runtime не затрагивает.
+
+Для трёх обновлённых нативных пакетов заново созданы patch-package-файлы,
+сохраняющие прежнее удаление app-only `versionCode/versionName`. iOS Pods
+синхронизированы; Android Debug собран для `arm64-v8a` и `x86_64`.
+Результаты автоматических проверок — в [журнале](testing/testing-progress.md),
+ручные проверки — в [чек-листе](testing/release-checklist.md).
+
 ## Встроенный Kotlin и новый Android DSL — 22.10.2026
 
 По разрешению пользователя Android переведён на встроенный Kotlin AGP 9:
