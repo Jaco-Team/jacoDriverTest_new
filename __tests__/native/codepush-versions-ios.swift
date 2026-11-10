@@ -1154,5 +1154,70 @@ for flags in [(true, false, false, false), (false, true, false, false),
     applicationLaunchKeys: [], hasURL: flags.0, hasUserActivity: flags.1, hasNotification: flags.2, hasShortcut: flags.3))
 }
 
+// Pure timing rules; presenting the notice and ending the process belong to the scene
+// delegate and are checked on a device.
+final class TrialClock { var now: TimeInterval = 0 }
+do {
+  let trialClock = TrialClock()
+  func watchdog(_ budget: TimeInterval = 30) -> CodePushTrialWatchdog {
+    CodePushTrialWatchdog(budgetSeconds: budget, monotonicSeconds: { trialClock.now })
+  }
+
+  let ordinary = watchdog()
+  ordinary.activate()
+  trialClock.now = 60
+  check("a launch without a trial is never timed", ordinary.remainingSeconds() == nil && !ordinary.expire())
+
+  trialClock.now = 0
+  let blank = watchdog()
+  blank.activate()
+  trialClock.now = 5
+  blank.arm()
+  check("time before the trial started is not counted", blank.remainingSeconds() == 30)
+  trialClock.now = 15
+  blank.deactivate()
+  trialClock.now = 500
+  check("inactive time is not counted", blank.remainingSeconds() == nil && !blank.expire())
+  blank.activate()
+  check("active time accumulates across interruptions", blank.remainingSeconds() == 20)
+  trialClock.now = 519.999
+  check("a trial does not expire before spending its active budget", !blank.expire())
+  trialClock.now = 520
+  check("a blank trial expires", blank.remainingSeconds() == 0 && blank.expire())
+  check("expiry is reported once", !blank.expire() && blank.remainingSeconds() == nil)
+
+  trialClock.now = 0
+  let mounted = watchdog()
+  mounted.arm(); mounted.activate()
+  trialClock.now = 29.999
+  mounted.settle()
+  trialClock.now = 90
+  check("a trial that mounted its root is never replaced", mounted.remainingSeconds() == nil && !mounted.expire())
+
+  trialClock.now = 0
+  let settledEarly = watchdog()
+  settledEarly.settle(); settledEarly.arm(); settledEarly.activate()
+  trialClock.now = 90
+  check("a settled launch cannot be armed again", settledEarly.remainingSeconds() == nil && !settledEarly.expire())
+
+  trialClock.now = 1
+  let steppedBack = watchdog()
+  steppedBack.arm(); steppedBack.activate()
+  trialClock.now = 0
+  check("a clock step back does not spend the budget", steppedBack.remainingSeconds() == 30 && !steppedBack.expire())
+  steppedBack.deactivate(); steppedBack.activate()
+  check("a clock step back is not accumulated", steppedBack.remainingSeconds() == 30)
+  trialClock.now = .nan
+  check("an invalid clock does not expire a trial", steppedBack.remainingSeconds() == 30 && !steppedBack.expire())
+
+  for budget in [0, -1, 601, TimeInterval.nan, TimeInterval.infinity] {
+    trialClock.now = 0
+    let disabled = watchdog(budget)
+    disabled.arm(); disabled.activate()
+    trialClock.now = 700
+    check("an invalid budget never arms the watchdog", disabled.remainingSeconds() == nil && !disabled.expire())
+  }
+}
+
 print("iOS native versions: \(checks - failures)/\(checks) checks passed")
 exit(failures == 0 ? 0 : 1)

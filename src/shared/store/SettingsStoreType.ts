@@ -71,6 +71,7 @@ export interface SettingsStore extends MySettingsResponse {
 
   setRotateMap: (is_rotate: boolean) => void,
   setPointId: (pointId: number | null) => void,
+  refreshMenuFlags: (pointId: number | null) => Promise<void>,
 
   getSettings: (silent?: boolean) => Promise<void>,
 

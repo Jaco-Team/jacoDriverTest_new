@@ -6,6 +6,7 @@ import YaMap, { Animation } from 'react-native-yamap-plus'
 
 import { useOrdersStore, useGEOStore, useSettingsStore } from '@/shared/store/store'
 import { initYaMap } from '@/shared/lib/yaMapInit'
+import { useOrdersRefreshOnForeground } from '@/shared/lib/useOrdersRefreshOnForeground'
 import { isValidMapPoint } from './mapPoint'
 import { useIsOffline } from '@/shared/ui/ConnectivityLocationIndicator'
 
@@ -186,6 +187,8 @@ export function useMapLogic({
     const id = setInterval(() => getOrders(false), ms);
     return () => clearInterval(id);
   }, [getOrders, isFocused, isOffline, update_interval]);
+
+  useOrdersRefreshOnForeground(isFocused && !isOffline);
 
   useEffect(() => {
     if (!isFocused || mapInitStatus !== 'ready' || !isMapMounted || isMapLoaded || didAutoRemountRef.current) {

@@ -81,7 +81,7 @@ type LaravelRequest = {
   method: 'get' | 'post'
   path: string
   payload?: Record<string, any>
-  requiresAuth?: boolean
+  params?: Record<string, any>
   timeoutMs?: number
   selectData?: (payload: any) => any
 }
@@ -89,28 +89,6 @@ type LaravelRequest = {
 function resolveLaravelRequest(module: string, data: Record<string, any>): LaravelRequest {
   const type = String(data.type ?? '')
   const payload = withoutInternalFields(data)
-
-  if (module === 'auth' && type === 'get_sms') {
-    return {
-      method: 'post',
-      path: laravelApiRoutes.auth.passwordRecoverySendCode,
-      payload: {
-        login: data.login,
-        password: data.pwd,
-        ...(data.captcha_token ? { captcha_token: data.captcha_token } : {}),
-      },
-      requiresAuth: false,
-    }
-  }
-
-  if (module === 'auth' && type === 'check_code') {
-    return {
-      method: 'post',
-      path: laravelApiRoutes.auth.passwordRecoveryConfirmCode,
-      payload: { login: data.login, code: data.code },
-      requiresAuth: false,
-    }
-  }
 
   if (module === 'price' && (type === 'get_my_price' || type === 'get_my_price_between')) {
     return {
@@ -203,6 +181,7 @@ function resolveLaravelRequest(module: string, data: Record<string, any>): Larav
     return {
       method: 'get',
       path: laravelApiRoutes.settings.get,
+      ...(data.point_id ? {params: {point_id: data.point_id}} : {}),
       selectData: response => ({
         ...(response?.settings ?? {}),
         all_points: response?.all_points ?? [],
@@ -278,13 +257,14 @@ export async function api<T>(
     const request = resolveLaravelRequest(module, data)
     const token = await getLaravelAuthToken()
 
-    if (request.requiresAuth !== false && !token) {
+    if (!token) {
       return { st: false, text: 'Сессия истекла. Войдите снова.' }
     }
 
     const config: AxiosRequestConfig = {
       ...(token ? { headers: bearerHeaders(token) } : {}),
       ...(request.timeoutMs ? { timeout: request.timeoutMs } : {}),
+      ...(request.params ? { params: request.params } : {}),
     }
     const response = request.method === 'get'
       ? await laravelHttp.get(request.path, config)

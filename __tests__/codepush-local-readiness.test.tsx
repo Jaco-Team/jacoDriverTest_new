@@ -6,6 +6,7 @@ jest.mock('@/codePush/bootstrap', () => ({areCodePushAssetsReady: () => true}));
 jest.mock('@/codePush/lifecycle', () => ({
   getCodePushLaunchState: jest.fn(),
   confirmCodePushLaunch: jest.fn(),
+  reportCodePushRootMounted: jest.fn(),
 }));
 jest.mock('@/shared/lib/yaMapInit', () => ({initYaMap: jest.fn(async () => true)}));
 
@@ -21,7 +22,12 @@ import {
 } from '@/shared/lib/driverOfflineCache';
 import {initYaMap} from '@/shared/lib/yaMapInit';
 import {codePushReadiness, isCodePushUiReady} from '@/codePush/readiness';
-import {restoreCodePushLocalState, useCodePushScreenCommit} from '@/codePush/useCodePushReadiness';
+import {confirmCodePushLaunch, reportCodePushRootMounted} from '@/codePush/lifecycle';
+import {
+  CodePushReadinessLifecycle,
+  restoreCodePushLocalState,
+  useCodePushScreenCommit,
+} from '@/codePush/useCodePushReadiness';
 
 const storage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 
@@ -134,4 +140,27 @@ it('requires a committed matching screen after restoration, then revokes on unmo
   expect(isCodePushUiReady(codePushReadiness.getSnapshot())).toBe(true);
   await screen.unmount();
   expect(isCodePushUiReady(codePushReadiness.getSnapshot())).toBe(false);
+});
+
+describe('root screen report to native', () => {
+  const flags = globalThis as unknown as {__DEV__: boolean};
+
+  afterEach(() => {
+    flags.__DEV__ = true;
+  });
+
+  it('reports the first commit once in a release bundle and never confirms by itself', async () => {
+    flags.__DEV__ = false;
+    const tree = await render(<CodePushReadinessLifecycle />);
+    await tree.rerender(<CodePushReadinessLifecycle />);
+    expect(reportCodePushRootMounted).toHaveBeenCalledTimes(1);
+    expect(confirmCodePushLaunch).not.toHaveBeenCalled();
+    await tree.unmount();
+  });
+
+  it('reports nothing under Metro, where no trial can run', async () => {
+    const tree = await render(<CodePushReadinessLifecycle />);
+    expect(reportCodePushRootMounted).not.toHaveBeenCalled();
+    await tree.unmount();
+  });
 });

@@ -7,31 +7,21 @@ import {
   TextInputProps,
   View,
 } from 'react-native'
-import Svg, { Path } from 'react-native-svg'
-import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+import { Eye, EyeOff } from 'lucide-react-native'
 
-function PasswordVisibilityIcon({ passwordVisible, color }: { passwordVisible: boolean; color: string }) {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" accessibilityElementsHidden>
-      <Path
-        fill={color}
-        d={
-          passwordVisible
-            ? 'M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92A11.94 11.94 0 0 0 23 12c-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7ZM2.27 3.27 4.45 5.45l.43.43A11.8 11.8 0 0 0 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42 2.73 2.73 1.27-1.27L3.54 2 2.27 3.27Zm5.26 5.26 1.55 1.55c-.05.3-.08.6-.08.92a3 3 0 0 0 3 3c.32 0 .62-.03.92-.08l1.55 1.55a5 5 0 0 1-6.94-6.94Zm4.31.49 3.15 3.15.02-.16a3 3 0 0 0-3-3l-.17.01Z'
-            : 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5Zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10Zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z'
-        }
-      />
-    </Svg>
-  )
-}
+import { useAuthPalette } from './authPalette'
 
-interface AuthTextFieldProps extends Omit<TextInputProps, 'placeholder'> {
+interface AuthTextFieldProps extends TextInputProps {
   label: string
   testID: string
+  invalid?: boolean
   passwordVisible?: boolean
   onTogglePassword?: () => void
+  /** Что показываем и скрываем, в винительном падеже: «пароль», «новый пароль». */
+  passwordSubject?: string
 }
 
+/** Поле с подписью над ним, как на странице входа SSO. */
 export const AuthTextField = forwardRef<
   React.ElementRef<typeof TextInput>,
   AuthTextFieldProps
@@ -40,139 +30,118 @@ export const AuthTextField = forwardRef<
     label,
     testID,
     value,
-    secureTextEntry,
+    invalid = false,
     passwordVisible = false,
     onTogglePassword,
+    passwordSubject = 'пароль',
+    editable = true,
     onFocus,
     onBlur,
     ...inputProps
   },
   ref
 ) {
-  const { colors } = useAppTheme()
+  const palette = useAuthPalette()
   const [isFocused, setIsFocused] = useState(false)
-  const isLabelFloating = isFocused || Boolean(value)
+  const borderColor = invalid ? palette.error : isFocused ? palette.crimson : palette.border
 
   return (
-    <View
-      style={[
-        styles.field,
-        {
-          borderColor: isFocused ? colors.brand : colors.border,
-          backgroundColor: colors.surfaceRaised,
-          shadowColor: colors.shadowStrong,
-        },
-        isFocused && styles.fieldFocused,
-      ]}
-      testID={`${testID}-container`}
-    >
-      <TextInput
-        ref={ref}
-        {...inputProps}
-        value={value}
-        secureTextEntry={secureTextEntry}
-        style={[styles.input, { color: colors.text }]}
-        selectionColor={colors.text}
-        accessibilityLabel={label}
-        testID={testID}
-        onFocus={(event) => {
-          setIsFocused(true)
-          onFocus?.(event)
-        }}
-        onBlur={(event) => {
-          setIsFocused(false)
-          onBlur?.(event)
-        }}
-      />
-
-      <Text
-        pointerEvents="none"
+    <View>
+      <Text style={[styles.label, { color: palette.label }]}>{label}</Text>
+      <View
         style={[
-          isLabelFloating ? styles.floatingLabel : styles.restingLabel,
-          {
-            color: colors.textMuted,
-            ...(isLabelFloating ? { backgroundColor: colors.surfaceRaised } : null),
-          },
+          styles.field,
+          { borderColor, backgroundColor: palette.field },
+          isFocused && { shadowColor: palette.crimson, ...styles.fieldFocused },
+          !editable && styles.fieldDisabled,
         ]}
+        testID={`${testID}-container`}
       >
-        {label}
-      </Text>
-
-      {onTogglePassword ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={passwordVisible ? 'Скрыть пароль' : 'Показать пароль'}
-          hitSlop={10}
-          style={styles.passwordToggle}
-          testID="auth-password-toggle"
-          onPress={onTogglePassword}
-        >
-          <PasswordVisibilityIcon passwordVisible={passwordVisible} color={colors.textMuted} />
-        </Pressable>
-      ) : null}
+        <TextInput
+          ref={ref}
+          {...inputProps}
+          value={value}
+          editable={editable}
+          style={[styles.input, onTogglePassword ? styles.inputWithToggle : null, { color: palette.ink }]}
+          placeholderTextColor={palette.muted}
+          selectionColor={palette.crimson}
+          accessibilityLabel={label}
+          testID={testID}
+          onFocus={(event) => {
+            setIsFocused(true)
+            onFocus?.(event)
+          }}
+          onBlur={(event) => {
+            setIsFocused(false)
+            onBlur?.(event)
+          }}
+        />
+        {onTogglePassword ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${passwordVisible ? 'Скрыть' : 'Показать'} ${passwordSubject}`}
+            accessibilityState={{ selected: passwordVisible }}
+            hitSlop={10}
+            style={styles.passwordToggle}
+            testID={testID === 'auth-password-input' ? 'auth-password-toggle' : `${testID}-toggle`}
+            onPress={onTogglePassword}
+          >
+            {passwordVisible ? (
+              <EyeOff color={palette.muted} size={20} />
+            ) : (
+              <Eye color={palette.muted} size={20} />
+            )}
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   )
 })
 
 const styles = StyleSheet.create({
+  label: {
+    marginBottom: 8,
+    fontFamily: 'Roboto-Medium',
+    fontSize: 16,
+    lineHeight: 24,
+  },
   field: {
-    position: 'relative',
-    minHeight: 58,
+    height: 48,
     flexDirection: 'row',
     alignItems: 'center',
-    overflow: 'visible',
     borderWidth: 1,
-    borderColor: 'rgba(37, 18, 22, 0.09)',
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#181114',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
+    borderRadius: 12,
   },
+  // Кольцо фокуса со страницы SSO: мягкое свечение вокруг поля.
   fieldFocused: {
-    borderWidth: 2,
-    borderColor: '#CC0033',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+  },
+  fieldDisabled: {
+    opacity: 0.6,
   },
   input: {
     minWidth: 0,
-    minHeight: 56,
+    height: 46,
     flex: 1,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 0,
     backgroundColor: 'transparent',
-    color: '#1F1015',
     fontFamily: 'Roboto-Regular',
-    fontSize: 16,
+    fontSize: 15,
     includeFontPadding: false,
-    lineHeight: 20,
     textAlignVertical: 'center',
   },
-  restingLabel: {
-    position: 'absolute',
-    top: 18,
-    left: 14,
-    color: 'rgba(64, 79, 92, 0.72)',
-    fontFamily: 'Roboto-Medium',
-    fontSize: 16,
-    lineHeight: 20,
-  },
-  floatingLabel: {
-    position: 'absolute',
-    top: -9,
-    left: 12,
-    paddingHorizontal: 4,
-    backgroundColor: '#FFFFFF',
-    color: 'rgba(64, 79, 92, 0.72)',
-    fontFamily: 'Roboto-Medium',
-    fontSize: 12,
-    lineHeight: 18,
+  inputWithToggle: {
+    paddingRight: 4,
   },
   passwordToggle: {
-    width: 48,
-    minHeight: 56,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
+    borderRadius: 18,
   },
 })

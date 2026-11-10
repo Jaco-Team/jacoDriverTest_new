@@ -19,6 +19,7 @@ object CodePushStartup {
     private val openingForeground = AtomicReference<() -> Boolean>({ true })
     private val mainHandoff = AtomicBoolean(false)
     private val processToken: String by lazy { UUID.randomUUID().toString().replace("-", "") }
+    private val trialWatchdog = CodePushTrialWatchdog()
 
     fun recordLaunchIntent(ordinaryLauncher: Boolean, foreground: () -> Boolean = { true }) {
         if (launchProvenance.record(ordinaryLauncher)) openingForeground.set(foreground)
@@ -86,8 +87,27 @@ object CodePushStartup {
     fun confirmLaunch(context: Context, binding: CodePushVersionSelection, attemptId: String,
         bindingValid: () -> Boolean): CodePushLaunchResult {
         if (binding !== cache.peek()) return CodePushLaunchResult("error", "confirmation_invalid")
-        return store(context)?.confirmLaunch(binding, attemptId, bindingValid)
+        val result = store(context)?.confirmLaunch(binding, attemptId, bindingValid)
             ?: CodePushLaunchResult("error", "runtime_invalid")
+        if (result.status == "confirmed") trialWatchdog.settle()
+        return result
+    }
+
+    /**
+     * MainActivity reports whether its window is in front. Returns the delay after which a
+     * trial that mounted nothing counts as blank, or null while nothing is being timed.
+     */
+    fun trialWatchdogDelay(activityInFront: Boolean): Long? {
+        if (cache.peek()?.source == CodePushVersionSource.TRIAL) trialWatchdog.arm()
+        if (activityInFront) trialWatchdog.activate() else trialWatchdog.deactivate()
+        return trialWatchdog.remainingMillis()
+    }
+
+    fun trialWatchdogExpired(): Boolean = trialWatchdog.expire()
+
+    /** JS committed its root screen: the bundle of this launch is alive. */
+    fun reportRootMounted(binding: CodePushVersionSelection) {
+        if (binding === cache.peek()) trialWatchdog.settle()
     }
 
     fun markFatal(context: Context, binding: CodePushVersionSelection, bindingValid: () -> Boolean): Boolean {

@@ -2,16 +2,22 @@ import NativeCodePush from '../src/codePush/NativeCodePush';
 import {
   confirmCodePushLaunch,
   getCodePushLaunchState,
+  reportCodePushRootMounted,
 } from '../src/codePush/lifecycle';
 
 jest.mock('../src/codePush/NativeCodePush', () => ({
   __esModule: true,
-  default: {getLaunchState: jest.fn(), confirmLaunch: jest.fn()},
+  default: {
+    getLaunchState: jest.fn(),
+    confirmLaunch: jest.fn(),
+    reportRootMounted: jest.fn(),
+  },
 }));
 
 const native = NativeCodePush!;
 const getState = native.getLaunchState as jest.Mock;
 const confirm = native.confirmLaunch as jest.Mock;
+const rootMounted = native.reportRootMounted as jest.Mock;
 const runtime = 'a'.repeat(64);
 const attempt = 'c'.repeat(32);
 const trial = {
@@ -27,6 +33,7 @@ const trial = {
 beforeEach(() => {
   getState.mockReset();
   confirm.mockReset();
+  rootMounted.mockReset();
 });
 
 it('only reads native identity explicitly, without acknowledging a launch', async () => {
@@ -117,3 +124,31 @@ it.each(['getLaunchState', 'confirmLaunch'] as const)(
     expect(JSON.stringify(result)).not.toContain('SECRET');
   },
 );
+
+describe('root screen report', () => {
+  it('tells native the root mounted without reading or confirming the attempt', () => {
+    reportCodePushRootMounted();
+    expect(rootMounted).toHaveBeenCalledTimes(1);
+    expect(getState).not.toHaveBeenCalled();
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it('stays silent when native rejects the report', () => {
+    rootMounted.mockImplementation(() => {
+      throw new Error('SECRET_NATIVE_DETAILS');
+    });
+    expect(() => reportCodePushRootMounted()).not.toThrow();
+  });
+
+  it('does nothing on a native build that has no such report', () => {
+    const module = native as unknown as Record<string, unknown>;
+    const original = module.reportRootMounted;
+    delete module.reportRootMounted;
+    try {
+      expect(() => reportCodePushRootMounted()).not.toThrow();
+    } finally {
+      module.reportRootMounted = original;
+    }
+    expect(rootMounted).not.toHaveBeenCalled();
+  });
+});

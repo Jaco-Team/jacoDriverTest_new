@@ -15,7 +15,12 @@ export interface GEOStore {
   type_location: 'none' | 'location' | 'watch',
   id_watch: number | null,
 
-  check_pos: (func: any, data: actionOrderData|{}, is_show_error?: boolean) => void,
+  // Ожидание геопозиции, которое видит курьер: для обратного отсчёта на спиннере.
+  // startedAt — начало текущей попытки, firstStartedAt — начало всего ожидания.
+  location_wait: {deadlineAt: number, startedAt: number, firstStartedAt?: number} | null,
+
+  // continueWithoutPosition: как на сайте, после двух неудачных попыток вызвать func с 0, 0.
+  check_pos: (func: any, data: actionOrderData|{}, is_show_error?: boolean, onFailure?: () => void, continueWithoutPosition?: boolean) => void,
   check_pos_fake: (func: any, data: actionOrderData|{}, is_show_error?: boolean) => void,
   saveMyPos: ({latitude, longitude}: {latitude: number, longitude: number}) => void,
   setDriverPos: ({latitude, longitude}: {latitude: number, longitude: number}) => void,

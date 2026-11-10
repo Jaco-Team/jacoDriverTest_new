@@ -78,6 +78,17 @@ describe('Laravel API compatibility routing', () => {
     )
   })
 
+  it('sends the selected cafe with the settings request when given', async () => {
+    mockGet.mockResolvedValueOnce({ data: { settings: { point_id: 15 }, all_points: [] } })
+
+    await api('settings', { type: 'getMySetting', point_id: 22 })
+
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/settings/get', {
+      headers: { Authorization: 'Bearer secure-token' },
+      params: { point_id: 22 },
+    })
+  })
+
   it('maps current-day price and graph month field to the mobile contract', async () => {
     mockPost
       .mockResolvedValueOnce({ data: { stat: {}, give_hist: [] } })
@@ -115,32 +126,14 @@ describe('Laravel API compatibility routing', () => {
     ])
   })
 
-  it('allows unauthenticated password-recovery requests only', async () => {
+  it('refuses protected requests without a token', async () => {
     mockGetLaravelAuthToken.mockResolvedValueOnce('')
-    mockPost.mockResolvedValueOnce({ data: { st: true } })
 
-    await api('auth', {
-      type: 'get_sms',
-      login: '79990000001',
-      pwd: 'NewPassword1!',
-      captcha_token: 'captcha-token',
-    })
-
-    expect(mockPost).toHaveBeenCalledWith(
-      '/api/v1/auth/password/recovery/send-code',
-      {
-        login: '79990000001',
-        password: 'NewPassword1!',
-        captcha_token: 'captcha-token',
-      },
-      {},
-    )
-
-    mockGetLaravelAuthToken.mockResolvedValueOnce('')
     await expect(api('orders', { type: 'get_orders', type_orders: 1 })).resolves.toEqual({
       st: false,
       text: 'Сессия истекла. Войдите снова.',
     })
+    expect(mockPost).not.toHaveBeenCalled()
   })
 
   it('clears the protected session when Laravel returns 401', async () => {
@@ -153,32 +146,17 @@ describe('Laravel API compatibility routing', () => {
     expect(result).toEqual({ st: false, text: 'Unauthenticated.', retryable: false })
     expect(mockClearLaravelAuthToken).toHaveBeenCalledTimes(1)
   })
-  it('сохраняет CAPTCHA и resend_after из успешной отправки SMS', async () => {
-    mockPost.mockResolvedValueOnce({ data: { st: true, captcha_required: true, resend_after: 30 } })
-    const result = await api('auth', { type: 'get_sms', login: '79990000001', pwd: 'Password1' })
-    expect(result).toEqual(expect.objectContaining({ st: true, captcha_required: true, resend_after: 30 }))
-    expect(mockPost).toHaveBeenCalledWith('/api/v1/auth/password/recovery/send-code',
-      { login: '79990000001', password: 'Password1' }, expect.any(Object))
-  })
+  it('сохраняет ожидание из ответа сервера: 200 с блокировкой и транспортный 429', async () => {
+    mockPost.mockResolvedValueOnce({ data: { st: false, text: 'Подождите.', locked: true, retry_after: 60 } })
+    expect(await api('orders', { type: 'get_orders', type_orders: 1 }))
+      .toEqual(expect.objectContaining({ st: false, locked: true, retry_after: 60 }))
 
-  it('сохраняет динамическую CAPTCHA из 422 и ожидание из транспортного 429', async () => {
-    mockPost.mockRejectedValueOnce({ response: { status: 422, data: {
-      text: 'Пройдите CAPTCHA.', captcha_required: true,
-    } } })
-    expect(await api('auth', { type: 'get_sms', login: 'driver', pwd: 'Password1' }))
-      .toEqual(expect.objectContaining({ st: false, captcha_required: true, text: 'Пройдите CAPTCHA.' }))
     mockPost.mockRejectedValueOnce({ response: { status: 429,
       headers: { 'retry-after': '30' }, data: { message: 'Too Many Attempts.' },
     } })
-    expect(await api('auth', { type: 'get_sms', login: 'driver', pwd: 'Password1' }))
+    expect(await api('orders', { type: 'get_orders', type_orders: 1 }))
       .toEqual(expect.objectContaining({ st: false, locked: true, retry_after: 30,
         text: 'Слишком много попыток. Повторите через 30 с.' }))
-  })
-
-  it('сохраняет ожидание подтверждения из совместимого HTTP 200', async () => {
-    mockPost.mockResolvedValueOnce({ data: { st: false, text: 'Подождите.', locked: true, retry_after: 60 } })
-    expect(await api('auth', { type: 'check_code', login: 'driver', code: '123456' }))
-      .toEqual(expect.objectContaining({ st: false, locked: true, retry_after: 60 }))
   })
 
 })

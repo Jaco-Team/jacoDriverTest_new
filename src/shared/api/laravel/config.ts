@@ -25,3 +25,11 @@ export const laravelApiConfig = {
   // очереди ещё до начала обработки. Production-таймаут не меняем.
   timeoutMs: laravelApiMode === 'local' ? 45_000 : 15_000,
 } as const
+
+/**
+ * Адрес входа через SSO с привязкой будущего кода входа к приложению:
+ * обменять код на токен получится только с code_verifier от этого challenge.
+ */
+export function buildLaravelSsoLoginUrl(codeChallenge: string): string {
+  return `${laravelApiConfig.ssoLoginUrl}&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256`
+}

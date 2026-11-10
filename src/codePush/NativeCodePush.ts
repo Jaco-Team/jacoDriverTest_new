@@ -56,6 +56,7 @@ export interface Spec extends TurboModule {
   checkAndDownload(): Promise<NativeDownloadResult>;
   getLaunchState(): Promise<NativeLaunchResult>;
   confirmLaunch(attemptId: string): Promise<NativeLaunchResult>;
+  reportRootMounted(): void;
   markFatal(): Promise<boolean>;
   getDiagnostics(): Promise<NativeDiagnosticsResult>;
 }

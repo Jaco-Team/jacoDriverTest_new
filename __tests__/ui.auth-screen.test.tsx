@@ -60,16 +60,22 @@ describe('AuthScreen', () => {
     await cleanup()
   })
 
-  it('показывает композицию сайта, hint и доступный вход через SSO', async () => {
+  it('показывает вход как на странице SSO: заголовок, подписи полей и доступный вход через SSO', async () => {
     const screen = await render(<AuthScreen />)
 
     expect(screen.getByTestId('auth-logo')).toBeTruthy()
-    expect(screen.getByText('АВТОРИЗАЦИЯ')).toBeTruthy()
-    expect(screen.getByText('Вход в аккаунт')).toBeTruthy()
-    expect(screen.getByTestId('auth-login-input')).toBeTruthy()
+    expect(screen.getByTestId('auth-title')).toHaveTextContent('Вход в аккаунт')
+    expect(screen.getByText('Введите номер телефона и пароль')).toBeTruthy()
+    expect(screen.getByText('Номер телефона')).toBeTruthy()
+    expect(screen.getByText('Пароль')).toBeTruthy()
+    expect(screen.getByTestId('auth-login-input').props.placeholder).toBe('+7 (999) 123-45-67')
     expect(screen.getByTestId('auth-password-input')).toBeTruthy()
-    expect(screen.getByTestId('auth-hint')).toBeTruthy()
+    // Старых надписи «АВТОРИЗАЦИЯ» и подсказки под полями больше нет.
+    expect(screen.queryByText('АВТОРИЗАЦИЯ')).toBeNull()
+    expect(screen.queryByTestId('auth-hint')).toBeNull()
     expect(screen.queryByTestId('auth-error')).toBeNull()
+    // Пока поля пустые, «Войти» недоступна.
+    expect(screen.getByTestId('auth-submit').props.accessibilityState).toEqual({ busy: false, disabled: true })
     expect(screen.queryByTestId('auth-captcha')).toBeNull()
 
     const sso = screen.getByTestId('auth-sso')
@@ -118,12 +124,11 @@ describe('AuthScreen', () => {
     expect(screen.getByTestId('auth-password-input').props.secureTextEntry).toBe(false)
   })
 
-  it('заменяет hint на inline-ошибку сервера', async () => {
+  it('показывает ошибку сервера под полями', async () => {
     mockAuthState.loginError = 'Неверный пароль'
 
     const screen = await render(<AuthScreen />)
 
-    expect(screen.queryByTestId('auth-hint')).toBeNull()
     expect(screen.getByTestId('auth-error')).toBeTruthy()
     expect(screen.getByText('Неверный пароль')).toBeTruthy()
   })

@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
+import { CircleCheck, CircleX, TriangleAlert, UserRoundX, type LucideIcon } from 'lucide-react-native'
 import { useShallow } from 'zustand/react/shallow'
 
 import {
@@ -32,6 +32,15 @@ interface ConfirmConfig {
   confirmColor: string
   iconBackground: string
   iconName: 'check-circle' | 'cancel' | 'person-off' | 'warning'
+}
+
+// Иконки из lucide: шрифт MaterialIcons в сборку iOS не попадает, и вместо
+// значка там рисовался «?».
+const CONFIRM_ICONS: Record<ConfirmConfig['iconName'], LucideIcon> = {
+  'check-circle': CircleCheck,
+  cancel: CircleX,
+  'person-off': UserRoundX,
+  warning: TriangleAlert,
 }
 
 interface OrderConfirmModalProps {
@@ -108,6 +117,7 @@ export function OrderConfirmModal({
     if (isOpen && typeConfirm) lastOpenConfig.current = getConfig(typeConfirm, orderId, colors)
   }, [isOpen, typeConfirm, orderId, colors])
   const config = isOpen ? currentConfig : (lastOpenConfig.current ?? currentConfig)
+  const ConfirmIcon = CONFIRM_ICONS[config.iconName]
   const titleFontSize = scaleGlobalFontSize(20, globalFontSize, 18, 24)
   const bodyFontSize = scaleGlobalFontSize(16, globalFontSize, 14, 18)
   const actionFontSize = scaleGlobalFontSize(17, globalFontSize, 14, 18)
@@ -148,13 +158,9 @@ export function OrderConfirmModal({
               styles.iconBox,
               { backgroundColor: config.iconBackground },
             ]}
+            testID={`order-confirm-icon-${config.iconName}`}
           >
-            <MaterialIcons
-              color={config.confirmColor}
-              name={config.iconName}
-              size={24}
-              testID={`order-confirm-icon-${config.iconName}`}
-            />
+            <ConfirmIcon color={config.confirmColor} size={24} />
           </View>
           <Text
             style={[

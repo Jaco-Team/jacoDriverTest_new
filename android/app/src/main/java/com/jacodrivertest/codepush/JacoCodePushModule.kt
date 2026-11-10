@@ -49,6 +49,10 @@ class JacoCodePushModule(private val context: ReactApplicationContext) : NativeC
         }
     }
 
+    override fun reportRootMounted() {
+        if (!BuildConfig.DEBUG && !invalidated.get()) CodePushStartup.reportRootMounted(launchBinding)
+    }
+
     override fun markFatal(promise: Promise) {
         try {
             lifecycleExecutor.execute {

@@ -121,9 +121,13 @@ npm run test:unit
 - `shared`
 - `components`
 
-При этом значительная часть бизнес-логики сосредоточена в одном общем store:
-
-- [src/shared/store/store.ts](../src/shared/store/store.ts)
+При этом значительная часть бизнес-логики сосредоточена в общих store
+в [src/shared/store](../src/shared/store): по одному модулю на store
+(`ordersStore.ts`, `settingsStore.ts`, `loginStore.ts` и т. д.).
+[src/shared/store/store.ts](../src/shared/store/store.ts) только реэкспортирует их,
+поэтому импорты `@/shared/store/store` и `jest.mock` этого пути продолжают работать.
+Константы, нужные при инициализации store, лежат в
+[storeShared.ts](../src/shared/store/storeShared.ts), который не импортирует другие store.
 
 Практический вывод:
 
@@ -192,7 +196,7 @@ npm run test:unit
 
 Критичные файлы:
 
-- [src/shared/store/store.ts](../src/shared/store/store.ts)
+- [src/shared/store](../src/shared/store) (модули store и реэкспорт в `store.ts`)
 - [src/shared/store/api.ts](../src/shared/store/api.ts)
 - [src/shared/lib/notifications.ts](../src/shared/lib/notifications.ts)
 - [src/shared/lib/useUserLocationUpdater.ts](../src/shared/lib/useUserLocationUpdater.ts)
@@ -217,15 +221,18 @@ npm run test:unit
 
 Основное состояние живет в `Zustand`.
 
-Ключевые store из [src/shared/store/store.ts](../src/shared/store/store.ts):
+Ключевые store (импортируются из [src/shared/store/store.ts](../src/shared/store/store.ts)):
 
-- `useGlobalStore`
-- `useLoginStore`
-- `useStatStore`
-- `useSettingsStore`
-- `useGEOStore`
-- `useOrdersStore`
-- `useFeedbackStore`
+- `useGlobalStore` — `globalStore.ts`
+- `useLoginStore` — `loginStore.ts`
+- `useStatStore` — `statStore.ts`
+- `useSettingsStore` — `settingsStore.ts`
+- `useGEOStore` — `geoStore.ts`
+- `useOrdersStore` — `ordersStore.ts`
+- `useFeedbackStore` — `feedbackStore.ts`
+
+Офлайн-снимок данных курьера собирается в `driverOfflineState.ts`,
+общие функции геолокации — в `geolocation.ts`.
 
 ## Тема интерфейса
 
@@ -460,11 +467,11 @@ MapKit координаты заказов, домашней точки и ку�
 
 ## Самые рискованные зоны проекта
 
-### 1. `src/shared/store/store.ts`
+### 1. `src/shared/store`
 
 Причины:
 
-- много store в одном файле;
+- store разнесены по модулям, но вызывают друг друга во время действий;
 - есть бизнес-действия с заказами;
 - есть авторизация и токен;
 - есть геолокация и настройки;

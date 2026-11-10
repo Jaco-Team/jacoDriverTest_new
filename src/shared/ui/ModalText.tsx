@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
+import { CircleAlert, WifiOff } from 'lucide-react-native'
 import { useShallow } from 'zustand/react/shallow'
 
 import {
@@ -39,6 +39,8 @@ export function ModalText(): React.JSX.Element {
   const bodyFontSize = scaleGlobalFontSize(16, globalFontSize, 14, 18)
   const actionFontSize = scaleGlobalFontSize(17, globalFontSize, 14, 18)
   const close = () => showModalText(false)
+  // Иконки из lucide: шрифт MaterialIcons в сборку iOS не попадает.
+  const MessageIcon = isOffline ? WifiOff : CircleAlert
 
   return (
     <Actionsheet isOpen={isOpen} onClose={close}>
@@ -66,11 +68,7 @@ export function ModalText(): React.JSX.Element {
 
         <View style={styles.headingRow} testID="message-modal">
           <View style={[styles.iconBox, { backgroundColor: colors.brandSoft }]}>
-            <MaterialIcons
-              color={colors.brand}
-              name={isOffline ? 'wifi-off' : 'error-outline'}
-              size={24}
-            />
+            <MessageIcon color={colors.brand} size={24} />
           </View>
           <Text
             style={[styles.title, {

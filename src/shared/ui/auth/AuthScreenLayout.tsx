@@ -5,26 +5,21 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import Svg, {
-  Circle,
-  Defs,
-  LinearGradient,
-  RadialGradient,
-  Rect,
-  Stop,
-} from 'react-native-svg'
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg'
 
 import { ConnectivityLocationIndicator } from '@/shared/ui/ConnectivityLocationIndicator'
-import { useAppTheme } from '@/shared/theme/AppThemeProvider'
+
+import { useAuthPalette } from './authPalette'
 
 interface AuthScreenLayoutProps {
   children: React.ReactNode
 }
 
 function AuthBackground(): React.JSX.Element {
-  const { colors, isDark } = useAppTheme()
+  const palette = useAuthPalette()
 
   return (
     <Svg
@@ -35,35 +30,24 @@ function AuthBackground(): React.JSX.Element {
       testID="auth-background"
     >
       <Defs>
-        <LinearGradient id="auth-base" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={colors.surface} />
-          <Stop offset="0.46" stopColor={isDark ? colors.surfaceAlt : colors.surfaceRaised} />
-          <Stop offset="1" stopColor={colors.surface} />
+        <LinearGradient id="auth-base" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor={palette.backgroundTop} />
+          <Stop offset="1" stopColor={palette.backgroundBottom} />
         </LinearGradient>
-        <RadialGradient id="auth-top-glow" cx="0" cy="0" rx="1" ry="1">
-          <Stop offset="0" stopColor="#315C7A" stopOpacity="0.14" />
-          <Stop offset="1" stopColor="#315C7A" stopOpacity="0" />
-        </RadialGradient>
-        <RadialGradient id="auth-bottom-glow" cx="1" cy="1" rx="1" ry="1">
-          <Stop offset="0" stopColor="#1F3D56" stopOpacity="0.08" />
-          <Stop offset="1" stopColor="#1F3D56" stopOpacity="0" />
-        </RadialGradient>
       </Defs>
-
       <Rect width="100%" height="100%" fill="url(#auth-base)" />
-      <Circle cx="0" cy="40" r="230" fill="url(#auth-top-glow)" />
-      <Circle cx="100%" cy="100%" r="270" fill="url(#auth-bottom-glow)" />
     </Svg>
   )
 }
 
+/** Карточка по центру экрана на светлом фоне — как страница входа SSO и ШЭФ. */
 export function AuthScreenLayout({ children }: AuthScreenLayoutProps): React.JSX.Element {
-  const { colors } = useAppTheme()
+  const palette = useAuthPalette()
+  const { width } = useWindowDimensions()
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.surface }]} testID="auth-screen-layout">
+    <View style={[styles.root, { backgroundColor: palette.backgroundTop }]} testID="auth-screen-layout">
       <AuthBackground />
-
       <SafeAreaView style={styles.safeArea} edges={['top', 'right', 'bottom', 'left']}>
         <ConnectivityLocationIndicator />
         <KeyboardAvoidingView
@@ -79,11 +63,8 @@ export function AuthScreenLayout({ children }: AuthScreenLayoutProps): React.JSX
             <View
               style={[
                 styles.card,
-                {
-                  borderColor: colors.border,
-                  backgroundColor: colors.surfaceRaised,
-                  shadowColor: colors.shadowStrong,
-                },
+                width >= 600 && styles.cardWide,
+                { backgroundColor: palette.card },
               ]}
               testID="auth-card"
             >
@@ -99,7 +80,6 @@ export function AuthScreenLayout({ children }: AuthScreenLayoutProps): React.JSX
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#F4F7FA',
   },
   safeArea: {
     flex: 1,
@@ -109,29 +89,23 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 16,
-    paddingRight: 14,
-    paddingBottom: 24,
-    paddingLeft: 14,
+    justifyContent: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 16,
   },
   card: {
-    flexGrow: 1,
     width: '100%',
-    maxWidth: 560,
+    maxWidth: 420,
     alignSelf: 'center',
-    paddingTop: 24,
-    paddingRight: 20,
-    paddingBottom: 24,
-    paddingLeft: 20,
-    overflow: Platform.OS === 'android' ? 'hidden' : 'visible',
-    borderWidth: 1,
-    borderColor: 'rgba(37, 18, 22, 0.08)',
+    padding: 16,
     borderRadius: 24,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#181114',
-    shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: 0.08,
-    shadowRadius: 30,
-    elevation: 8,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  cardWide: {
+    padding: 32,
   },
 })

@@ -39,7 +39,62 @@ object CodePushLifecycleAndroidTest {
         controls(parent)
         faults(parent)
         coldOpening(parent)
+        trialWatchdog()
         println("Android lifecycle: $checks assertions passed")
+    }
+
+    /** Pure timing rules; ending the process belongs to the activity and is checked on a device. */
+    private fun trialWatchdog() {
+        var clock = 0L
+        fun watchdog(budget: Long = 30_000) = CodePushTrialWatchdog(budget) { clock }
+
+        val ordinary = watchdog().apply { activate() }
+        clock = 60_000
+        check(ordinary.remainingMillis() == null && !ordinary.expire(), "A launch without a trial was timed")
+
+        clock = 0
+        val blank = watchdog().apply { activate() }
+        clock = 5_000
+        blank.arm()
+        check(blank.remainingMillis() == 30_000L, "Time before the trial started was counted")
+        clock = 15_000
+        blank.deactivate()
+        clock = 500_000
+        check(blank.remainingMillis() == null && !blank.expire(), "Time behind another window was counted")
+        blank.activate()
+        check(blank.remainingMillis() == 20_000L, "Time in front was not accumulated across pauses")
+        clock = 519_999
+        check(!blank.expire(), "A trial expired before spending its budget in front")
+        clock = 520_000
+        check(blank.remainingMillis() == 0L && blank.expire(), "A blank trial did not expire")
+        check(!blank.expire() && blank.remainingMillis() == null, "Expiry was reported twice")
+
+        clock = 0
+        val mounted = watchdog().apply { arm(); activate() }
+        clock = 29_999
+        mounted.settle()
+        clock = 90_000
+        check(mounted.remainingMillis() == null && !mounted.expire(), "A trial that mounted its root was replaced")
+
+        clock = 0
+        val settledEarly = watchdog().apply { settle(); arm(); activate() }
+        clock = 90_000
+        check(settledEarly.remainingMillis() == null && !settledEarly.expire(), "A settled launch was armed again")
+
+        clock = 1_000
+        val steppedBack = watchdog().apply { arm(); activate() }
+        clock = 0
+        check(steppedBack.remainingMillis() == 30_000L && !steppedBack.expire(), "A clock step back spent the budget")
+        steppedBack.deactivate()
+        steppedBack.activate()
+        check(steppedBack.remainingMillis() == 30_000L, "A clock step back was accumulated")
+
+        for (budget in listOf(0L, -1L, 600_001L)) {
+            clock = 0
+            val disabled = watchdog(budget).apply { arm(); activate() }
+            clock = 700_000
+            check(disabled.remainingMillis() == null && !disabled.expire(), "An invalid budget armed the watchdog")
+        }
     }
 
     private fun store(root: File, token: String = process, fault: (String) -> Unit = {}, at: Long = now,

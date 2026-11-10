@@ -214,6 +214,76 @@ enum CodePushSceneEntryPolicy {
   }
 }
 
+/// A trial whose root screen never mounts leaves a blank window: its bundle failed
+/// while loading. Only time with the app active is counted, so an opening interrupted
+/// by a call or a system alert is never mistaken for a broken bundle. The watchdog
+/// reports expiry and nothing else: the caller ends the process, and the next start
+/// recovers through the unconfirmed-launch path.
+final class CodePushTrialWatchdog {
+  private let lock = NSLock()
+  private let budgetSeconds: TimeInterval
+  private let monotonicSeconds: () -> TimeInterval
+  private var armed = false
+  private var settled = false
+  private var activeSince: TimeInterval?
+  private var spentSeconds: TimeInterval = 0
+
+  init(budgetSeconds: TimeInterval = 30,
+       monotonicSeconds: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) {
+    self.budgetSeconds = budgetSeconds
+    self.monotonicSeconds = monotonicSeconds
+  }
+
+  /// This process started a trial bundle. Time before this moment is never counted.
+  func arm() {
+    lock.lock(); defer { lock.unlock() }
+    guard !armed, !settled, budgetSeconds.isFinite, budgetSeconds > 0, budgetSeconds <= 600 else { return }
+    armed = true
+    if activeSince != nil { activeSince = monotonicSeconds() }
+  }
+
+  func activate() {
+    lock.lock(); defer { lock.unlock() }
+    if activeSince == nil { activeSince = monotonicSeconds() }
+  }
+
+  func deactivate() {
+    lock.lock(); defer { lock.unlock() }
+    guard let since = activeSince else { return }
+    activeSince = nil
+    if armed && !settled { spentSeconds += elapsed(since) }
+  }
+
+  /// The root screen mounted or the launch was confirmed: this bundle runs.
+  func settle() {
+    lock.lock(); settled = true; lock.unlock()
+  }
+
+  /// Active seconds left before expiry, or nil while nothing is being timed.
+  func remainingSeconds() -> TimeInterval? {
+    lock.lock(); defer { lock.unlock() }
+    return remaining()
+  }
+
+  /// True once, when an armed trial spent its whole active budget without mounting.
+  func expire() -> Bool {
+    lock.lock(); defer { lock.unlock() }
+    guard remaining() == 0 else { return false }
+    settled = true
+    return true
+  }
+
+  private func remaining() -> TimeInterval? {
+    guard armed, !settled, let since = activeSince else { return nil }
+    return max(0, budgetSeconds - spentSeconds - elapsed(since))
+  }
+
+  private func elapsed(_ since: TimeInterval) -> TimeInterval {
+    let value = monotonicSeconds() - since
+    return value.isFinite && value > 0 ? value : 0
+  }
+}
+
 struct CodePushLaunchBinding {
   let selection: CodePushVersionSelection
   let nativeRuntimeId: String
@@ -394,8 +464,45 @@ enum CodePushStartup {
     #if DEBUG
       return embeddedURL
     #else
-      return selection().localURL ?? embeddedURL
+      let choice = selection()
+      if choice.source == "trial" {
+        trialWatchdog.arm()
+        DispatchQueue.main.async { scheduleTrialTimer() }
+      }
+      return choice.localURL ?? embeddedURL
     #endif
+  }
+
+  private static let trialWatchdog = CodePushTrialWatchdog()
+  // The two values below are touched on the main queue only.
+  private static var trialTimer: DispatchWorkItem?
+  private static var blankTrialHandler: (() -> Void)?
+
+  /// SceneDelegate reports whether its scene is active and, once, what to do when a
+  /// trial mounted nothing within its active budget. Main queue only.
+  static func watchTrial(sceneActive: Bool, onBlank: (() -> Void)? = nil) {
+    #if !DEBUG
+      if let onBlank = onBlank { blankTrialHandler = onBlank }
+      if sceneActive { trialWatchdog.activate() } else { trialWatchdog.deactivate() }
+      scheduleTrialTimer()
+    #endif
+  }
+
+  private static func scheduleTrialTimer() {
+    trialTimer?.cancel()
+    trialTimer = nil
+    guard let delay = trialWatchdog.remainingSeconds() else { return }
+    let item = DispatchWorkItem {
+      if trialWatchdog.expire() { blankTrialHandler?() } else { scheduleTrialTimer() }
+    }
+    trialTimer = item
+    DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
+  }
+
+  /// JS committed its root screen: the bundle of this launch is alive.
+  static func rootMounted(_ binding: CodePushLaunchBinding) {
+    guard binding.errorCode.isEmpty, binding.processToken == CodePushProcessIdentity.token else { return }
+    trialWatchdog.settle()
   }
 
   static func captureBinding() -> CodePushLaunchBinding {
@@ -466,8 +573,10 @@ enum CodePushStartup {
     do {
       let runtime = try CodePushNativeEnvironment.loadRuntimeContext().get()
       guard runtime.nativeRuntimeId == binding.nativeRuntimeId else { return .failure("confirmation_invalid") }
-      return try makeStore().confirm(selection: binding.selection, attemptId: attemptId,
+      let result = try makeStore().confirm(selection: binding.selection, attemptId: attemptId,
         processToken: binding.processToken, bindingValid: bindingValid)
+      if result.status == "confirmed" { trialWatchdog.settle() }
+      return result
     } catch { return .failure("confirmation_failed") }
   }
 }

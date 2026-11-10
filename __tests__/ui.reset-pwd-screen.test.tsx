@@ -1,14 +1,6 @@
 import React from 'react'
 import { cleanup, fireEvent, render } from '@testing-library/react-native'
 
-const mockHandleCodeChange = jest.fn()
-const mockHandleLoginChange = jest.fn()
-const mockHandlePasswordChange = jest.fn()
-const mockHandleTogglePassword = jest.fn()
-const mockRequestRecoveryCode = jest.fn()
-const mockConfirmRecoveryCode = jest.fn()
-const mockGoToAuth = jest.fn()
-
 let mockResetState: any
 
 jest.mock('@/features/reset-pwd/model/useResetPwdLogic', () => ({
@@ -35,223 +27,198 @@ jest.mock('@/shared/ui/auth/AuthSmartCaptcha', () => {
 
 import { ResetPwdScreen } from '@/features/reset-pwd/ui/ResetPwdScreen'
 
-describe('ResetPwdScreen', () => {
+function baseState(overrides: Record<string, unknown> = {}) {
+  return {
+    step: 'request',
+    loading: false,
+    phone: '',
+    setPhone: jest.fn(),
+    phoneError: '',
+    maskedPhone: '',
+    channels: ['sms', 'telegram', 'voice'],
+    channel: 'sms',
+    setChannel: jest.fn(),
+    code: '',
+    setCode: jest.fn(),
+    password: '',
+    setPassword: jest.fn(),
+    repeatPassword: '',
+    setRepeatPassword: jest.fn(),
+    passwordRules: { length: false, characters: false, match: false },
+    error: null,
+    recoveryMessage: '',
+    captchaVisible: false,
+    captchaResetKey: 0,
+    handleCaptchaTokenChange: jest.fn(),
+    handleCaptchaError: jest.fn(),
+    resendAfter: 0,
+    retryAfter: 0,
+    canSubmit: false,
+    submit: jest.fn(),
+    resend: jest.fn(),
+    back: jest.fn(),
+    editPhone: jest.fn(),
+    changeChannel: jest.fn(),
+    goToLogin: jest.fn(),
+    ...overrides,
+  }
+}
+
+describe('ResetPwdScreen: те же шаги, что на странице входа SSO', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
-    mockResetState = {
-      activeStep: 0,
-      recoveryComplete: false,
-      panelTitle: 'Восстановление доступа',
-      panelText:
-        'Укажите номер телефона и новый пароль. После этого мы отправим код подтверждения.',
-      helperText:
-        'Если номер зарегистрирован, отправим SMS с кодом. Пароль должен быть сложным.',
-      myCode: '',
-      handleCodeChange: mockHandleCodeChange,
-      myLogin: '',
-      handleLoginChange: mockHandleLoginChange,
-      myPWD: '',
-      handlePasswordChange: mockHandlePasswordChange,
-      showPassword: false,
-      handleTogglePassword: mockHandleTogglePassword,
-      errorText: '',
-      captchaRequired: true,
-      showResendCaptcha: false,
-      captchaResetKey: 0,
-      retryAfter: 0,
-      sendRetryAfter: 0,
-      canResendCode: false,
-      handleCaptchaTokenChange: jest.fn(),
-      handleCaptchaError: jest.fn(),
-      isLoading: false,
-      canRequestCode: false,
-      canConfirmCode: false,
-      requestRecoveryCode: mockRequestRecoveryCode,
-      confirmRecoveryCode: mockConfirmRecoveryCode,
-      goToAuth: mockGoToAuth,
-    }
+    mockResetState = baseState()
   })
 
   afterEach(async () => {
     await cleanup()
   })
 
-  it('показывает первый шаг с прежними требованиями пароля и обязательной CAPTCHA', async () => {
+  it('шаг номера: поле, способ получения кода с подписью и возврат ко входу', async () => {
     const screen = await render(<ResetPwdScreen />)
 
-    expect(screen.getByText('ВОССТАНОВЛЕНИЕ ПАРОЛЯ')).toBeTruthy()
-    expect(screen.getByText('Восстановление доступа')).toBeTruthy()
-    expect(screen.getByTestId('reset-phone-input')).toBeTruthy()
-    expect(screen.getByTestId('reset-password-input')).toBeTruthy()
-    expect(screen.getByTestId('reset-password-input').props.keyboardType).toBe('default')
-    expect(screen.getByTestId('reset-password-input').props.secureTextEntry).toBe(true)
-    expect(screen.getByTestId('reset-password-requirements')).toBeTruthy()
-    expect(screen.getByTestId('reset-captcha')).toBeTruthy()
-    expect(screen.getByText('Не менее 8 символов')).toBeTruthy()
-    expect(screen.getByText('Хотя бы одна цифра')).toBeTruthy()
-    expect(screen.getByText('Строчная латинская буква')).toBeTruthy()
-    expect(screen.getByText('Заглавная латинская буква')).toBeTruthy()
-    expect(screen.getByTestId('reset-hint')).toBeTruthy()
-    expect(screen.getByTestId('reset-submit').props.disabled).toBe(true)
-    expect(screen.getByTestId('reset-submit-surface')).toHaveStyle({
-      backgroundColor: '#E0E0E0',
-      borderColor: '#C9CDD1',
-      borderWidth: 1,
-    })
-    expect(screen.getByTestId('reset-submit-label')).toHaveStyle({
-      color: '#9E9E9E',
-    })
-  })
+    expect(screen.getByTestId('reset-title')).toHaveTextContent('Восстановление пароля')
+    expect(screen.getByText('Отправим код подтверждения на ваш номер')).toBeTruthy()
+    expect(screen.getByTestId('auth-logo')).toBeTruthy()
+    expect(screen.queryByTestId('auth-back')).toBeNull()
+    expect(screen.getByTestId('reset-login-input').props.placeholder).toBe('+7 (999) 123-45-67')
 
-  it('скрывает CAPTCHA только по явному отказу сервера от проверки', async () => {
-    mockResetState.captchaRequired = false
-    const screen = await render(<ResetPwdScreen />)
-    expect(screen.queryByTestId('reset-captcha')).toBeNull()
-    expect(screen.getByTestId('reset-submit').props.disabled).toBe(true)
-  })
+    expect(screen.getByTestId('auth-channel-sms').props.accessibilityState).toMatchObject({ selected: true })
+    expect(screen.getByTestId('auth-channel-helper')).toHaveTextContent('Придёт SMS с 6-значным кодом')
+    await fireEvent.press(screen.getByTestId('auth-channel-voice'))
+    expect(mockResetState.setChannel).toHaveBeenCalledWith('voice')
 
-  it('показывает оставшееся ожидание на заблокированной кнопке', async () => {
-    mockResetState.retryAfter = 25
-    const screen = await render(<ResetPwdScreen />)
+    await fireEvent.changeText(screen.getByTestId('reset-login-input'), '79991234567')
+    expect(mockResetState.setPhone).toHaveBeenCalledWith('79991234567')
+
     const submit = screen.getByTestId('reset-submit')
-    expect(submit.props.accessibilityLabel).toBe('Повторить через 25 с')
-    expect(submit.props.disabled).toBe(true)
+    expect(submit).toHaveTextContent('Отправить код')
+    expect(submit.props.accessibilityState).toEqual({ busy: false, disabled: true })
+
+    await fireEvent.press(screen.getByTestId('reset-return-to-auth'))
+    expect(mockResetState.goToLogin).toHaveBeenCalledTimes(1)
   })
 
-  it('передаёт ввод первого шага и переход к авторизации', async () => {
-    mockResetState.canRequestCode = true
-    const screen = await render(<ResetPwdScreen />)
-
-    expect(screen.getByTestId('reset-submit-surface')).toHaveStyle({
-      backgroundColor: '#CC0033',
-      borderColor: '#CC0033',
-    })
-    expect(screen.getByTestId('reset-submit-label')).toHaveStyle({
-      color: '#FFFFFF',
+  it('не показывает переключатель, когда доступна только SMS, и показывает ошибку номера', async () => {
+    mockResetState = baseState({
+      channels: ['sms'],
+      phoneError: 'Аккаунт с таким номером не найден.',
+      captchaVisible: true,
     })
 
-    await fireEvent.changeText(screen.getByTestId('reset-phone-input'), '89003270606')
-    await fireEvent.changeText(screen.getByTestId('reset-password-input'), 'Password1')
-    await fireEvent.press(screen.getByTestId('auth-password-toggle'))
-    await fireEvent.press(screen.getByTestId('reset-submit'))
-    await fireEvent.press(screen.getByTestId('reset-back-to-auth'))
+    const screen = await render(<ResetPwdScreen />)
 
-    expect(mockHandleLoginChange).toHaveBeenCalledWith('89003270606')
-    expect(mockHandlePasswordChange).toHaveBeenCalledWith('Password1')
-    expect(mockHandleTogglePassword).toHaveBeenCalledTimes(1)
-    expect(mockRequestRecoveryCode).toHaveBeenCalledTimes(1)
-    expect(mockGoToAuth).toHaveBeenCalledTimes(1)
+    expect(screen.queryByTestId('auth-channel-switch')).toBeNull()
+    expect(screen.getByTestId('reset-phone-error')).toHaveTextContent('Аккаунт с таким номером не найден.')
+    expect(screen.getByTestId('reset-captcha')).toBeTruthy()
   })
 
-  it('показывает второй шаг с одним шестизначным SMS-инпутом', async () => {
-    mockResetState.activeStep = 1
-    mockResetState.panelTitle = 'Подтверждение по SMS'
-    mockResetState.panelText =
-      'Введите код из SMS, чтобы подтвердить номер и завершить восстановление пароля.'
-    mockResetState.helperText =
-      'Если код не пришел, проверьте номер телефона и повторите отправку позже.'
-    mockResetState.myCode = '110712'
-    mockResetState.canConfirmCode = true
+  it('шаг кода: номер под маской, шесть ячеек, отсчёт повторной отправки', async () => {
+    mockResetState = baseState({
+      step: 'code',
+      maskedPhone: '+7 (999) ***-**-67',
+      code: '12',
+      resendAfter: 29,
+      recoveryMessage: 'Запрос на отправку кода принят.',
+      canSubmit: false,
+    })
 
     const screen = await render(<ResetPwdScreen />)
-    const codeInput = screen.getByTestId('reset-code-input')
 
-    expect(screen.getByText('Подтверждение по SMS')).toBeTruthy()
-    expect(codeInput.props.maxLength).toBe(6)
-    expect(screen.queryByTestId('reset-captcha')).toBeNull()
+    expect(screen.getByTestId('reset-title')).toHaveTextContent('Введите код')
+    expect(screen.getByTestId('reset-masked-phone')).toHaveTextContent('+7 (999) ***-**-67')
+    expect(screen.queryByTestId('auth-logo')).toBeNull()
+    expect(screen.getByTestId('reset-code-input-cell-0')).toHaveTextContent('1')
+    expect(screen.getByTestId('reset-code-input-cell-1')).toHaveTextContent('2')
+    expect(screen.getByTestId('reset-code-input-cell-5')).toHaveTextContent('')
+    expect(screen.getByTestId('reset-resend-wait')).toHaveTextContent('Отправить повторно через 0:29')
+    expect(screen.queryByTestId('reset-resend')).toBeNull()
+    expect(screen.getByTestId('reset-message')).toHaveTextContent('Запрос на отправку кода принят.')
+    expect(screen.getByTestId('reset-submit')).toHaveTextContent('Подтвердить')
 
-    await fireEvent.changeText(codeInput, '1234')
-    await fireEvent.press(screen.getByTestId('reset-submit'))
+    await fireEvent.changeText(screen.getByTestId('reset-code-input'), '12a345')
+    expect(mockResetState.setCode).toHaveBeenCalledWith('12345')
 
-    expect(mockHandleCodeChange).toHaveBeenCalledWith('1234')
-    expect(mockConfirmRecoveryCode).toHaveBeenCalledTimes(1)
+    await fireEvent.press(screen.getByTestId('auth-back'))
+    await fireEvent.press(screen.getByTestId('reset-edit-phone'))
+    await fireEvent.press(screen.getByTestId('reset-change-channel'))
+    expect(mockResetState.back).toHaveBeenCalledTimes(1)
+    expect(mockResetState.editPhone).toHaveBeenCalledTimes(1)
+    expect(mockResetState.changeChannel).toHaveBeenCalledTimes(1)
   })
 
-  it('ожидание повторного SMS не блокирует подтверждение и повторная отправка доступна отдельно', async () => {
-    mockResetState.activeStep = 1
-    mockResetState.canConfirmCode = true
-    mockResetState.sendRetryAfter = 20
+  it('после ожидания предлагает отправить код снова и показывает отказ по коду с заголовком', async () => {
+    mockResetState = baseState({
+      step: 'code',
+      maskedPhone: '+7 (999) ***-**-67',
+      error: { text: 'Код не подошёл или устарел', code: true },
+      recoveryMessage: 'Запрос на отправку кода принят.',
+    })
+
     const screen = await render(<ResetPwdScreen />)
-    expect(screen.getByText('Отправить снова через 20 с')).toBeTruthy()
-    expect(screen.getByTestId('reset-resend').props.disabled).toBe(true)
-    expect(screen.getByTestId('reset-submit').props.disabled).toBe(false)
-    mockResetState.sendRetryAfter = 0
-    mockResetState.canResendCode = true
-    await screen.rerender(<ResetPwdScreen />)
+
+    expect(screen.getByTestId('reset-error')).toHaveTextContent('Неверный кодКод не подошёл или устарел')
+    // Пояснение об отправке уступает место ошибке.
+    expect(screen.queryByTestId('reset-message')).toBeNull()
+
     await fireEvent.press(screen.getByTestId('reset-resend'))
-    expect(mockRequestRecoveryCode).toHaveBeenCalledTimes(1)
-    expect(mockConfirmRecoveryCode).not.toHaveBeenCalled()
+    expect(mockResetState.resend).toHaveBeenCalledTimes(1)
   })
 
-  it('на шаге SMS CAPTCHA требуется только для повторной отправки', async () => {
-    mockResetState.activeStep = 1
-    mockResetState.captchaRequired = true
-    mockResetState.showResendCaptcha = true
-    mockResetState.canConfirmCode = true
-    const screen = await render(<ResetPwdScreen />)
-    expect(screen.getByTestId('reset-captcha')).toBeTruthy()
-    expect(screen.getByTestId('reset-resend').props.disabled).toBe(true)
-    expect(screen.getByText('Проверка для повторной отправки')).toBeTruthy()
-    expect(screen.getByTestId('reset-submit').props.disabled).toBe(false)
-  })
-
-  it('полученный SMS подтверждается без новой CAPTCHA, открытая проверка относится только к повтору', async () => {
-    mockResetState.activeStep = 1
-    mockResetState.myCode = '123456'
-    mockResetState.canConfirmCode = true
-    mockResetState.canResendCode = true
-    const screen = await render(<ResetPwdScreen />)
-    expect(screen.queryByTestId('reset-captcha')).toBeNull()
-    expect(screen.getByTestId('reset-submit').props.disabled).toBe(false)
-    mockResetState.showResendCaptcha = true
-    mockResetState.canResendCode = false
-    await screen.rerender(<ResetPwdScreen />)
-    expect(screen.getByText('Проверка для повторной отправки')).toBeTruthy()
-    expect(screen.getByTestId('reset-code-input').props.value).toBe('123456')
-    expect(screen.getByTestId('reset-submit').props.disabled).toBe(false)
-  })
-
-  it('после успешной смены пароля предлагает вход и убирает повторное подтверждение SMS', async () => {
-    mockResetState.activeStep = 1;
-    mockResetState.recoveryComplete = true;
-    mockResetState.panelTitle = 'Пароль изменён';
-    mockResetState.panelText = 'Пароль успешно изменён. Теперь войдите в аккаунт с новым паролем.';
-
-    const screen = await render(<ResetPwdScreen />);
-
-    expect(screen.getByText('Пароль изменён')).toBeTruthy();
-    expect(screen.queryByTestId('reset-code-input')).toBeNull();
-    expect(screen.queryByTestId('reset-phone-input')).toBeNull();
-    expect(screen.queryByTestId('reset-password-input')).toBeNull();
-    expect(screen.queryByTestId('reset-captcha')).toBeNull();
-    expect(screen.queryByTestId('reset-error')).toBeNull();
-    expect(screen.queryByTestId('reset-resend')).toBeNull();
-    expect(screen.queryByTestId('reset-back-to-auth')).toBeNull();
-    const submit = screen.getByTestId('reset-submit');
-    expect(submit.props.disabled).toBe(false);
-    expect(submit.props.accessibilityLabel).toBe('Войти');
-
-    await fireEvent.press(submit);
-
-    expect(mockGoToAuth).toHaveBeenCalledTimes(1);
-    expect(mockConfirmRecoveryCode).not.toHaveBeenCalled();
-    expect(mockRequestRecoveryCode).not.toHaveBeenCalled();
-  });
-
-  it('заменяет подсказку на inline-ошибку и блокирует кнопку во время запроса', async () => {
-    mockResetState.errorText = 'Код из смс введен не верно'
-    mockResetState.isLoading = true
-
-    const screen = await render(<ResetPwdScreen />)
-    const submit = screen.getByTestId('reset-submit')
-
-    expect(screen.queryByTestId('reset-hint')).toBeNull()
-    expect(screen.getByTestId('reset-error')).toBeTruthy()
-    expect(screen.getByText('Код из смс введен не верно')).toBeTruthy()
-    expect(submit.props.disabled).toBe(true)
-    expect(submit.props.accessibilityState).toEqual({
-      busy: true,
-      disabled: true,
+  it('шаг пароля: два поля со своими кнопками показа и три требования', async () => {
+    mockResetState = baseState({
+      step: 'password',
+      password: 'NewPassword9',
+      repeatPassword: 'NewPassword',
+      passwordRules: { length: true, characters: true, match: false },
+      retryAfter: 20,
     })
+
+    const screen = await render(<ResetPwdScreen />)
+
+    expect(screen.getByTestId('reset-title')).toHaveTextContent('Придумайте новый пароль')
+    expect(screen.getByText('Используйте строчные и заглавные латинские буквы и цифры')).toBeTruthy()
+    expect(screen.getByTestId('reset-password-input').props.secureTextEntry).toBe(true)
+    expect(screen.getByTestId('reset-repeat-password-input').props.secureTextEntry).toBe(true)
+
+    await fireEvent.press(screen.getByTestId('reset-password-input-toggle'))
+    expect(screen.getByTestId('reset-password-input').props.secureTextEntry).toBe(false)
+    expect(screen.getByTestId('reset-repeat-password-input').props.secureTextEntry).toBe(true)
+
+    expect(screen.getByTestId('auth-password-rule-length').props.accessibilityLabel).toBe(
+      'Не менее 8 символов — выполнено',
+    )
+    expect(screen.getByTestId('auth-password-rule-match').props.accessibilityLabel).toBe(
+      'Пароли совпадают — не выполнено',
+    )
+    expect(screen.getByTestId('reset-countdown')).toHaveTextContent('Повторите через 0:20')
+    expect(screen.getByTestId('reset-submit')).toHaveTextContent('Сохранить пароль')
+
+    await fireEvent.changeText(screen.getByTestId('reset-repeat-password-input'), 'NewPassword9')
+    expect(mockResetState.setRepeatPassword).toHaveBeenCalledWith('NewPassword9')
+  })
+
+  it('шаг «готово»: значок успеха и вход с новым паролем', async () => {
+    mockResetState = baseState({ step: 'success', canSubmit: true })
+
+    const screen = await render(<ResetPwdScreen />)
+
+    expect(screen.getByTestId('reset-title')).toHaveTextContent('Пароль изменён')
+    expect(screen.getByText('Теперь вы можете войти с новым паролем')).toBeTruthy()
+    expect(screen.getByTestId('auth-success-icon')).toBeTruthy()
+    expect(screen.queryByTestId('reset-return-to-auth')).toBeNull()
+
+    const submit = screen.getByTestId('reset-submit')
+    expect(submit).toHaveTextContent('Войти')
+    await fireEvent.press(submit)
+    expect(mockResetState.submit).toHaveBeenCalledTimes(1)
+  })
+
+  it('во время запроса кнопка занята, а поля недоступны', async () => {
+    mockResetState = baseState({ loading: true, phone: '+7 (999) 123-45-67' })
+
+    const screen = await render(<ResetPwdScreen />)
+
+    expect(screen.getByTestId('reset-submit').props.accessibilityState).toEqual({ busy: true, disabled: true })
+    expect(screen.getByTestId('reset-login-input').props.editable).toBe(false)
   })
 })

@@ -90,6 +90,20 @@ export async function getCodePushLaunchState(): Promise<LaunchResult> {
   }
 }
 
+/**
+ * Tells native that this bundle evaluated and committed its root screen. A trial that
+ * never says so shows a blank window, and native replaces it with the working version.
+ * This is not a confirmation: the attempt is still acknowledged only by confirmLaunch.
+ */
+export function reportCodePushRootMounted(): void {
+  try {
+    if (NativeCodePush && typeof NativeCodePush.reportRootMounted === 'function')
+      NativeCodePush.reportRootMounted();
+  } catch {
+    // A native build without the watchdog has nothing to be told.
+  }
+}
+
 /** Only a caller with real readiness evidence may acknowledge the native attempt. */
 export async function confirmCodePushLaunch(
   attemptId: string,

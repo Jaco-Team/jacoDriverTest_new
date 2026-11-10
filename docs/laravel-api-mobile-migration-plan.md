@@ -149,7 +149,7 @@ Android уже разрешает cleartext для локальной разра
 | Модуль | Laravel endpoints | Что заменяет в приложении |
 | --- | --- | --- |
 | Авторизация | `POST /api/v1/auth/token/login`, `GET /api/v1/auth/me`, `GET /api/v1/auth/session/meta`, `POST /api/v1/auth/logout` | legacy `auth: login/check_token` и локальный logout |
-| Восстановление | `POST /api/v1/auth/password/recovery/send-code`, `POST /api/v1/auth/password/recovery/confirm-code` | legacy `get_sms/check_code` |
+| Восстановление | `GET /api/v1/auth/password/recovery/channels`, `POST /api/v1/auth/password/recovery/request-code`, `POST /api/v1/auth/password/recovery/reset` | legacy `get_sms/check_code`; прежние `send-code`/`confirm-code` приложение больше не вызывает |
 | Настройки | `GET /api/v1/settings/get`, `GET /api/v1/settings/points`, `POST /api/v1/settings/save`, `avg-time`, `get_point_phones`, `save-position` | legacy-модуль `settings` и часть `orders` |
 | Заказы | `get_orders`, `action_order`, `check_fake_order`, `hide_del_orders`, `get_pay_qr`, `check_pay_order` | legacy-модуль `orders` |
 | График | `POST /api/v1/graph`, `order-appeals`, `camera-appeals` | legacy-модуль `graph` |
@@ -246,6 +246,11 @@ mobile callback.
 - [x] Согласовать и зарегистрировать `jacodriver://auth/sso` для Android и iOS.
 - [x] Реализовать системную auth-сессию и возврат через deep link.
 - [x] Обменять одноразовый `login_code` через `/api/v1/auth/sso/exchange`.
+- [x] Привязать `login_code` к приложению (PKCE `S256`): перед открытием браузера
+  приложение получает пару через `/api/v1/auth/sso/pkce`, `code_challenge` уходит в
+  адрес входа, `code_verifier` лежит в Keychain/Keystore и отправляется при обмене.
+  Без начатого входа приложение код не обменивает. Нужен backend с этой точкой:
+  со старым backend кнопка SSO покажет ошибку подготовки входа.
 - [x] Проверить SSO на iOS Simulator и Android Emulator.
 - [x] Реализовать CAPTCHA при входе и восстановлении пароля.
 

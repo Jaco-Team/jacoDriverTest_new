@@ -1,9 +1,11 @@
 export const laravelApiRoutes = {
   auth: {
     tokenLogin: '/api/v1/auth/token/login',
+    ssoPkce: '/api/v1/auth/sso/pkce',
     ssoExchange: '/api/v1/auth/sso/exchange',
-    passwordRecoverySendCode: '/api/v1/auth/password/recovery/send-code',
-    passwordRecoveryConfirmCode: '/api/v1/auth/password/recovery/confirm-code',
+    passwordRecoveryChannels: '/api/v1/auth/password/recovery/channels',
+    passwordRecoveryRequestCode: '/api/v1/auth/password/recovery/request-code',
+    passwordRecoveryReset: '/api/v1/auth/password/recovery/reset',
     me: '/api/v1/auth/me',
     logout: '/api/v1/auth/logout',
   },

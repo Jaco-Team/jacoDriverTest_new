@@ -55,6 +55,11 @@ RCT_EXPORT_MODULE(JacoCodePush)
   }];
 }
 
+- (void)reportRootMounted
+{
+  [_launchBridge reportRootMounted];
+}
+
 - (void)markFatal:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject
 {
   [_launchBridge markFatalWithCompletion:^(BOOL recorded) { resolve(@(recorded)); }];

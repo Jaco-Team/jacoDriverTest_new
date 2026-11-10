@@ -402,7 +402,11 @@ Pods. Приложение установлено, подключилось к M
 и запускает существующую React Native factory. В
 [Info.plist](../ios/jacoDriverTest/Info.plist) зарегистрирована одна сцена.
 Холодные URL передаются в launch options, активные URL и universal links —
-в `RCTLinkingManager`. Инициализация Firebase и MapKit остаётся в AppDelegate.
+в `RCTLinkingManager` через scene-методы (`scene(_:openURLContexts:)`,
+`scene(_:continue:)`). App-delegate-варианты `RCTLinkingManager.application(...)`
+в приложении со сценой ничего не отправляют в JS (`RCTIsSceneDelegateApp`): с
+ними ссылка в уже запущенное приложение молча терялась. Инициализация Firebase
+и MapKit остаётся в AppDelegate.
 После изменения Debug-сборка и запуск на iOS 27 прошли.
 
 Этот прогон не включает Android, Release, реальный iPhone, вход в аккаунт,

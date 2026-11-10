@@ -7,6 +7,7 @@ const mockIsReady = jest.fn();
 const mockSystemBars = jest.fn();
 
 let mockLoadSpinner = false;
+let mockLocationWait: { deadlineAt: number; startedAt: number } | null = null;
 let mockNavigationContainerProps: any;
 let hardwareBackPressHandler: (() => boolean) | undefined;
 
@@ -45,7 +46,8 @@ jest.mock('react-native-edge-to-edge', () => ({
 }));
 
 jest.mock('@/shared/store/store', () => ({
-  useGlobalStore: (selector: any) => selector({ loadSpinner: mockLoadSpinner }),
+  useGlobalStore: (selector: any) => selector({ loadSpinner: mockLoadSpinner, globalFontSize: 16 }),
+  useGEOStore: (selector: any) => selector({ location_wait: mockLocationWait }),
 }));
 
 jest.mock('@/analytics/AppMetricaService', () => ({
@@ -104,6 +106,7 @@ describe('NavigationProvider и системные области', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockLoadSpinner = false;
+    mockLocationWait = null;
     mockNavigationContainerProps = undefined;
     mockGetCurrentRoute.mockReturnValue({ name: 'Greeting' });
     mockIsReady.mockReturnValue(true);
@@ -214,6 +217,27 @@ describe('NavigationProvider и системные области', () => {
     expect(latestSystemBarsProps()).toEqual({
       style: { statusBar: 'light', navigationBar: 'dark' },
     });
+  });
+
+  it('пока ждём геопозицию, вместо общего spinner показывает кольцо с секундами', async () => {
+    mockLoadSpinner = true;
+    mockLocationWait = { deadlineAt: Date.now() + 10000, startedAt: Date.now() };
+    mockGetCurrentRoute.mockReturnValue({ name: 'Auth' });
+
+    const screen = await render(
+      <NavigationProvider>
+        <CustomSpinner />
+      </NavigationProvider>,
+    );
+
+    await act(async () => {
+      mockNavigationContainerProps.onReady();
+    });
+
+    expect(screen.getByTestId('location-wait-ring')).toBeTruthy();
+    expect(screen.getByTestId('location-wait-seconds')).toHaveTextContent('10');
+    expect(screen.queryByTestId('global-spinner')).toBeNull();
+    screen.unmount();
   });
 
   it('централизованно задаёт Status Bar на iOS', async () => {

@@ -91,6 +91,54 @@ class CodePushLaunchProvenance {
     }
 }
 
+/**
+ * A trial whose root screen never mounts leaves a blank window: its bundle failed while loading.
+ * Only time with the app in front is counted, so an opening interrupted by a call or a system
+ * dialog is never mistaken for a broken bundle. The watchdog reports expiry and nothing else:
+ * the caller replaces the process, and the next start recovers through the unconfirmed-launch path.
+ */
+class CodePushTrialWatchdog(
+    private val budgetMillis: Long = 30_000,
+    private val monotonicMillis: () -> Long = { System.nanoTime() / 1_000_000 },
+) {
+    private var armed = false
+    private var settled = false
+    private var activeSince: Long? = null
+    private var spentMillis = 0L
+
+    /** This process started a trial bundle. Time before this moment is never counted. */
+    @Synchronized fun arm() {
+        if (armed || settled || budgetMillis !in 1..600_000) return
+        armed = true
+        if (activeSince != null) activeSince = monotonicMillis()
+    }
+
+    @Synchronized fun activate() { if (activeSince == null) activeSince = monotonicMillis() }
+
+    @Synchronized fun deactivate() {
+        val since = activeSince ?: return
+        activeSince = null
+        if (armed && !settled) spentMillis += (monotonicMillis() - since).coerceAtLeast(0)
+    }
+
+    /** The root screen mounted or the launch was confirmed: this bundle runs. */
+    @Synchronized fun settle() { settled = true }
+
+    /** Active milliseconds left before expiry, or null while nothing is being timed. */
+    @Synchronized fun remainingMillis(): Long? {
+        val since = activeSince
+        if (!armed || settled || since == null) return null
+        return (budgetMillis - spentMillis - (monotonicMillis() - since).coerceAtLeast(0)).coerceAtLeast(0)
+    }
+
+    /** True once, when an armed trial spent its whole active budget without mounting. */
+    @Synchronized fun expire(): Boolean {
+        if (remainingMillis() != 0L) return false
+        settled = true
+        return true
+    }
+}
+
 /** Production Android supplies lstat/fstat checks; host fixtures use the JVM filesystem provider. */
 interface CodePushVersionFileAccess {
     fun regular(file: File): Boolean

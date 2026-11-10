@@ -5,24 +5,15 @@ export type CheckTokenResponse = {
   st: Status;
 }
 
-export type LoginResponse = {
-  st: Status;
-  text?: string;
-  token?: string;
-  captcha_required?: boolean;
-  retry_after?: number;
-  locked?: boolean;
-  resend_after?: number;
-}
+/** Результат подготовки входа через SSO: адрес для браузера или причина отказа. */
+export type SsoLoginStart =
+  | {st: true; url: string}
+  | {st: false; text: string};
 
 export interface StatusTextType {
   st: Status;
   text: string;
   captcha_required?: boolean;
-  retry_after?: number;
-  locked?: boolean;
-  resend_after?: number;
-  password_changed?: boolean;
 };
 
 export interface LoginTypes {
@@ -38,9 +29,8 @@ export interface LoginTypes {
   wallpaper_btn: boolean,
   formAuth: boolean,
   
-  sendSMS: (login: string, pwd: string, captchaToken?: string) => Promise<StatusTextType>,
-  sendCode: (login: string, code: string, pwd: string) => Promise<StatusTextType>,
   auth: (login: string, pwd: string, captchaToken?: string) => Promise<StatusTextType>,
+  prepareSsoLogin: () => Promise<SsoLoginStart>,
   authWithSsoCode: (loginCode: string) => Promise<StatusTextType>,
   check_token: () => Promise<Status>,
   logogout: () => Promise<void>,

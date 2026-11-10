@@ -67,6 +67,11 @@ final class JacoCodePushBridge: NSObject {
     }
   }
 
+  @objc func reportRootMounted() {
+    guard bindingIsValid() else { return }
+    CodePushStartup.rootMounted(binding)
+  }
+
   @objc(markFatalWithCompletion:)
   func markFatal(completion: @escaping (Bool) -> Void) {
     let immutableBinding = binding

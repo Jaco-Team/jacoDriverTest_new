@@ -132,10 +132,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
       // never a new update opportunity, and its external events go to that JS.
       startReactNative(ordinaryUI: false)
       for context in connectionOptions.urlContexts {
-        RCTLinkingManager.application(UIApplication.shared, open: context.url, options: [:])
+        forwardToRunningJS(context, in: scene)
       }
       for activity in connectionOptions.userActivities {
-        RCTLinkingManager.application(UIApplication.shared, continue: activity, restorationHandler: { _ in })
+        RCTLinkingManager.scene(scene, continue: activity)
       }
     } else if !ordinaryEntry { startReactNative(ordinaryUI: false) }
     else if windowScene.activationState == .foregroundActive || windowScene.activationState == .foregroundInactive {
@@ -151,6 +151,26 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   func sceneDidBecomeActive(_ scene: UIScene) {
     if ordinaryEntry { prepareOrdinaryUI() }
     else { startReactNative(ordinaryUI: false) }
+    CodePushStartup.watchTrial(sceneActive: true) { [weak self] in self?.offerToCloseAfterBlankTrial() }
+  }
+
+  func sceneWillResignActive(_ scene: UIScene) {
+    CodePushStartup.watchTrial(sceneActive: false)
+  }
+
+  // The trial bundle mounted nothing, so the user sees a blank window. This process
+  // cannot switch bundles and iOS cannot relaunch an app: the next opening finds the
+  // unconfirmed attempt, quarantines it and starts the working version.
+  private func offerToCloseAfterBlankTrial() {
+    guard var presenter = window?.rootViewController else { exit(0) }
+    while let presented = presenter.presentedViewController { presenter = presented }
+    let alert = UIAlertController(
+      title: "Обновление не запустилось",
+      message: "Закройте приложение и откройте его снова — запустится предыдущая версия.",
+      preferredStyle: .alert
+    )
+    alert.addAction(UIAlertAction(title: "Закрыть приложение", style: .default) { _ in exit(0) })
+    presenter.present(alert, animated: true)
   }
 
   func sceneDidDisconnect(_ scene: UIScene) {
@@ -206,13 +226,22 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     if !reactNativeStarted, let context = URLContexts.first {
       receiveInitialURL(context.url, sourceApplication: context.options.sourceApplication)
       for context in URLContexts.dropFirst() {
-        RCTLinkingManager.application(UIApplication.shared, open: context.url, options: [:])
+        forwardToRunningJS(context, in: scene)
       }
       return
     }
     for context in URLContexts {
-      RCTLinkingManager.application(UIApplication.shared, open: context.url, options: [:])
+      forwardToRunningJS(context, in: scene)
     }
+  }
+
+  // The app owns its window through a scene, and in a scene-based app the
+  // app-delegate entry points of RCTLinkingManager (open URL, continue user
+  // activity) are no-ops (RCTIsSceneDelegateApp): the link never reaches Linking
+  // in JS. The scene variants post it. React Native takes only the first URL of
+  // the set, so every context is forwarded on its own.
+  private func forwardToRunningJS(_ context: UIOpenURLContext, in scene: UIScene) {
+    RCTLinkingManager.scene(scene, openURLContexts: [context])
   }
 
   func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
@@ -222,10 +251,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
       startReactNative(ordinaryUI: false)
       return
     }
-    RCTLinkingManager.application(
-      UIApplication.shared,
-      continue: userActivity,
-      restorationHandler: { _ in }
-    )
+    RCTLinkingManager.scene(scene, continue: userActivity)
   }
 }

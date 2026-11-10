@@ -12,15 +12,17 @@ import {RU_SCREEN_NAMES} from '@/app/navigation/types';
 import { laravelApiConfig } from '@/shared/api/laravel/config'
 
 import { parseSsoCallbackUrl } from './ssoCallback'
+import { parsePhoneInput } from '@/shared/lib/phoneInput'
 
 export function useAuthLogic() {
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>()
 
   // Берём нужные методы/значения из zustand:
-  const [check_token, auth, authWithSsoCode, isLoading] = useLoginStore(
+  const [check_token, auth, prepareSsoLogin, authWithSsoCode, isLoading] = useLoginStore(
     useShallow((state) => [
       state.check_token,
       state.auth,
+      state.prepareSsoLogin,
       state.authWithSsoCode,
       state.is_load,
     ])
@@ -114,8 +116,9 @@ export function useAuthLogic() {
     setShowPassword((prev) => !prev)
   }
 
+  // Номер показываем маской, как на странице входа SSO; серверу уходит +7XXXXXXXXXX.
   const handleLoginChange = (value: string) => {
-    setMyLogin(value)
+    setMyLogin(parsePhoneInput(value).display)
   }
 
   const handlePasswordChange = (value: string) => {
@@ -138,7 +141,7 @@ export function useAuthLogic() {
     }
 
     const submittedCaptchaToken = captchaToken
-    const res = await auth(login, pwd, submittedCaptchaToken)
+    const res = await auth(parsePhoneInput(login).apiValue || login.trim(), pwd, submittedCaptchaToken)
     if (res.captcha_required === true) {
       setCaptchaRequired(true)
       setCaptchaToken('')
@@ -168,10 +171,19 @@ export function useAuthLogic() {
     Keyboard.dismiss()
     setLoginError('')
 
+    // Сначала привязываем будущий код входа к приложению, затем открываем браузер.
+    const start = await prepareSsoLogin()
+
+    if (!start.st) {
+      setLoginError(start.text || 'Не удалось начать вход через SSO.')
+      Analytics.log(AnalyticsEvent.AuthLoginFail, 'Ошибка подготовки SSO');
+      return
+    }
+
     try {
       if (await InAppBrowser.isAvailable()) {
         const result = await InAppBrowser.openAuth(
-          laravelApiConfig.ssoLoginUrl,
+          start.url,
           laravelApiConfig.ssoCallbackUrl,
           {
             ephemeralWebSession: false,
@@ -188,7 +200,7 @@ export function useAuthLogic() {
         return
       }
 
-      await Linking.openURL(laravelApiConfig.ssoLoginUrl)
+      await Linking.openURL(start.url)
     } catch {
       setLoginError('Не удалось открыть вход через SSO.')
       Analytics.log(AnalyticsEvent.AuthLoginFail, 'Ошибка открытия SSO');

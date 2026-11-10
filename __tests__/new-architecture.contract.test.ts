@@ -107,7 +107,7 @@ describe('New Architecture contract', () => {
     );
     expect(deps['@react-native-community/datetimepicker']).toMatch(/^\^?9\.2/);
     expect(deps['@fortawesome/react-native-fontawesome']).toMatch(/^\^?1\.0/);
-    expect(deps['lucide-react-native']).toBe('^1.67.0');
+    expect(deps['lucide-react-native']).toBe('^1.71.0');
     expect(deps['@react-native-community/netinfo']).toMatch(/^\^?12\.0/);
     expect(deps['react-native-device-info']).toMatch(/^\^?15\.0/);
     const podfile = read('ios/Podfile');
@@ -260,7 +260,12 @@ describe('New Architecture contract', () => {
   });
 
   it('токен авторизации читается из защищённого Laravel token storage', () => {
-    const store = read('src/shared/store/store.ts');
+    // Сторы разнесены по модулям в src/shared/store; проверяем их все.
+    const store = fs
+      .readdirSync(path.join(root, 'src/shared/store'))
+      .filter(file => file.endsWith('.ts'))
+      .map(file => read(`src/shared/store/${file}`))
+      .join('\n');
     expect(store).toContain('getLaravelAuthToken');
     expect(store).toContain('saveLaravelAuthToken');
     expect(store).not.toContain("AsyncStorage.setItem('token'");
@@ -281,6 +286,19 @@ describe('New Architecture contract', () => {
     expect(manifest).toContain('android:pathPrefix="/sso"');
     expect(infoPlist).toMatch(/<string>jacodriver<\/string>/);
     expect(appDelegate).toContain('RCTLinkingManager.application');
+  });
+
+  it('iOS передаёт ссылки в уже запущенное приложение через scene-методы RCTLinkingManager', () => {
+    const appDelegate = read('ios/jacoDriverTest/AppDelegate.swift');
+    const sceneDelegate = appDelegate.slice(appDelegate.indexOf('class SceneDelegate'));
+
+    // Приложение владеет окном через сцену. В таком приложении
+    // RCTLinkingManager.application(...) ничего не отправляет в JS, поэтому из
+    // SceneDelegate ссылки и user activity идут только через scene-варианты.
+    expect(sceneDelegate).toContain('RCTLinkingManager.scene(scene, openURLContexts: [context])');
+    expect(sceneDelegate).toContain('RCTLinkingManager.scene(scene, continue: userActivity)');
+    expect(sceneDelegate).toContain('RCTLinkingManager.scene(scene, continue: activity)');
+    expect(sceneDelegate).not.toContain('RCTLinkingManager.application(');
   });
 
   it('index.js подключает InteractionManager shim до App', () => {

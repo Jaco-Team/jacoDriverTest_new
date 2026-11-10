@@ -1,6 +1,11 @@
 package com.jacodrivertest
 
+import android.content.ComponentName
+import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.Process
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -24,6 +29,37 @@ class MainActivity : ReactActivity() {
     }
     installSplashScreen()
     super.onCreate(null) // Передайте null вместо savedInstanceState
+  }
+
+  private val trialHandler = Handler(Looper.getMainLooper())
+  private val trialExpired = Runnable {
+    if (CodePushStartup.trialWatchdogExpired()) restartWithWorkingVersion() else watchTrial(true)
+  }
+
+  override fun onResume() {
+    super.onResume()
+    if (!BuildConfig.DEBUG) watchTrial(true)
+  }
+
+  override fun onPause() {
+    if (!BuildConfig.DEBUG) watchTrial(false)
+    super.onPause()
+  }
+
+  private fun watchTrial(inFront: Boolean) {
+    trialHandler.removeCallbacks(trialExpired)
+    CodePushStartup.trialWatchdogDelay(inFront)?.let { trialHandler.postDelayed(trialExpired, it) }
+  }
+
+  /**
+   * The trial bundle mounted nothing, so the user sees a blank window. This process cannot
+   * switch bundles; its replacement finds the unconfirmed attempt, quarantines it and starts
+   * the working version.
+   */
+  private fun restartWithWorkingVersion() {
+    startActivity(Intent.makeRestartActivityTask(ComponentName(this, CodePushLaunchActivity::class.java)))
+    finishAffinity()
+    Process.killProcess(Process.myPid())
   }
 
   /**

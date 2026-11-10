@@ -88,4 +88,101 @@ describe('Анти-дребезг actionButtonOrder', () => {
     await waitFor(() => expect(apiSpy).toHaveBeenCalledTimes(2));
     expect(check_pos_fake).toHaveBeenCalledTimes(2);
   });
+
+  it('отмена с GPS остаётся заблокированной после 300 мс, пока запрос выполняется', async () => {
+    const { useOrdersStore, useGEOStore, useGlobalStore } = require('@/shared/store/store');
+
+    const check_pos = jest.fn((cb: any, payload: any) => cb({ data: payload }));
+    useGEOStore.setState({ check_pos });
+
+    useGlobalStore.setState({
+      setSpinner: jest.fn(),
+      getAuthToken: jest.fn().mockResolvedValue('token'),
+      showModalText: jest.fn(),
+      notifToken: 'pushToken',
+    });
+
+    const d1 = deferred<{ st: boolean; text: string }>();
+    const apiSpy = jest
+      .spyOn(require('@/shared/store/api'), 'api')
+      .mockReturnValueOnce(d1.promise as any);
+
+    useOrdersStore.setState({
+      driver_need_gps: true,
+      is_modalConfirm: false,
+      isOpenOrderMap: false,
+      showOrdersMap: jest.fn(),
+      getOrders: jest.fn(),
+      isClick: false,
+    });
+
+    useOrdersStore.getState().actionButtonOrder(2, 555);
+    await waitFor(() => expect(apiSpy).toHaveBeenCalledTimes(1));
+
+    jest.advanceTimersByTime(30000);
+    expect(useOrdersStore.getState().isClick).toBe(true);
+
+    useOrdersStore.getState().actionButtonOrder(2, 555);
+    expect(check_pos).toHaveBeenCalledTimes(1);
+    expect(apiSpy).toHaveBeenCalledTimes(1);
+
+    d1.resolve({ st: true, text: '' });
+    await waitFor(() => expect(useOrdersStore.getState().isClick).toBe(false));
+  });
+
+  it('ошибка геопозиции снимает блокировку без запроса', async () => {
+    const { useOrdersStore, useGEOStore, useGlobalStore } = require('@/shared/store/store');
+
+    const check_pos = jest.fn(
+      (_cb: any, _payload: any, _showError?: boolean, onFailure?: () => void) => onFailure?.()
+    );
+    useGEOStore.setState({ check_pos });
+
+    useGlobalStore.setState({
+      setSpinner: jest.fn(),
+      getAuthToken: jest.fn().mockResolvedValue('token'),
+      showModalText: jest.fn(),
+      notifToken: 'pushToken',
+    });
+
+    const apiSpy = jest.spyOn(require('@/shared/store/api'), 'api');
+
+    useOrdersStore.setState({
+      driver_need_gps: true,
+      is_modalConfirm: false,
+      isOpenOrderMap: false,
+      isClick: false,
+    });
+
+    useOrdersStore.getState().actionButtonOrder(3, 555);
+
+    expect(useOrdersStore.getState().isClick).toBe(false);
+    expect(apiSpy).not.toHaveBeenCalled();
+  });
+
+  it('молчащий GPS: через 30 секунд снимаются и блокировка, и полноэкранный спиннер', async () => {
+    const { useOrdersStore, useGEOStore, useGlobalStore } = require('@/shared/store/store');
+
+    const check_pos = jest.fn();
+    useGEOStore.setState({ check_pos });
+    useGlobalStore.setState({ showModalText: jest.fn(), notifToken: 'pushToken' });
+    const apiSpy = jest.spyOn(require('@/shared/store/api'), 'api');
+
+    useOrdersStore.setState({
+      driver_need_gps: true,
+      is_modalConfirm: false,
+      isOpenOrderMap: false,
+      isClick: false,
+    });
+
+    useOrdersStore.getState().actionButtonOrder(3, 555);
+    expect(check_pos).toHaveBeenCalledWith(expect.any(Function), { order_id: 555, type: 3 }, true, expect.any(Function), true);
+    expect(useGlobalStore.getState().loadSpinner).toBe(true);
+
+    jest.advanceTimersByTime(30000);
+
+    expect(useOrdersStore.getState().isClick).toBe(false);
+    expect(useGlobalStore.getState().loadSpinner).toBe(false);
+    expect(apiSpy).not.toHaveBeenCalled();
+  });
 });

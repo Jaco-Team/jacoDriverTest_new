@@ -7,6 +7,10 @@ const mockLogoutFromLaravel = jest.fn();
 const mockSaveLaravelAuthToken = jest.fn();
 const mockGetLaravelAuthToken = jest.fn();
 const mockClearLaravelAuthToken = jest.fn();
+const mockRequestLaravelSsoLoginBinding = jest.fn();
+const mockSaveSsoLoginAttempt = jest.fn();
+const mockReadSsoLoginAttempt = jest.fn();
+const mockClearSsoLoginAttempt = jest.fn();
 
 jest.mock('@/shared/store/api', () => ({
   api: (...args: any[]) => mockApi(...args),
@@ -17,6 +21,13 @@ jest.mock('@/shared/api/laravel/auth', () => ({
   fetchLaravelMe: (...args: any[]) => mockFetchLaravelMe(...args),
   loginWithLaravel: (...args: any[]) => mockLoginWithLaravel(...args),
   logoutFromLaravel: (...args: any[]) => mockLogoutFromLaravel(...args),
+  requestLaravelSsoLoginBinding: (...args: any[]) => mockRequestLaravelSsoLoginBinding(...args),
+}));
+
+jest.mock('@/shared/lib/ssoLoginAttemptStorage', () => ({
+  clearSsoLoginAttempt: (...args: any[]) => mockClearSsoLoginAttempt(...args),
+  readSsoLoginAttempt: (...args: any[]) => mockReadSsoLoginAttempt(...args),
+  saveSsoLoginAttempt: (...args: any[]) => mockSaveSsoLoginAttempt(...args),
 }));
 
 jest.mock('@/shared/lib/laravelAuthTokenStorage', () => ({
@@ -53,6 +64,13 @@ describe('useLoginStore auth flow', () => {
       token: 'sso-token',
       token_type: 'Bearer',
     });
+    mockRequestLaravelSsoLoginBinding.mockResolvedValue({
+      codeVerifier: 'stored-verifier',
+      codeChallenge: 'login-challenge',
+    });
+    mockSaveSsoLoginAttempt.mockResolvedValue(undefined);
+    mockReadSsoLoginAttempt.mockResolvedValue('stored-verifier');
+    mockClearSsoLoginAttempt.mockResolvedValue(undefined);
     mockLoginWithLaravel.mockResolvedValue({
       login: 'driver',
       token: 'laravel-token',
@@ -132,7 +150,9 @@ describe('useLoginStore auth flow', () => {
   it('authWithSsoCode: обменивает одноразовый код и создаёт Laravel-сессию', async () => {
     const result = await useLoginStore.getState().authWithSsoCode('one-time-code');
 
-    expect(mockExchangeLaravelSsoLoginCode).toHaveBeenCalledWith('one-time-code');
+    // Код обменивается вместе с verifier начатого входа, после успеха попытка закрыта.
+    expect(mockExchangeLaravelSsoLoginCode).toHaveBeenCalledWith('one-time-code', 'stored-verifier');
+    expect(mockClearSsoLoginAttempt).toHaveBeenCalledTimes(1);
     expect(mockSaveLaravelAuthToken).toHaveBeenCalledWith('sso-token');
     expect(mockFetchLaravelMe).toHaveBeenCalledWith('sso-token');
     expect(useGlobalStore.getState().tokenAuth).toBe('sso-token');
@@ -157,6 +177,57 @@ describe('useLoginStore auth flow', () => {
     });
     expect(mockSaveLaravelAuthToken).not.toHaveBeenCalled();
     expect(useGlobalStore.getState().tokenAuth).toBe('');
+    // Чужая или повторная ссылка не должна сорвать настоящий вход: verifier остаётся.
+    expect(mockClearSsoLoginAttempt).not.toHaveBeenCalled();
+  });
+
+  it('authWithSsoCode: не обменивает код, если вход начало не приложение', async () => {
+    mockReadSsoLoginAttempt.mockResolvedValueOnce('');
+
+    const result = await useLoginStore.getState().authWithSsoCode('injected-code');
+
+    expect(result).toEqual({st: false, text: 'Сессия SSO устарела. Начните вход ещё раз.'});
+    expect(mockExchangeLaravelSsoLoginCode).not.toHaveBeenCalled();
+    expect(useLoginStore.getState().is_load).toBe(false);
+    expect(useGlobalStore.getState().loadSpinner).toBe(false);
+  });
+
+  it('authWithSsoCode: сбой чтения Keychain считается отсутствием начатого входа', async () => {
+    mockReadSsoLoginAttempt.mockRejectedValueOnce(new Error('Keychain unavailable'));
+
+    const result = await useLoginStore.getState().authWithSsoCode('one-time-code');
+
+    expect(result.st).toBe(false);
+    expect(mockExchangeLaravelSsoLoginCode).not.toHaveBeenCalled();
+  });
+
+  it('prepareSsoLogin: сохраняет verifier и отдаёт адрес входа с challenge', async () => {
+    const result = await useLoginStore.getState().prepareSsoLogin();
+
+    expect(mockSaveSsoLoginAttempt).toHaveBeenCalledWith('stored-verifier');
+    expect(result).toEqual({
+      st: true,
+      url: 'https://apidriver.jacochef.ru/auth/sso/login?client=mobile&code_challenge=login-challenge&code_challenge_method=S256',
+    });
+    // Сам verifier в адрес для браузера не попадает.
+    expect(result.st === true && result.url).not.toContain('stored-verifier');
+  });
+
+  it('prepareSsoLogin: без пары от сервера или без Keychain вход не начинается', async () => {
+    mockRequestLaravelSsoLoginBinding.mockRejectedValueOnce(new Error('Нет соединения'));
+
+    await expect(useLoginStore.getState().prepareSsoLogin()).resolves.toEqual({
+      st: false,
+      text: 'Нет соединения',
+    });
+    expect(mockSaveSsoLoginAttempt).not.toHaveBeenCalled();
+
+    mockSaveSsoLoginAttempt.mockRejectedValueOnce(new Error('Keychain unavailable'));
+
+    await expect(useLoginStore.getState().prepareSsoLogin()).resolves.toEqual({
+      st: false,
+      text: 'Keychain unavailable',
+    });
   });
 
   it('authWithSsoCode: очищает сессию, если Keychain не сохранил token', async () => {
@@ -205,137 +276,6 @@ describe('useLoginStore auth flow', () => {
     expect(result).toEqual({ st: false, text: 'Пожалуйста, подождите...' });
     expect(mockApi).not.toHaveBeenCalled();
     expect(useGlobalStore.getState().loadSpinner).toBe(false);
-  });
-
-  it('sendSMS success/error: логирует результат и возвращает ошибку для inline-блока', async () => {
-    mockApi
-      .mockResolvedValueOnce({ st: true, text: 'sent' })
-      .mockResolvedValueOnce({ st: false, text: 'SMS недоступна' });
-
-    const success = await useLoginStore.getState().sendSMS('driver', '123456');
-
-    expect(success).toEqual({ st: true, text: 'sent' });
-    expect(mockApi).toHaveBeenNthCalledWith(1, 'auth', {
-      type: 'get_sms',
-      login: 'driver',
-      pwd: '123456',
-    });
-    expect(mockAnalyticsLog).toHaveBeenCalledWith('AuthSendSms', 'Отправка СМС-кода');
-
-    jest.advanceTimersByTime(500);
-
-    const error = await useLoginStore.getState().sendSMS('driver', 'bad');
-
-    expect(error).toEqual({ st: false, text: 'SMS недоступна' });
-    expect(mockAnalyticsLog).toHaveBeenCalledWith(
-      'AuthSendSmsFail',
-      'Ошибка отправки СМС-кода',
-    );
-    expect(useGlobalStore.getState().is_show_modal_text).toBe(false);
-    expect(useGlobalStore.getState().modal_text).toBe('');
-  });
-
-  it('sendSMS передаёт требование CAPTCHA и ожидание UI без потери полей', async () => {
-    mockApi.mockResolvedValueOnce({ st: false, text: 'Подождите.', captcha_required: true, locked: true, retry_after: 30 });
-    expect(await useLoginStore.getState().sendSMS('driver', 'Password1'))
-      .toEqual({ st: false, text: 'Подождите.', captcha_required: true, locked: true, retry_after: 30 });
-    jest.advanceTimersByTime(500);
-    mockApi.mockResolvedValueOnce({ st: true, text: 'sent', captcha_required: false, resend_after: 30 });
-    expect(await useLoginStore.getState().sendSMS('driver', 'Password1'))
-      .toEqual({ st: true, text: 'sent', captcha_required: false, resend_after: 30 });
-  });
-
-  it('sendCode передаёт отдельное ожидание подтверждения', async () => {
-    mockApi.mockResolvedValueOnce({ st: false, text: 'Подождите.', locked: true, retry_after: 60 });
-    expect(await useLoginStore.getState().sendCode('driver', '123456', 'Password1'))
-      .toEqual({ st: false, text: 'Подождите.', locked: true, retry_after: 60 });
-    expect(mockLoginWithLaravel).not.toHaveBeenCalled();
-  });
-
-  it('sendCode success: подтверждает код и выполняет Laravel-вход с новым паролем', async () => {
-    mockApi.mockResolvedValueOnce({
-      st: true,
-      text: 'ok',
-    });
-
-    const result = await useLoginStore.getState().sendCode('driver', '123456', 'NewPassword1!');
-
-    expect(mockApi).toHaveBeenCalledWith('auth', {
-      type: 'check_code',
-      login: 'driver',
-      code: '123456',
-    });
-    expect(result).toEqual({ st: true, text: 'ok' });
-    expect(mockLoginWithLaravel).toHaveBeenCalledWith('driver', 'NewPassword1!');
-    expect(mockSaveLaravelAuthToken).toHaveBeenCalledWith('laravel-token');
-    expect(mockFetchLaravelMe).toHaveBeenCalledWith('laravel-token');
-    expect(useGlobalStore.getState().tokenAuth).toBe('laravel-token');
-    expect(useLoginStore.getState().currentUser?.login).toBe('driver');
-    expect(mockGetSettings).toHaveBeenCalledTimes(1);
-  });
-
-  it('sendCode: сохраняет успех смены пароля, если автоматический вход требует CAPTCHA', async () => {
-    mockApi.mockResolvedValueOnce({st: true, text: 'ok'});
-    mockLoginWithLaravel.mockRejectedValueOnce({
-      response: {
-        status: 422,
-        data: {text: 'Пройдите CAPTCHA, чтобы продолжить.', captcha_required: true},
-      },
-    });
-
-    const result = await useLoginStore.getState().sendCode('driver', '123456', 'NewPassword1!');
-
-    expect(result).toEqual({
-      st: false,
-      text: 'Пройдите CAPTCHA, чтобы продолжить.',
-      password_changed: true,
-    });
-    expect(mockApi).toHaveBeenCalledTimes(1);
-    expect(mockSaveLaravelAuthToken).not.toHaveBeenCalled();
-    expect(mockFetchLaravelMe).not.toHaveBeenCalled();
-    expect(mockGetSettings).not.toHaveBeenCalled();
-    expect(useGlobalStore.getState().tokenAuth).toBe('');
-    expect(useLoginStore.getState().currentUser).toBeNull();
-
-    jest.advanceTimersByTime(500);
-    expect(useLoginStore.getState().is_load).toBe(false);
-    expect(useGlobalStore.getState().loadSpinner).toBe(false);
-  });
-
-  it('sendCode: ошибка загрузки профиля после смены пароля очищает сессию, но не отменяет восстановление', async () => {
-    mockApi.mockResolvedValueOnce({st: true, text: 'ok'});
-    mockFetchLaravelMe.mockRejectedValueOnce(new Error('Network Error'));
-
-    const result = await useLoginStore.getState().sendCode('driver', '123456', 'NewPassword1!');
-
-    expect(result).toEqual(expect.objectContaining({st: false, password_changed: true}));
-    expect(mockSaveLaravelAuthToken).toHaveBeenCalledWith('laravel-token');
-    expect(mockClearLaravelAuthToken).toHaveBeenCalledTimes(1);
-    expect(useGlobalStore.getState().tokenAuth).toBe('');
-    expect(useLoginStore.getState().currentUser).toBeNull();
-    expect(mockGetSettings).not.toHaveBeenCalled();
-  });
-
-  it('sendCode error: возвращает inline-ошибку и не сохраняет token', async () => {
-    mockApi.mockResolvedValueOnce({
-      st: false,
-      text: 'Код из смс введен не верно',
-    });
-
-    const result = await useLoginStore.getState().sendCode('driver', '123456', 'NewPassword1!');
-
-    expect(mockApi).toHaveBeenCalledWith('auth', {
-      type: 'check_code',
-      login: 'driver',
-      code: '123456',
-    });
-    expect(result).toEqual({
-      st: false,
-      text: 'Код из смс введен не верно',
-    });
-    expect(useGlobalStore.getState().tokenAuth).toBe('');
-    expect(mockGetSettings).not.toHaveBeenCalled();
-    expect(useGlobalStore.getState().is_show_modal_text).toBe(false);
   });
 
   it('check_token: без Laravel token очищает сессию и не дергает API', async () => {
@@ -467,7 +407,7 @@ describe('useLoginStore auth flow', () => {
     expect(useLoginStore.getState().currentUser?.login).toBe('79990000001');
   });
 
-  it('передаёт CAPTCHA token в Laravel login и восстановление пароля', async () => {
+  it('передаёт CAPTCHA token в Laravel login', async () => {
     await useLoginStore.getState().auth('driver', '123456', 'login-captcha-token');
 
     expect(mockLoginWithLaravel).toHaveBeenCalledWith(
@@ -475,19 +415,5 @@ describe('useLoginStore auth flow', () => {
       '123456',
       'login-captcha-token',
     );
-
-    jest.advanceTimersByTime(500);
-    mockApi.mockResolvedValueOnce({ st: true, text: 'sent' });
-
-    await useLoginStore
-      .getState()
-      .sendSMS('driver', 'NewPassword1!', 'recovery-captcha-token');
-
-    expect(mockApi).toHaveBeenCalledWith('auth', {
-      type: 'get_sms',
-      login: 'driver',
-      pwd: 'NewPassword1!',
-      captcha_token: 'recovery-captcha-token',
-    });
   });
 });

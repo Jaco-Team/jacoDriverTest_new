@@ -178,7 +178,7 @@ describe('useSettingsStore.getSettings', () => {
         finishOldRequest = resolve;
       }));
     } else {
-      mockApi.mockResolvedValueOnce(oldResponse);
+      // Выбранное кафе читается до запроса, чтобы отправить его на сервер.
       asyncStorage.getItem.mockImplementationOnce(() => new Promise(resolve => {
         finishStorageRead = resolve;
       }));
@@ -187,10 +187,8 @@ describe('useSettingsStore.getSettings', () => {
 
     const pendingGet = useSettingsStore.getState().getSettings();
     await waitFor(() => {
-      expect(mockApi).toHaveBeenCalledTimes(1);
-      if (boundary === 'AsyncStorage') {
-        expect(asyncStorage.getItem).toHaveBeenCalledWith('selected_driver_point_id');
-      }
+      expect(asyncStorage.getItem).toHaveBeenCalledWith('selected_driver_point_id');
+      expect(mockApi).toHaveBeenCalledTimes(boundary === 'API' ? 1 : 0);
     });
     const fontSize = reset ? 16 : 22;
     const mapScale = reset ? 1 : 1.25;
@@ -222,8 +220,9 @@ describe('useSettingsStore.getSettings', () => {
     });
     expect(useOrdersStore.getState().update_interval).toBe(interval);
     expect(useAppThemeStore.getState().preference).toBe(appTheme);
+    // Устаревший запрос, задержанный на хранилище, после сохранения не отправляется.
     expect(mockApi.mock.calls.map(([, data]) => data.type))
-      .toEqual(['getMySetting', 'saveMySetting']);
+      .toEqual(boundary === 'API' ? ['getMySetting', 'saveMySetting'] : ['saveMySetting']);
   });
 
   it('ограничивает полученный с сервера размер шрифта значением 26', async () => {

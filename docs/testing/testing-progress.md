@@ -16,6 +16,27 @@
 проверена на iOS и Android эмуляторах. Нативные сборки после UI-правки не
 повторялись; ручные шаги приведены в [релизном чек-листе](./release-checklist.md).
 
+## Обновление JS-зависимостей — 10.11.2026
+
+- Обновлены только пакеты без нативного кода и без патчей из `patches/`:
+  `@hookform/resolvers` `7.0.1` → `7.0.5`, `axios` `1.21.0` → `1.21.1`,
+  `zustand` `5.0.16` → `5.1.0`, `lucide-react-native` `1.67.0` → `1.71.0`,
+  `@babel/core` и `@babel/runtime` → `7.29.13`, три пакета `typescript-eslint`
+  → `8.72.2`, `@types/react-test-renderer` → `19.3.1`.
+- Вместе с `axios` обновился `follow-redirects` `1.16.1` → `1.16.3`; замечание
+  `npm audit` по нему закрыто (всего 40 → 39, высоких 5 → 4).
+- Нативные модули, `Podfile.lock` и патчи не менялись; `patch-package`
+  применяет все патчи без предупреждений.
+- `npm run lint`, `npm run typecheck` — успешно; `npm run test:unit` —
+  **148 наборов / 1474 теста**.
+- iOS Simulator (Debug, Metro с очисткой кэша): вход через SSO, список заказов,
+  окно подтверждения с иконкой и отсчёт геопозиции работают. Android и
+  release-сборки после обновления не проверялись.
+- Не обновлялись: `react-native-svg`, `react-native-gesture-handler` (нужна
+  нативная сборка); `datetimepicker`, `@sentry/react-native`,
+  `react-native-yamap-plus`, `react-native-keychain` (нужно пересоздать патчи);
+  `tailwindcss` 4, `typescript` 7 и Babel 8 (их не принимают текущие зависимости).
+
 ## Точечное обновление зависимостей — 03.11.2026
 
 - После повторной проверки npm registry обновлён `lucide-react-native`

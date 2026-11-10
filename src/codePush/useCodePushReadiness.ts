@@ -6,7 +6,11 @@ import {useOfflineMapStore} from '@/features/offline-map/model/offlineMap.store'
 import {useAppThemeStore} from '@/shared/theme/AppThemeProvider';
 import {initYaMap} from '@/shared/lib/yaMapInit';
 import {areCodePushAssetsReady} from './bootstrap';
-import {confirmCodePushLaunch, getCodePushLaunchState} from './lifecycle';
+import {
+  confirmCodePushLaunch,
+  getCodePushLaunchState,
+  reportCodePushRootMounted,
+} from './lifecycle';
 import {
   codePushReadiness,
   createCodePushReadyRunner,
@@ -41,6 +45,8 @@ const runner = createCodePushReadyRunner({
 export function CodePushReadinessLifecycle(): null {
   useEffect(() => {
     if (__DEV__) return;
+    // The first commit of the provider tree: this bundle put something on screen.
+    reportCodePushRootMounted();
     const update = () => runner.update(
       codePushReadiness.getSnapshot(), AppState.currentState === 'active',
     );

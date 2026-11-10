@@ -7,6 +7,9 @@ import { ModalFilterOrders } from '@/features/orders-map/ui/ModalFilterOrders'
 
 import { useDialCall } from '@/shared/lib/useDialCall';
 import { useOrdersUpdater } from '@/shared/lib/useOrdersUpdater';
+import { useOrdersRefreshOnForeground } from '@/shared/lib/useOrdersRefreshOnForeground';
+import { useIsOffline } from '@/shared/lib/connectivityContext';
+import { useIsFocused } from '@react-navigation/native';
 
 import { ScreenLayout } from '@/shared/ui/ScreenLayout'
 import {useCodePushScreenCommit} from '@/codePush/useCodePushReadiness'
@@ -16,7 +19,11 @@ export function OrdersListScreen() {
   
   const { orders, hasCachedOrders, isChecking, isGlobalLoading, getOrders, getSettings, update_interval, actionButtonOrder, setActiveConfirm, FormatPrice, showAlertText, globalFontSize } = useOrdersList()
 
+  const isFocused = useIsFocused()
+  const isOffline = useIsOffline()
+
   useOrdersUpdater(getOrders, update_interval, getSettings)
+  useOrdersRefreshOnForeground(isFocused && !isOffline)
   useCodePushScreenCommit('List_orders')
 
   return (

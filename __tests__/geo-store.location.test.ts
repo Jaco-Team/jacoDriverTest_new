@@ -58,6 +58,7 @@ describe('useGEOStore location flow', () => {
       location_driver_time_text: '',
       type_location: 'none',
       id_watch: null,
+      location_wait: null,
     });
   });
 
@@ -94,8 +95,9 @@ describe('useGEOStore location flow', () => {
       expect.any(Function),
       expect.any(Function),
       {
-        maximumAge: 3000,
         enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
       },
     );
     expect(callback).toHaveBeenCalledWith({
@@ -151,24 +153,73 @@ describe('useGEOStore location flow', () => {
     expect(useGlobalStore.getState().loadSpinner).toBe(false);
   });
 
-  it('check_pos: при ошибке GPS показывает текст ошибки и гасит spinner', async () => {
+  it('check_pos: без продолжения после двух ошибок GPS показывает текст ошибки и гасит spinner', async () => {
     const callback = jest.fn();
 
-    mockGetCurrentPosition.mockImplementationOnce((_success, error) => {
-      error({ message: 'timeout' });
-    });
+    mockGetCurrentPosition
+      .mockImplementationOnce((_success, error) => error({ code: 3, message: 'timeout' }))
+      .mockImplementationOnce((_success, error) => error({ code: 3, message: 'timeout' }));
 
     await useGEOStore.getState().check_pos(callback, {});
 
     expect(callback).not.toHaveBeenCalled();
+    expect(mockGetCurrentPosition).toHaveBeenNthCalledWith(2, expect.any(Function), expect.any(Function), {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 60000,
+    });
     expect(useGlobalStore.getState().is_show_modal_text).toBe(true);
     expect(useGlobalStore.getState().modal_text).toBe(
-      'Не удалось определить местоположение. timeout',
+      'Местоположение определяется слишком долго. Проверьте GPS и интернет, затем повторите действие.',
     );
 
     jest.advanceTimersByTime(300);
 
     expect(useGlobalStore.getState().loadSpinner).toBe(false);
+  });
+
+  it('check_pos: как на сайте, после двух ошибок GPS действие продолжается с 0, 0', async () => {
+    const payload = { order_id: 7 };
+    const callback = jest.fn();
+    const onFailure = jest.fn();
+    const waits: unknown[] = [];
+    const unsubscribe = useGEOStore.subscribe(state => waits.push(state.location_wait));
+
+    mockGetCurrentPosition
+      .mockImplementationOnce((_success, error) => error({ code: 3, message: 'timeout' }))
+      .mockImplementationOnce((_success, error) => error({ code: 2, message: 'unavailable' }));
+
+    await useGEOStore.getState().check_pos(callback, payload, true, onFailure, true);
+    unsubscribe();
+
+    expect(callback).toHaveBeenCalledWith({ latitude: 0, longitude: 0, data: payload, accuracy: 0 });
+    expect(onFailure).not.toHaveBeenCalled();
+    expect(useGlobalStore.getState().is_show_modal_text).toBe(false);
+    expect(waits).toEqual([
+      expect.objectContaining({ deadlineAt: expect.any(Number) }),
+      expect.objectContaining({ deadlineAt: expect.any(Number) }),
+      null,
+    ]);
+    // Повторная попытка продолжает тот же отсчёт: начало всего ожидания не сдвигается.
+    const [firstWait, retryWait] = waits as Array<{ startedAt: number; firstStartedAt: number }>;
+    expect(firstWait.firstStartedAt).toBe(firstWait.startedAt);
+    expect(retryWait.firstStartedAt).toBe(firstWait.startedAt);
+    expect(useGEOStore.getState().location_wait).toBeNull();
+  });
+
+  it('check_pos: запрет доступа из GPS останавливает действие даже с продолжением', async () => {
+    const callback = jest.fn();
+    const onFailure = jest.fn();
+
+    mockGetCurrentPosition.mockImplementationOnce((_success, error) => error({ code: 1, message: 'denied' }));
+
+    await useGEOStore.getState().check_pos(callback, {}, true, onFailure, true);
+
+    expect(callback).not.toHaveBeenCalled();
+    expect(onFailure).toHaveBeenCalledTimes(1);
+    expect(useGlobalStore.getState().modal_text).toBe(
+      'Нет доступа к геолокации. Разрешите доступ к местоположению в настройках телефона.',
+    );
   });
 
   it('check_pos_fake: отдает нулевые координаты и завершает spinner по таймеру', async () => {
