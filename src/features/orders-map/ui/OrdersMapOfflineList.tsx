@@ -24,7 +24,7 @@ function getOrderCountLabel(count: number): string {
   return `${count} заказов`;
 }
 
-export function OrdersMapOfflineList({topInset}: {topInset: number}) {
+export function OrdersMapOfflineList({topInset, reason}: {topInset: number; reason?: string}) {
   const {colors} = useAppTheme();
   const {orders, type, showOrdersMap} = useOrdersStore(
     useShallow(state => ({
@@ -78,8 +78,7 @@ export function OrdersMapOfflineList({topInset}: {topInset: number}) {
               fontSize: hintFontSize,
               lineHeight: hintFontSize * 1.4,
             }}>
-            Карта этой области ещё не сохранена. Скачайте город в настройках при
-            подключённом интернете.
+            {reason ?? 'Карта этого города не скачана. Скачайте её с интернетом.'}
           </Text>
           <Text
             style={{

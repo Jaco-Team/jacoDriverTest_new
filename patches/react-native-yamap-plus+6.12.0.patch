@@ -1,13 +1,17 @@
 diff --git a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/module/YamapModule.kt b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/module/YamapModule.kt
-index 02de75e..77de38b 100644
 --- a/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/module/YamapModule.kt
 +++ b/node_modules/react-native-yamap-plus/android/src/main/java/ru/yamap/module/YamapModule.kt
-@@ -4,14 +4,56 @@ import com.facebook.react.bridge.Promise
+@@ -1,17 +1,147 @@
+ package ru.yamap.module
+ 
++import android.util.Log
+ import com.facebook.react.bridge.Promise
  import com.facebook.react.bridge.ReactApplicationContext
  import com.facebook.react.bridge.UiThreadUtil
  import com.yandex.mapkit.MapKitFactory
 +import com.yandex.mapkit.geometry.Point
 +import com.yandex.mapkit.offline_cache.OfflineCacheManager
++import com.yandex.mapkit.offline_cache.RegionListener
 +import com.yandex.mapkit.offline_cache.RegionListUpdatesListener
 +import com.yandex.mapkit.offline_cache.RegionsAtPointListener
  import com.yandex.runtime.i18n.I18nManagerFactory
@@ -17,13 +21,88 @@ index 02de75e..77de38b 100644
  import ru.yamap.NativeYamapModuleSpec
  
  class YamapModule(reactContext: ReactApplicationContext) : NativeYamapModuleSpec(reactContext) {
++    private val offlineLogSnapshots = mutableMapOf<Int, String>()
++    private var offlineRegionListener: RegionListener? = null
++    private val offlineRequestedDownloads = mutableSetOf<Int>()
++    private val offlineActiveDownloads = mutableSetOf<Int>()
++    private val offlineStartedDownloads = mutableSetOf<Int>()
 +    private var offlineListListener: RegionListUpdatesListener? = null
 +    private var offlineErrorListener: OfflineCacheManager.ErrorListener? = null
 +    private var offlineCatalogUpdated = false
 +    private var offlineCatalogError: String? = null
 +    private val offlineRegionErrors = mutableMapOf<Int, String>()
++    private val offlineErrorReleases = mutableMapOf<Int, Long?>()
++
++    // Device diagnostics only: no credentials, user data or UI messages.
++    // Logging must never reject a download or change its state.
++    private fun logOfflineEvent(manager: OfflineCacheManager, id: Int, event: String, force: Boolean = false) {
++        try {
++            val details = JSONObject().apply {
++                put("regionId", id)
++                put("state", manager.getState(id).name.lowercase())
++                put("progressPercent", (manager.getProgress(id) * 100).toInt())
++                put("downloadedReleaseTime", manager.getDownloadedReleaseTime(id) ?: JSONObject.NULL)
++                put("availableReleaseTime", manager.regions().firstOrNull { it.id == id }?.releaseTime ?: JSONObject.NULL)
++                put("catalogUpdated", offlineCatalogUpdated)
++                put("downloadStarted", offlineStartedDownloads.contains(id))
++                put("requestActive", offlineActiveDownloads.contains(id))
++                offlineRegionErrors[id]?.let { put("error", it) }
++                offlineCatalogError?.let { put("catalogError", it) }
++            }
++            val snapshot = details.toString()
++            if (force || offlineLogSnapshots[id] != snapshot) {
++                offlineLogSnapshots[id] = snapshot
++                details.put("event", event)
++                Log.i("JacoOfflineMap", details.toString())
++            }
++        } catch (error: Throwable) {
++            Log.w("JacoOfflineMap", "event=$event regionId=$id diagnostic_unavailable", error)
++        }
++    }
++
++    private fun recordOfflineError(manager: OfflineCacheManager, id: Int, error: com.yandex.runtime.Error) {
++        offlineRegionErrors[id] = "Не удалось скачать карту: $error"
++        offlineErrorReleases[id] = manager.getDownloadedReleaseTime(id)
++        offlineActiveDownloads.remove(id)
++        logOfflineEvent(manager, id, "error", true)
++    }
++
++    private fun recordOfflineState(manager: OfflineCacheManager, id: Int) {
++        if (!offlineRequestedDownloads.contains(id)) return
++        when (manager.getState(id).name.lowercase()) {
++            "downloading" -> {
++                offlineStartedDownloads.add(id)
++                offlineActiveDownloads.add(id)
++            }
++            "paused" -> offlineActiveDownloads.remove(id)
++            "completed" -> {
++                val installed = manager.getDownloadedReleaseTime(id)
++                val available = manager.regions().firstOrNull { it.id == id }?.releaseTime
++                if (offlineStartedDownloads.contains(id) ||
++                    (installed != null && available != null && installed >= available)) {
++                    offlineActiveDownloads.remove(id)
++                }
++            }
++        }
++    }
 +
 +    private fun watchOfflineCatalog(manager: OfflineCacheManager) {
++        if (offlineRegionListener == null) {
++            val listener = object : RegionListener {
++                override fun onRegionStateChanged(regionId: Int) {
++                    recordOfflineState(manager, regionId)
++                    if (offlineRequestedDownloads.contains(regionId)) {
++                        logOfflineEvent(manager, regionId, "sdk_state", true)
++                    }
++                }
++
++                override fun onRegionProgress(regionId: Int) {
++                    recordOfflineState(manager, regionId)
++                }
++            }
++            offlineRegionListener = listener
++            manager.addRegionListener(WeakReference(listener))
++        }
 +        if (offlineListListener == null) {
 +            val listener = object : RegionListUpdatesListener {
 +                override fun onListUpdated() {
@@ -38,14 +117,25 @@ index 02de75e..77de38b 100644
 +            val listener = object : OfflineCacheManager.ErrorListener {
 +                override fun onError(error: com.yandex.runtime.Error) {
 +                    offlineCatalogError = error.toString()
++                    offlineActiveDownloads.toList().forEach { id ->
++                        recordOfflineError(manager, id, error)
++                    }
 +                }
 +
 +                override fun onRegionError(error: com.yandex.runtime.Error, regionId: Int) {
-+                    offlineRegionErrors[regionId] = "Не удалось скачать карту: $error"
++                    recordOfflineError(manager, regionId, error)
 +                }
 +            }
 +            offlineErrorListener = listener
 +            manager.addErrorListener(WeakReference(listener))
++        }
++    }
++
++    override fun logOfflineMapState(snapshot: String) {
++        try {
++            if (snapshot.length <= 4096) Log.i("JacoOfflineMapUI", snapshot)
++        } catch (_: Exception) {
++            // Diagnostics must not affect rendering or package state.
 +        }
 +    }
  
@@ -59,7 +149,7 @@ index 02de75e..77de38b 100644
          UiThreadUtil.runOnUiThread(Thread(Runnable {
              var apiKeyException: Throwable? = null
              try {
-@@ -19,7 +61,7 @@ class YamapModule(reactContext: ReactApplicationContext) : NativeYamapModuleSpec
+@@ -19,7 +149,7 @@
                  // MapKitFactory is already initialized
                  // And setting api key leads to crash
                  try {
@@ -68,7 +158,7 @@ index 02de75e..77de38b 100644
                  } catch (exception: Throwable) {
                      apiKeyException = exception
                  }
-@@ -27,7 +69,7 @@ class YamapModule(reactContext: ReactApplicationContext) : NativeYamapModuleSpec
+@@ -27,7 +157,7 @@
                  MapKitFactory.initialize(reactApplicationContext)
                  MapKitFactory.getInstance().onStart()
                  promise.resolve(null)
@@ -77,10 +167,30 @@ index 02de75e..77de38b 100644
                  if (apiKeyException != null) {
                      promise.reject(apiKeyException)
                      return@Runnable
-@@ -70,6 +112,103 @@ class YamapModule(reactContext: ReactApplicationContext) : NativeYamapModuleSpec
+@@ -70,6 +200,162 @@
          })
      }
  
++    override fun getKnownOfflineRegions(promise: Promise) {
++        UiThreadUtil.runOnUiThread {
++            try {
++                val manager = MapKitFactory.getInstance().offlineCacheManager
++                watchOfflineCatalog(manager)
++                val regions = JSONArray()
++                manager.regions().forEach { region ->
++                    regions.put(JSONObject().apply {
++                        put("id", region.id)
++                        put("name", region.name)
++                        put("sizeBytes", region.size.value)
++                    })
++                }
++                promise.resolve(regions.toString())
++            } catch (error: Throwable) {
++                promise.reject("YANDEX_OFFLINE_STATUS", error)
++            }
++        }
++    }
++
 +    override fun getOfflineRegionsAtPoint(latitude: Double, longitude: Double, promise: Promise) {
 +        UiThreadUtil.runOnUiThread {
 +            try {
@@ -123,9 +233,29 @@ index 02de75e..77de38b 100644
 +                val manager = MapKitFactory.getInstance().offlineCacheManager
 +                watchOfflineCatalog(manager)
 +                val id = regionId.toInt()
++                recordOfflineState(manager, id)
++                val state = manager.getState(id).name.lowercase()
++                val regions = manager.regions()
++                // An empty startup catalog makes unsupported provisional, not a missing package.
++                val stateKnown = state != "unsupported" || offlineCatalogUpdated || regions.isNotEmpty()
++                val availableRelease = regions.firstOrNull { it.id == id }?.releaseTime
++                val release = manager.getDownloadedReleaseTime(id)
++                // An old installed map can remain completed after an update fails.
++                // Clear the failure only when a different release is installed.
++                if ((state == "completed" || state == "outdated") &&
++                    release != null && offlineRegionErrors.containsKey(id) &&
++                    release != offlineErrorReleases[id]) {
++                    offlineRegionErrors.remove(id)
++                    offlineErrorReleases.remove(id)
++                }
++                logOfflineEvent(manager, id, "status")
 +                promise.resolve(JSONObject().apply {
++                    put("downloadedReleaseTime", release ?: JSONObject.NULL)
++                    put("availableReleaseTime", availableRelease ?: JSONObject.NULL)
++                    put("downloadStarted", offlineStartedDownloads.contains(id))
 +                    put("id", id)
-+                    put("state", manager.getState(id).name.lowercase())
++                    put("state", state)
++                    put("stateKnown", stateKnown)
 +                    put("progress", manager.getProgress(id).toDouble())
 +                    offlineRegionErrors[id]?.let { put("error", it) }
 +                }.toString())
@@ -141,15 +271,26 @@ index 02de75e..77de38b 100644
 +                val manager = MapKitFactory.getInstance().offlineCacheManager
 +                watchOfflineCatalog(manager)
 +                val id = regionId.toInt()
++                logOfflineEvent(manager, id, "start_before", true)
 +                if (manager.mayBeOutOfAvailableSpace(id)) {
++                    Log.w("JacoOfflineMap", "event=start_rejected regionId=$id reason=insufficient_space")
 +                    promise.reject("YANDEX_OFFLINE_SPACE", "Недостаточно свободного места")
 +                    return@runOnUiThread
 +                }
 +                offlineRegionErrors.remove(id)
++                offlineErrorReleases.remove(id)
 +                manager.allowUseCellularNetwork(true)
++                offlineStartedDownloads.remove(id)
++                offlineRequestedDownloads.add(id)
++                offlineActiveDownloads.add(id)
 +                manager.startDownload(id)
++                recordOfflineState(manager, id)
++                logOfflineEvent(manager, id, "start_returned", true)
 +                promise.resolve(null)
 +            } catch (error: Throwable) {
++                offlineRequestedDownloads.remove(regionId.toInt())
++                offlineActiveDownloads.remove(regionId.toInt())
++                Log.e("JacoOfflineMap", "event=start_exception regionId=${regionId.toInt()}", error)
 +                promise.reject("YANDEX_OFFLINE_DOWNLOAD", error)
 +            }
 +        }
@@ -158,7 +299,11 @@ index 02de75e..77de38b 100644
 +    override fun pauseOfflineRegionDownload(regionId: Double, promise: Promise) {
 +        UiThreadUtil.runOnUiThread {
 +            try {
-+                MapKitFactory.getInstance().offlineCacheManager.pauseDownload(regionId.toInt())
++                offlineActiveDownloads.remove(regionId.toInt())
++                offlineRequestedDownloads.remove(regionId.toInt())
++                val manager = MapKitFactory.getInstance().offlineCacheManager
++                manager.pauseDownload(regionId.toInt())
++                logOfflineEvent(manager, regionId.toInt(), "pause_returned", true)
 +                promise.resolve(null)
 +            } catch (error: Throwable) {
 +                promise.reject("YANDEX_OFFLINE_PAUSE", error)
@@ -171,6 +316,10 @@ index 02de75e..77de38b 100644
 +            try {
 +                MapKitFactory.getInstance().offlineCacheManager.drop(regionId.toInt())
 +                offlineRegionErrors.remove(regionId.toInt())
++                offlineErrorReleases.remove(regionId.toInt())
++                offlineActiveDownloads.remove(regionId.toInt())
++                offlineStartedDownloads.remove(regionId.toInt())
++                offlineRequestedDownloads.remove(regionId.toInt())
 +                promise.resolve(null)
 +            } catch (error: Throwable) {
 +                promise.reject("YANDEX_OFFLINE_REMOVE", error)
@@ -562,10 +711,9 @@ index bf01868..b10ae56 100644
              
              for (int i = 0; i < [routes count]; ++i) {
 diff --git a/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm b/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm
-index b8e9491..9ca0bc6 100644
 --- a/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm
 +++ b/node_modules/react-native-yamap-plus/ios/Module/RTNYamapModule.mm
-@@ -1,10 +1,60 @@
+@@ -1,9 +1,142 @@
  #import "RTNYamapModule.h"
  
  #import <YandexMapsMobile/YMKMapKitFactory.h>
@@ -592,19 +740,94 @@ index b8e9491..9ca0bc6 100644
 +    return data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"[]";
 +}
 +
-+@interface RTNYamapModule () <YMKOfflineMapRegionListUpdatesListener, YMKOfflineCacheManagerErrorListener>
++@interface RTNYamapModule () <YMKOfflineMapRegionListUpdatesListener, YMKOfflineCacheManagerErrorListener, YMKOfflineCacheRegionListener>
++@property (nonatomic, strong) NSMutableSet<NSNumber *> *offlineRequestedDownloads;
++@property (nonatomic, strong) NSMutableSet<NSNumber *> *offlineActiveDownloads;
++@property (nonatomic, strong) NSMutableSet<NSNumber *> *offlineStartedDownloads;
++@property (nonatomic, strong) NSMutableDictionary<NSString *, NSString *> *offlineJournalSnapshots;
 +@property (nonatomic, assign) BOOL offlineListenersAdded;
 +@property (nonatomic, assign) BOOL offlineCatalogUpdated;
 +@property (nonatomic, copy) NSString *offlineCatalogError;
 +@property (nonatomic, strong) NSMutableDictionary<NSNumber *, NSString *> *offlineRegionErrors;
++@property (nonatomic, strong) NSMutableDictionary<NSNumber *, NSDate *> *offlineErrorReleases;
 +@end
 +
  @implementation RTNYamapModule
- 
++
++// System journal only. These methods never change MapKit or JS store state.
++- (void)logOfflineMapState:(NSString *)snapshot {
++    @try {
++        if (snapshot.length <= 4096) NSLog(@"[JacoOfflineMapUI] %@", snapshot);
++    } @catch (__unused NSException *exception) {}
++}
++
++- (void)journalOffline:(NSString *)key payload:(NSDictionary *)payload {
++    @try {
++        NSString *snapshot = offlineJSON(payload);
++        if (!self.offlineJournalSnapshots) self.offlineJournalSnapshots = [NSMutableDictionary dictionary];
++        if (![self.offlineJournalSnapshots[key] isEqualToString:snapshot]) {
++            self.offlineJournalSnapshots[key] = snapshot;
++            NSLog(@"[JacoOfflineMap] %@", snapshot);
++        }
++    } @catch (__unused NSException *exception) {}
++}
++
++- (void)journalOfflineRegion:(NSUInteger)regionId {
++    @try {
++        YMKOfflineCacheManager *manager = [YMKMapKit sharedInstance].offlineCacheManager;
++        NSDate *installed = [manager getDownloadedReleaseTimeWithRegionId:regionId];
++        NSDate *available = nil;
++        for (YMKOfflineCacheRegion *region in [manager regions]) {
++            if (region.id == regionId) { available = region.releaseTime; break; }
++        }
++        [self journalOffline:[NSString stringWithFormat:@"sdk:%lu", (unsigned long)regionId] payload:@{
++            @"event": @"sdk_state", @"regionId": @(regionId),
++            @"state": offlineRegionStateName([manager getStateWithRegionId:regionId]),
++            @"downloadedReleaseTime": installed ? @(installed.timeIntervalSince1970 * 1000.0) : [NSNull null],
++            @"availableReleaseTime": available ? @(available.timeIntervalSince1970 * 1000.0) : [NSNull null],
++            @"catalogUpdated": @(self.offlineCatalogUpdated)
++        }];
++    } @catch (__unused NSException *exception) {}
++}
++
++- (void)recordOfflineState:(YMKOfflineCacheManager *)manager regionId:(NSUInteger)regionId {
++    if (![self.offlineRequestedDownloads containsObject:@(regionId)]) return;
++    YMKOfflineCacheRegionState state = [manager getStateWithRegionId:regionId];
++    if (state == YMKOfflineCacheRegionStateDownloading) {
++        [self.offlineStartedDownloads addObject:@(regionId)];
++        [self.offlineActiveDownloads addObject:@(regionId)];
++    } else if (state == YMKOfflineCacheRegionStatePaused) {
++        [self.offlineActiveDownloads removeObject:@(regionId)];
++    } else if (state == YMKOfflineCacheRegionStateCompleted) {
++        NSDate *installed = [manager getDownloadedReleaseTimeWithRegionId:regionId];
++        NSDate *available = nil;
++        for (YMKOfflineCacheRegion *region in [manager regions]) {
++            if (region.id == regionId) { available = region.releaseTime; break; }
++        }
++        if ([self.offlineStartedDownloads containsObject:@(regionId)] ||
++            (installed && available && [installed compare:available] != NSOrderedAscending)) {
++            [self.offlineActiveDownloads removeObject:@(regionId)];
++        }
++    }
++}
++
++- (void)onRegionStateChangedWithRegionId:(NSUInteger)regionId {
++    [self recordOfflineState:[YMKMapKit sharedInstance].offlineCacheManager regionId:regionId];
++    [self journalOfflineRegion:regionId];
++}
++
++- (void)onRegionProgressWithRegionId:(NSUInteger)regionId {
++    [self recordOfflineState:[YMKMapKit sharedInstance].offlineCacheManager regionId:regionId];
++}
++
 +- (void)watchOfflineCatalog:(YMKOfflineCacheManager *)manager {
 +    if (!self.offlineListenersAdded) {
 +        [manager addRegionListUpdatesListenerWithRegionListUpdatesListener:self];
 +        [manager addErrorListenerWithErrorListener:self];
++        [manager addRegionListenerWithRegionListener:self];
++        self.offlineRequestedDownloads = [NSMutableSet set];
++        self.offlineActiveDownloads = [NSMutableSet set];
++        self.offlineStartedDownloads = [NSMutableSet set];
 +        self.offlineListenersAdded = YES;
 +    }
 +}
@@ -616,20 +839,45 @@ index b8e9491..9ca0bc6 100644
 +
 +- (void)onErrorWithError:(NSError *)error {
 +    self.offlineCatalogError = error.localizedDescription;
++    for (NSNumber *regionId in [self.offlineActiveDownloads allObjects]) {
++        [self onRegionErrorWithError:error regionId:regionId.unsignedIntegerValue];
++    }
 +}
 +
 +- (void)onRegionErrorWithError:(NSError *)error regionId:(NSUInteger)regionId {
 +    if (!self.offlineRegionErrors) self.offlineRegionErrors = [NSMutableDictionary dictionary];
 +    self.offlineRegionErrors[@(regionId)] = error.localizedDescription;
++    if (!self.offlineErrorReleases) self.offlineErrorReleases = [NSMutableDictionary dictionary];
++    NSDate *release = [[YMKMapKit sharedInstance].offlineCacheManager getDownloadedReleaseTimeWithRegionId:regionId];
++    if (release) self.offlineErrorReleases[@(regionId)] = release;
++    else [self.offlineErrorReleases removeObjectForKey:@(regionId)];
++    [self.offlineActiveDownloads removeObject:@(regionId)];
 +}
-+
+ 
  - (dispatch_queue_t)methodQueue {
      return dispatch_get_main_queue();
- }
-@@ -53,6 +103,101 @@ - (void)getLocale:(nonnull RCTPromiseResolveBlock)resolve reject:(nonnull RCTPro
+@@ -53,6 +186,157 @@
      [self getLocaleImpl:resolve];
  }
  
++- (void)getKnownOfflineRegions:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
++    @try {
++        YMKOfflineCacheManager *manager = [YMKMapKit sharedInstance].offlineCacheManager;
++        [self watchOfflineCatalog:manager];
++        NSMutableArray *regions = [NSMutableArray array];
++        for (YMKOfflineCacheRegion *region in [manager regions]) {
++            [regions addObject:@{@"id": @(region.id), @"name": region.name, @"sizeBytes": @(region.size.value)}];
++        }
++        [self journalOffline:@"catalog" payload:@{
++            @"event": @"catalog_read", @"count": @(regions.count),
++            @"catalogUpdated": @(self.offlineCatalogUpdated)
++        }];
++        resolve(offlineJSON(regions));
++    } @catch (NSException *exception) {
++        reject(@"YANDEX_OFFLINE_STATUS", exception.reason, nil);
++    }
++}
++
 +- (void)getOfflineRegionsAtPoint:(double)latitude longitude:(double)longitude resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
 +    @try {
 +        YMKOfflineCacheManager *manager = [YMKMapKit sharedInstance].offlineCacheManager;
@@ -676,12 +924,37 @@ index b8e9491..9ca0bc6 100644
 +        YMKOfflineCacheManager *manager = [YMKMapKit sharedInstance].offlineCacheManager;
 +        [self watchOfflineCatalog:manager];
 +        NSUInteger value = (NSUInteger)regionId;
++        [self recordOfflineState:manager regionId:value];
++        YMKOfflineCacheRegionState state = [manager getStateWithRegionId:value];
++        NSArray<YMKOfflineCacheRegion *> *regions = [manager regions];
++        // An empty startup catalog makes unsupported provisional, not a missing package.
++        BOOL stateKnown = state != YMKOfflineCacheRegionStateUnsupported || self.offlineCatalogUpdated || regions.count > 0;
++        NSDate *availableRelease = nil;
++        for (YMKOfflineCacheRegion *region in regions) {
++            if (region.id == value) { availableRelease = region.releaseTime; break; }
++        }
++        NSDate *release = [manager getDownloadedReleaseTimeWithRegionId:value];
++        // A completed old package does not mean its update succeeded.
++        if ((state == YMKOfflineCacheRegionStateCompleted || state == YMKOfflineCacheRegionStateOutdated) &&
++            release && self.offlineRegionErrors[@(value)] &&
++            ![release isEqual:self.offlineErrorReleases[@(value)]]) {
++            [self.offlineRegionErrors removeObjectForKey:@(value)];
++            [self.offlineErrorReleases removeObjectForKey:@(value)];
++        }
 +        NSMutableDictionary *status = [@{
 +            @"id": @(value),
-+            @"state": offlineRegionStateName([manager getStateWithRegionId:value]),
++            @"state": offlineRegionStateName(state),
++            @"stateKnown": @(stateKnown),
 +            @"progress": @([manager getProgressWithRegionId:value])
 +        } mutableCopy];
++        status[@"downloadedReleaseTime"] = release ? @(release.timeIntervalSince1970 * 1000.0) : [NSNull null];
++        status[@"availableReleaseTime"] = availableRelease ? @(availableRelease.timeIntervalSince1970 * 1000.0) : [NSNull null];
++        status[@"downloadStarted"] = @([self.offlineStartedDownloads containsObject:@(value)]);
 +        if (self.offlineRegionErrors[@(value)]) status[@"error"] = self.offlineRegionErrors[@(value)];
++        NSMutableDictionary *journal = [status mutableCopy];
++        journal[@"event"] = @"status_returned";
++        journal[@"catalogUpdated"] = @(self.offlineCatalogUpdated);
++        [self journalOffline:[NSString stringWithFormat:@"status:%lu", (unsigned long)value] payload:journal];
 +        resolve(offlineJSON(status));
 +    } @catch (NSException *exception) {
 +        reject(@"YANDEX_OFFLINE_STATUS", exception.reason, nil);
@@ -698,16 +971,25 @@ index b8e9491..9ca0bc6 100644
 +            return;
 +        }
 +        [self.offlineRegionErrors removeObjectForKey:@(value)];
++        [self.offlineErrorReleases removeObjectForKey:@(value)];
 +        [manager allowUseCellularNetworkWithUseCellular:YES];
++        [self.offlineStartedDownloads removeObject:@(value)];
++        [self.offlineRequestedDownloads addObject:@(value)];
++        [self.offlineActiveDownloads addObject:@(value)];
 +        [manager startDownloadWithRegionId:value];
++        [self recordOfflineState:manager regionId:value];
 +        resolve(nil);
 +    } @catch (NSException *exception) {
++        [self.offlineRequestedDownloads removeObject:@((NSUInteger)regionId)];
++        [self.offlineActiveDownloads removeObject:@((NSUInteger)regionId)];
 +        reject(@"YANDEX_OFFLINE_DOWNLOAD", exception.reason, nil);
 +    }
 +}
 +
 +- (void)pauseOfflineRegionDownload:(double)regionId resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
 +    @try {
++        [self.offlineActiveDownloads removeObject:@((NSUInteger)regionId)];
++        [self.offlineRequestedDownloads removeObject:@((NSUInteger)regionId)];
 +        [[YMKMapKit sharedInstance].offlineCacheManager pauseDownloadWithRegionId:(NSUInteger)regionId];
 +        resolve(nil);
 +    } @catch (NSException *exception) {
@@ -719,6 +1001,10 @@ index b8e9491..9ca0bc6 100644
 +    @try {
 +        [[YMKMapKit sharedInstance].offlineCacheManager dropWithRegionId:(NSUInteger)regionId];
 +        [self.offlineRegionErrors removeObjectForKey:@((NSUInteger)regionId)];
++        [self.offlineErrorReleases removeObjectForKey:@((NSUInteger)regionId)];
++        [self.offlineActiveDownloads removeObject:@((NSUInteger)regionId)];
++        [self.offlineStartedDownloads removeObject:@((NSUInteger)regionId)];
++        [self.offlineRequestedDownloads removeObject:@((NSUInteger)regionId)];
 +        resolve(nil);
 +    } @catch (NSException *exception) {
 +        reject(@"YANDEX_OFFLINE_REMOVE", exception.reason, nil);
@@ -1201,13 +1487,21 @@ index 2025475..03533c6 100644
  
  - (void)setInteractiveDisabled:(BOOL)interactiveDisabled {
 diff --git a/node_modules/react-native-yamap-plus/src/modules/YamapInstance.ts b/node_modules/react-native-yamap-plus/src/modules/YamapInstance.ts
-index e5b76a8..70c4e74 100644
 --- a/node_modules/react-native-yamap-plus/src/modules/YamapInstance.ts
 +++ b/node_modules/react-native-yamap-plus/src/modules/YamapInstance.ts
-@@ -5,4 +5,9 @@ export const YamapInstance = {
+@@ -1,8 +1,18 @@
+ import NativeYamapModule from '../spec/NativeYamapModule';
+ 
+ export const YamapInstance = {
++  // Lazy lookup keeps diagnostics optional on previously installed binaries.
++  logOfflineMapState(snapshot: string) {
++    NativeYamapModule.logOfflineMapState(snapshot);
++  },
+   init: NativeYamapModule.init,
    setLocale: NativeYamapModule.setLocale,
    getLocale: NativeYamapModule.getLocale,
    resetLocale: NativeYamapModule.resetLocale,
++  getKnownOfflineRegions: NativeYamapModule.getKnownOfflineRegions,
 +  getOfflineRegionsAtPoint: NativeYamapModule.getOfflineRegionsAtPoint,
 +  getOfflineRegionStatus: NativeYamapModule.getOfflineRegionStatus,
 +  startOfflineRegionDownload: NativeYamapModule.startOfflineRegionDownload,
@@ -1228,13 +1522,18 @@ index 24c18ff..6db35de 100644
    zI?: CodegenTypes.Float;
    /**
 diff --git a/node_modules/react-native-yamap-plus/src/spec/NativeYamapModule.ts b/node_modules/react-native-yamap-plus/src/spec/NativeYamapModule.ts
-index 5d408ca..1abce27 100644
 --- a/node_modules/react-native-yamap-plus/src/spec/NativeYamapModule.ts
 +++ b/node_modules/react-native-yamap-plus/src/spec/NativeYamapModule.ts
-@@ -5,6 +5,11 @@ interface Spec extends TurboModule {
+@@ -1,10 +1,17 @@
+ import {type TurboModule, TurboModuleRegistry} from 'react-native';
+ 
+ interface Spec extends TurboModule {
++  logOfflineMapState(snapshot: string): void
+   init(apiKey: string): Promise<void>
    setLocale(locale: string): Promise<void>
    getLocale(): Promise<string>
    resetLocale(): Promise<void>
++  getKnownOfflineRegions(): Promise<string>
 +  getOfflineRegionsAtPoint(latitude: number, longitude: number): Promise<string>
 +  getOfflineRegionStatus(regionId: number): Promise<string>
 +  startOfflineRegionDownload(regionId: number): Promise<void>

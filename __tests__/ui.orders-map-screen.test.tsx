@@ -369,6 +369,23 @@ describe('экран карты заказов', () => {
   })
 
   it('показывает офлайн-плашку поверх карты без изменения её геометрии и пересоздания', async () => {
+    // This scenario starts with an already verified installed map. SDK startup
+    // and its loading screen are covered separately below.
+    useOfflineMapStore.setState({
+      hydrated: true,
+      cities: {
+        samara: {
+          regionId: 51,
+          status: 'ready',
+          availability: 'ready',
+          nativeState: 'completed',
+          usableReleaseTime: 1000,
+          progress: 1,
+          managed: true,
+          autoResume: false,
+        },
+      },
+    })
     function Probe() {
       return <ConnectivityContext.Provider value={mockMapLogic.isOffline}>
         <MapScreen />
@@ -466,6 +483,46 @@ describe('экран карты заказов', () => {
     expect(screen.queryByTestId('native-yandex-map')).toBeNull()
   })
 
+  it('waits for persisted offline map metadata before choosing a map or saved orders', async () => {
+    mockMapLogic.isOffline = true
+    await render(<ConnectivityContext.Provider value><MapScreen /></ConnectivityContext.Provider>)
+    expect(screen.getByTestId('orders-map-loading')).toBeTruthy()
+    expect(screen.queryByText('Карта недоступна')).toBeNull()
+    expect(screen.queryByTestId('native-yandex-map')).toBeNull()
+  })
+
+  it.each(['ready', 'missing', 'invalid'] as const)(
+    'waits through SDK startup and then presents the confirmed %s state', async availability => {
+      mockMapLogic.isOffline = true
+      useOfflineMapStore.setState({hydrated: true, cities: {samara: {
+        regionId: 51, status: 'ready', availability: 'checking', nativeState: 'unsupported',
+        progress: 1, usableReleaseTime: 1000, managed: true, autoResume: false,
+      }}})
+      await render(<ConnectivityContext.Provider value><MapScreen /></ConnectivityContext.Provider>)
+      await fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {
+        nativeEvent: {layout: {width: 390, height: 700}},
+      })
+      expect(screen.getByTestId('orders-map-loading')).toBeTruthy()
+      expect(screen.queryByText('Карта недоступна')).toBeNull()
+      expect(screen.queryByTestId('native-yandex-map')).toBeNull()
+      expect(screen.queryByTestId('orders-map-rotation-lock')).toBeNull()
+
+      await act(async () => {
+        useOfflineMapStore.setState({cities: {samara: {
+          ...useOfflineMapStore.getState().cities.samara!, availability,
+        }}})
+      })
+      expect(screen.queryByTestId('orders-map-loading')).toBeNull()
+      if (availability === 'ready') {
+        expect(screen.getByTestId('native-yandex-map')).toBeTruthy()
+        expect(screen.queryByText('Карта недоступна')).toBeNull()
+      } else {
+        expect(screen.getByText('Карта недоступна')).toBeTruthy()
+        expect(screen.queryByTestId('native-yandex-map')).toBeNull()
+      }
+    },
+  )
+
   it('со скачанной картой текущего города оставляет MapKit доступным офлайн', async () => {
     useOfflineMapStore.setState({
       hydrated: true,
@@ -495,4 +552,17 @@ describe('экран карты заказов', () => {
     expect(screen.getByTestId('native-yandex-map')).toBeTruthy()
     expect(screen.queryByText('Карта недоступна')).toBeNull()
   })
+
+it('leaves the installed previous map mounted offline while its update is paused', async () => {
+  useOfflineMapStore.setState({hydrated: true, cities: {samara: {
+    regionId: 51, status: 'paused', availability: 'ready', needsUpdate: true,
+    progress: 0.3, managed: true, autoResume: false,
+  }}});
+  mockMapLogic.isOffline = true;
+  await render(<ConnectivityContext.Provider value><MapScreen /></ConnectivityContext.Provider>);
+  await fireEvent(screen.getByTestId('orders-map-viewport'), 'layout', {nativeEvent: {layout: {width: 390, height: 700}}});
+  expect(screen.getByTestId('native-yandex-map')).toBeTruthy();
+  expect(screen.queryByText('Карта недоступна')).toBeNull();
+});
+
 })

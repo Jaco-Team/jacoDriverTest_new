@@ -15,7 +15,7 @@ const storage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 const online = {online: true, authenticated: true, active: true};
 const statuses: Record<
   number,
-  {id: number; state: string; progress: number; error?: string}
+  {id: number; state: string; stateKnown?: boolean; progress: number; error?: string; downloadedReleaseTime?: number | null; availableReleaseTime?: number | null; downloadStarted?: boolean}
 > = {};
 let disk = new Map<string, string>();
 
@@ -28,6 +28,7 @@ beforeEach(() => {
   storage.setItem.mockImplementation(async (key, value) => {
     disk.set(key, value);
   });
+  native.getKnownOfflineRegions.mockResolvedValue('[]');
   native.getOfflineRegionsAtPoint.mockImplementation(async (_lat, lon) =>
     JSON.stringify(
       lon > 50
@@ -160,7 +161,7 @@ it('background interruption resumes in the foreground, logout disables automatic
   await useOfflineMapStore.getState().setRuntime(online);
   expect(native.startOfflineRegionDownload).toHaveBeenCalledTimes(2);
 });
-it('refresh explicitly starts a new download even for an already completed city', async () => {
+it('explicit Update reaches SDK even for an already completed city', async () => {
   useOfflineMapStore.setState({
     cities: {
       samara: {
@@ -386,4 +387,377 @@ it('SDK warmup does not discard auto-resume intent or the saved date of complete
   expect(useOfflineMapStore.getState().cities.tolyatti?.savedAt).toBe(123);
   await useOfflineMapStore.getState().resumePending();
   expect(native.startOfflineRegionDownload).toHaveBeenCalledWith(51);
+});
+
+it('keeps an outdated installed package usable and rejects need_update separately', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'ready', progress: 1, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'outdated', progress: 1, downloadedReleaseTime: 1000};
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    availability: 'ready', needsUpdate: true, usableReleaseTime: 1000,
+  });
+  statuses[51] = {id: 51, state: 'need_update', progress: 1, downloadedReleaseTime: 1000};
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    availability: 'invalid', needsUpdate: true,
+  });
+});
+
+it('a native update error remains visible without hiding a completed installed package', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'error', progress: 1, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'completed', progress: 1, error: 'Old network failure'};
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    availability: 'ready', status: 'error', error: 'Old network failure',
+  });
+});
+
+it('retains the checked previous release across an update, pause and cold offline restart', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'ready', progress: 1, savedAt: 123, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'outdated', progress: 1, downloadedReleaseTime: 1000};
+  await useOfflineMapStore.getState().refresh();
+  native.startOfflineRegionDownload.mockImplementationOnce(async id => {
+    statuses[id] = {id, state: 'downloading', progress: 0.2, downloadedReleaseTime: 1000};
+  });
+  await useOfflineMapStore.getState().download('samara', true);
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    status: 'downloading', availability: 'ready', savedAt: 123,
+  });
+  await useOfflineMapStore.getState().pause('samara');
+  useOfflineMapStore.setState({hydrated: false, cities: {}, runtime: {...online, online: false}});
+  await useOfflineMapStore.getState().hydrate();
+  expect(useOfflineMapStore.getState().cities.samara?.availability).toBe('checking');
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    status: 'paused', availability: 'ready', savedAt: 123, autoResume: false,
+  });
+});
+
+it('does not advertise a partial first download or a changed installed release as usable', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'paused', progress: 0.4, managed: true, autoResume: false,
+    usableReleaseTime: 1000,
+  }}});
+  for (const downloadedReleaseTime of [null, 2000]) {
+    statuses[51] = {id: 51, state: 'paused', progress: 0.4, downloadedReleaseTime};
+    await useOfflineMapStore.getState().refresh();
+    expect(useOfflineMapStore.getState().cities.samara?.availability).toBe('missing');
+  }
+});
+
+it('rechecks legacy outdated records instead of treating their date as proof of validity', async () => {
+  disk.set(OFFLINE_CITY_STORAGE_KEY, JSON.stringify({version: 1, cities: {samara: {
+    regionId: 51, status: 'outdated', progress: 1, savedAt: 123, managed: true, autoResume: false,
+  }}}));
+  useOfflineMapStore.setState({hydrated: false});
+  await useOfflineMapStore.getState().hydrate();
+  expect(useOfflineMapStore.getState().cities.samara?.availability).toBe('checking');
+  statuses[51] = {id: 51, state: 'need_update', progress: 1};
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara?.availability).toBe('invalid');
+});
+
+it('recovers an installed city from the local SDK catalog without internet or JS metadata', async () => {
+  useOfflineMapStore.setState({runtime: {...online, online: false}});
+  native.getKnownOfflineRegions.mockResolvedValueOnce(JSON.stringify([
+    {id: 51, name: 'Самара', sizeBytes: 1000},
+  ]));
+  statuses[51] = {id: 51, state: 'completed', progress: 1, downloadedReleaseTime: 1000};
+  await useOfflineMapStore.getState().refresh();
+  expect(native.getOfflineRegionsAtPoint).not.toHaveBeenCalled();
+  expect(native.startOfflineRegionDownload).not.toHaveBeenCalled();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({regionId: 51, availability: 'ready'});
+});
+
+it('a temporary SDK read failure does not erase automatic resume intent', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'paused', progress: 0.4, managed: true, autoResume: true,
+  }}});
+  native.getOfflineRegionStatus.mockRejectedValueOnce(new Error('SDK is starting'));
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    availability: 'checking', autoResume: true,
+  });
+});
+
+it('does not release the download slot because of an old error while SDK is downloading', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'downloading', progress: 0.4, managed: true, autoResume: true,
+  }}});
+  statuses[51] = {id: 51, state: 'downloading', progress: 0.5, error: 'Previous connection loss'};
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().busyCityId).toBe('samara');
+  expect(useOfflineMapStore.getState().cities.samara?.autoResume).toBe(true);
+});
+
+it('updates a known installed region without another network region lookup', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, nativeState: 'completed', status: 'ready', availability: 'ready',
+    usableReleaseTime: 1000, progress: 1, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'outdated', progress: 1, downloadedReleaseTime: 1000};
+  native.getOfflineRegionsAtPoint.mockRejectedValue(new Error('NetworkErrorBinding'));
+  await useOfflineMapStore.getState().download('samara', true);
+  expect(native.getOfflineRegionsAtPoint).not.toHaveBeenCalled();
+  expect(native.startOfflineRegionDownload).toHaveBeenCalledWith(51);
+});
+
+it('keeps a failed update visible across SDK polls and offline restoration without hiding the old map', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'ready', availability: 'ready', usableReleaseTime: 1000,
+    progress: 1, savedAt: 123, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'outdated', progress: 1, downloadedReleaseTime: 1000};
+  native.startOfflineRegionDownload.mockRejectedValueOnce(
+    new Error('com.yandex.runtime.network.internal.NetworkErrorBinding@49d0bb1'),
+  );
+  await useOfflineMapStore.getState().download('samara', true);
+  statuses[51].state = 'completed';
+  const expectedError = 'Не удалось связаться с сервером карт Яндекса. Проверьте интернет и повторите.';
+  for (let i = 0; i < 3; i++) await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    status: 'error', availability: 'ready', downloadError: expectedError, savedAt: 123,
+  });
+  useOfflineMapStore.setState({hydrated: false, cities: {}, runtime: {...online, online: false}});
+  await useOfflineMapStore.getState().hydrate();
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    status: 'error', availability: 'ready', downloadError: expectedError,
+  });
+  useOfflineMapStore.setState({runtime: online});
+  await useOfflineMapStore.getState().download('samara');
+  expect(useOfflineMapStore.getState().cities.samara?.downloadError).toBeUndefined();
+});
+
+it('a verified newly installed release clears the failure of the previous release update', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'error', availability: 'ready', usableReleaseTime: 1000,
+    downloadError: 'Previous update failed', progress: 0, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'completed', progress: 1, downloadedReleaseTime: 2000};
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    status: 'ready', availability: 'ready', usableReleaseTime: 2000, downloadError: undefined,
+  });
+});
+
+
+it('an old installed package cannot complete a newly requested update before SDK starts it', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'outdated', availability: 'ready', usableReleaseTime: 1000,
+    needsUpdate: true, progress: 1, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'outdated', progress: 1, downloadedReleaseTime: 1000};
+  native.startOfflineRegionDownload.mockImplementationOnce(async () => undefined);
+  await useOfflineMapStore.getState().download('samara', true);
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    preparing: true, status: 'outdated', availability: 'ready', autoResume: true,
+  });
+  expect(useOfflineMapStore.getState().busyCityId).toBe('samara');
+  statuses[51] = {id: 51, state: 'downloading', progress: 0.1, downloadedReleaseTime: 1000};
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    preparing: false, status: 'downloading', autoResume: true,
+  });
+  statuses[51] = {id: 51, state: 'completed', progress: 1, downloadedReleaseTime: 2000};
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    status: 'ready', preparing: false, usableReleaseTime: 2000,
+  });
+});
+
+it('keeps an asynchronous native update failure when the old package remains completed', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'ready', availability: 'ready', usableReleaseTime: 1000,
+    progress: 1, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'outdated', progress: 1, downloadedReleaseTime: 1000};
+  native.startOfflineRegionDownload.mockImplementationOnce(async () => undefined);
+  await useOfflineMapStore.getState().download('samara', true);
+  statuses[51].state = 'completed';
+  statuses[51].error = 'NetworkErrorBinding';
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    status: 'error', availability: 'ready', autoResume: false,
+    downloadError: 'Не удалось связаться с сервером карт Яндекса. Проверьте интернет и повторите.',
+  });
+  delete statuses[51].error;
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara?.status).toBe('error');
+  await useOfflineMapStore.getState().download('samara');
+  expect(native.startOfflineRegionDownload).toHaveBeenCalledTimes(2);
+  expect(useOfflineMapStore.getState().cities.samara?.downloadError).toBeUndefined();
+});
+
+
+it('resumes an update interrupted before SDK leaves the old outdated state', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'outdated', availability: 'ready', usableReleaseTime: 1000,
+    needsUpdate: true, progress: 1, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'outdated', progress: 1, downloadedReleaseTime: 1000};
+  native.startOfflineRegionDownload.mockImplementationOnce(async () => undefined);
+  native.pauseOfflineRegionDownload.mockImplementationOnce(async () => undefined);
+  await useOfflineMapStore.getState().download('samara', true);
+  await useOfflineMapStore.getState().setRuntime({...online, online: false});
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    status: 'paused', availability: 'ready', autoResume: true, preparing: false,
+  });
+  await useOfflineMapStore.getState().setRuntime(online);
+  expect(native.startOfflineRegionDownload).toHaveBeenCalledTimes(2);
+  expect(useOfflineMapStore.getState().cities.samara?.status).toBe('downloading');
+});
+
+
+it('does not treat the old completed package as the result of Update while a newer catalog release exists', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'ready', availability: 'ready', usableReleaseTime: 1000,
+    progress: 1, savedAt: 123, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'completed', progress: 1,
+    downloadedReleaseTime: 1000, availableReleaseTime: 2000, downloadStarted: false};
+  native.startOfflineRegionDownload.mockImplementationOnce(async () => undefined);
+  await useOfflineMapStore.getState().download('samara', true);
+  for (let i = 0; i < 3; i++) await useOfflineMapStore.getState().refresh();
+  expect(native.startOfflineRegionDownload).toHaveBeenCalledWith(51);
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    preparing: true, awaitingStart: true, availability: 'ready', autoResume: true, savedAt: 123,
+  });
+  expect(useOfflineMapStore.getState().busyCityId).toBe('samara');
+  statuses[51] = {id: 51, state: 'completed', progress: 1,
+    downloadedReleaseTime: 2000, availableReleaseTime: 2000, downloadStarted: true};
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    status: 'ready', preparing: false, awaitingStart: false, usableReleaseTime: 2000,
+  });
+  expect(useOfflineMapStore.getState().busyCityId).toBeNull();
+});
+
+it('accepts a completed matching catalog release without inventing a download or changing its saved date', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'ready', availability: 'ready', usableReleaseTime: 1000,
+    progress: 1, savedAt: 123, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'completed', progress: 1,
+    downloadedReleaseTime: 1000, availableReleaseTime: 1000, downloadStarted: false};
+  native.startOfflineRegionDownload.mockImplementationOnce(async () => undefined);
+  await useOfflineMapStore.getState().download('samara', true);
+  expect(native.startOfflineRegionDownload).toHaveBeenCalledWith(51);
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    status: 'ready', preparing: false, awaitingStart: false, savedAt: 123, autoResume: false,
+  });
+  expect(useOfflineMapStore.getState().busyCityId).toBeNull();
+});
+
+it('does not guess that a completed old package is current when the catalog release is unknown', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'ready', availability: 'ready', usableReleaseTime: 1000,
+    progress: 1, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'completed', progress: 1,
+    downloadedReleaseTime: 1000, downloadStarted: false};
+  native.startOfflineRegionDownload.mockImplementationOnce(async () => undefined);
+  await useOfflineMapStore.getState().download('samara', true);
+  expect(useOfflineMapStore.getState().cities.samara?.preparing).toBe(true);
+  statuses[51].availableReleaseTime = 1000;
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara?.preparing).toBe(false);
+});
+
+it('recognizes a download observed by SDK callbacks even if JS polling misses its downloading state', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'ready', availability: 'ready', usableReleaseTime: 1000,
+    progress: 1, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'completed', progress: 1,
+    downloadedReleaseTime: 1000, downloadStarted: false};
+  native.startOfflineRegionDownload.mockImplementationOnce(async () => undefined);
+  await useOfflineMapStore.getState().download('samara', true);
+  statuses[51].downloadStarted = true;
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    status: 'ready', preparing: false, awaitingStart: false,
+  });
+});
+
+
+it('keeps resume intent if SDK starts downloading after an initial completed matching-catalog snapshot', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'ready', availability: 'ready', usableReleaseTime: 1000,
+    progress: 1, managed: true, autoResume: false,
+  }}});
+  statuses[51] = {id: 51, state: 'completed', progress: 1,
+    downloadedReleaseTime: 1000, availableReleaseTime: 1000, downloadStarted: false};
+  native.startOfflineRegionDownload.mockImplementationOnce(async () => undefined);
+  await useOfflineMapStore.getState().download('samara', true);
+  statuses[51] = {id: 51, state: 'downloading', progress: 0.2,
+    downloadedReleaseTime: 1000, availableReleaseTime: 2000, downloadStarted: true};
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    status: 'downloading', availability: 'ready', autoResume: true, updating: true,
+  });
+});
+
+
+it('waits for the SDK catalog before invalidating a saved map on cold offline startup', async () => {
+  disk.set(OFFLINE_CITY_STORAGE_KEY, JSON.stringify({version: 1, cities: {tolyatti: {
+    regionId: 240, status: 'ready', progress: 1, availability: 'ready',
+    usableReleaseTime: 1000, savedAt: 123, managed: true, autoResume: false,
+  }}}));
+  useOfflineMapStore.setState({hydrated: false, cities: {}, runtime: {...online, online: false}});
+  await useOfflineMapStore.getState().hydrate();
+  statuses[240] = {id: 240, state: 'unsupported', stateKnown: false, progress: 0};
+  for (let i = 0; i < 2; i++) await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.tolyatti).toMatchObject({
+    availability: 'checking', status: 'ready', progress: 1,
+    usableReleaseTime: 1000, savedAt: 123, autoResume: false,
+  });
+  expect(useOfflineMapStore.getState().cities.tolyatti?.error).toBeUndefined();
+  statuses[240] = {id: 240, state: 'completed', stateKnown: true, progress: 1,
+    downloadedReleaseTime: 1000, availableReleaseTime: 1000};
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.tolyatti).toMatchObject({
+    availability: 'ready', status: 'ready', usableReleaseTime: 1000, savedAt: 123,
+  });
+  expect(native.getOfflineRegionsAtPoint).not.toHaveBeenCalled();
+  expect(native.startOfflineRegionDownload).not.toHaveBeenCalled();
+});
+
+it('still rejects a region confirmed unsupported by an initialized SDK catalog', async () => {
+  useOfflineMapStore.setState({cities: {tolyatti: {
+    regionId: 240, status: 'ready', availability: 'checking', progress: 1,
+    usableReleaseTime: 1000, savedAt: 123, managed: true, autoResume: false,
+  }}});
+  statuses[240] = {id: 240, state: 'unsupported', stateKnown: true, progress: 0};
+  await useOfflineMapStore.getState().refresh();
+  expect(useOfflineMapStore.getState().cities.tolyatti).toMatchObject({
+    availability: 'invalid', status: 'error',
+  });
+  expect(native.startOfflineRegionDownload).not.toHaveBeenCalled();
+});
+
+it.each([false, true])('preserves pause intent while SDK state is unknown (autoResume=%s)', async autoResume => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'paused', availability: 'checking', progress: 0.47,
+    managed: true, autoResume,
+  }}});
+  statuses[51] = {id: 51, state: 'unsupported', stateKnown: false, progress: 0};
+  await useOfflineMapStore.getState().refresh();
+  await useOfflineMapStore.getState().resumePending();
+  expect(useOfflineMapStore.getState().cities.samara).toMatchObject({
+    availability: 'checking', status: 'paused', progress: 0.47, autoResume,
+  });
+  expect(native.startOfflineRegionDownload).not.toHaveBeenCalled();
+  statuses[51] = {id: 51, state: 'paused', stateKnown: true, progress: 0.47};
+  await useOfflineMapStore.getState().refresh();
+  await useOfflineMapStore.getState().resumePending();
+  expect(native.startOfflineRegionDownload).toHaveBeenCalledTimes(autoResume ? 1 : 0);
 });

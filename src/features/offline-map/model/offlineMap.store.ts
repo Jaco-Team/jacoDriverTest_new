@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {YamapInstance} from 'react-native-yamap-plus';
 import {create} from 'zustand';
 
+import {isOfflineCityUsable} from './offlineMapAvailability';
+import {getOfflineMapErrorMessage} from './offlineMapError';
 import {initYaMap} from '@/shared/lib/yaMapInit';
 import {
   OFFLINE_MAP_CITIES,
@@ -13,11 +15,22 @@ export const OFFLINE_CITY_STORAGE_KEY = 'jaco_mapkit_city_downloads_v1';
 type DownloadState =
   'available' | 'downloading' | 'paused' | 'ready' | 'outdated' | 'error';
 export interface CityDownload {
+  // Independent of a new download, its progress, pause or error.
+  availability?: 'checking' | 'ready' | 'missing' | 'invalid';
+  needsUpdate?: boolean;
+  nativeState?: string;
+  usableReleaseTime?: number;
+  updating?: boolean;
+  preparing?: boolean;
+  // Command acceptance is not confirmation that a new package was installed.
+  awaitingStart?: boolean;
   regionId?: number;
   sizeBytes?: number;
   status: DownloadState;
   progress: number;
   savedAt?: number;
+  // Failure of the last explicit request, independent of installed SDK data.
+  downloadError?: string;
   error?: string;
   autoResume: boolean;
   // Includes deleted packages: automatic cafe sync must respect user intent.
@@ -55,8 +68,13 @@ interface NativeRegion {
 interface NativeStatus {
   id: number;
   state: string;
+  // False only while the SDK cannot yet distinguish an unknown region from an unsupported one.
+  stateKnown?: boolean;
   progress: number;
   error?: string;
+  downloadedReleaseTime?: number | null;
+  availableReleaseTime?: number | null;
+  downloadStarted?: boolean;
 }
 
 let hydration: Promise<void> | null = null;
@@ -76,7 +94,7 @@ function canDownload() {
   return online && authenticated && active;
 }
 function message(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
+  return getOfflineMapErrorMessage(error);
 }
 function updateCity(id: OfflineCityId, changes: Partial<CityDownload>) {
   const state = useOfflineMapStore.getState();
@@ -132,7 +150,7 @@ async function findRegion(id: OfflineCityId): Promise<NativeRegion> {
   throw new Error(`Карта «${city.name}» пока недоступна. Повторите попытку.`);
 }
 async function readStatus(id: OfflineCityId) {
-  const entry = useOfflineMapStore.getState().cities[id];
+  let entry = useOfflineMapStore.getState().cities[id];
   if (!entry?.regionId) return;
   const native = JSON.parse(
     await YamapInstance.getOfflineRegionStatus(entry.regionId),
@@ -140,48 +158,112 @@ async function readStatus(id: OfflineCityId) {
   if (native.id !== entry.regionId || !Number.isFinite(native.progress)) {
     throw new Error('Не удалось проверить сохранённую карту.');
   }
+  // A manual pause can happen while the native status promise is in flight.
+  entry = useOfflineMapStore.getState().cities[id];
+  if (!entry || entry.regionId !== native.id) return;
+  if (native.stateKnown === false) {
+    // Startup can report unsupported before the local catalog is loaded.
+    // Preserve download intent, errors and installed metadata until SDK confirms the state.
+    updateCity(id, {nativeState: native.state, availability: 'checking'});
+    return;
+  }
   const progress = Math.min(1, Math.max(0, native.progress));
-  if (native.error || native.state === 'unsupported') {
+  const release = typeof native.downloadedReleaseTime === 'number' &&
+    Number.isFinite(native.downloadedReleaseTime) && native.downloadedReleaseTime > 0
+    ? native.downloadedReleaseTime : undefined;
+  // While updating, only a previously verified installed release can remain
+  // usable. A date/progress value alone is not evidence of a valid old map.
+  const previousReleaseUsable = release !== undefined && release === entry.usableReleaseTime;
+  const availableRelease = typeof native.availableReleaseTime === 'number' &&
+    Number.isFinite(native.availableReleaseTime) && native.availableReleaseTime > 0
+    ? native.availableReleaseTime : undefined;
+  const newerReleaseAvailable = release !== undefined && availableRelease !== undefined &&
+    availableRelease > release;
+  const installedMatchesCatalog = native.state === 'completed' &&
+    release !== undefined && availableRelease !== undefined && release >= availableRelease;
+  const snapshot = {
+    nativeState: native.state, progress, preparing: false, awaitingStart: false,
+  };
+  if (entry.preparing && entry.awaitingStart && previousReleaseUsable && !native.error &&
+      (native.state === 'completed' || native.state === 'outdated') &&
+      !installedMatchesCatalog && (!native.downloadStarted || newerReleaseAvailable)) {
+    // A command returning is not a completed download. Retain the request while
+    // SDK still describes the old package. No timer fabricates success/failure.
     updateCity(id, {
-      status: 'error',
-      progress,
-      // A persisted region can report unsupported while MapKit warms up.
-      // Keep pending intent; a genuine unsupported region remains in error
-      // and is never resumed until the SDK reports an available/paused state.
-      autoResume: native.error ? false : entry.autoResume,
-      error:
-        native.error ||
-        'Офлайн-карта больше не поддерживается. Удалите её и скачайте снова.',
+      nativeState: native.state, availability: 'ready',
+      needsUpdate: native.state === 'outdated' || newerReleaseAvailable,
     });
-  } else if (native.state === 'completed') {
+    return;
+  }
+  if (native.state === 'completed' || native.state === 'outdated') {
+    // Completed can describe the OLD installed package after a failed update.
+    // Only a new attempt or a newly installed release clears that failure.
+    const newRelease = release !== undefined && entry.usableReleaseTime !== undefined &&
+      release !== entry.usableReleaseTime;
+    const attemptError = newRelease ? undefined :
+      native.error ? message(native.error) : entry.downloadError;
+    const failedAttempt = Boolean(attemptError);
+    const resumeUpdate = !failedAttempt && !newRelease && !installedMatchesCatalog &&
+      entry.status === 'paused' && entry.autoResume && entry.updating === true;
     updateCity(id, {
-      status: 'ready',
-      progress: 1,
-      autoResume: false,
-      savedAt: entry.savedAt ?? Date.now(),
-      error: undefined,
+      ...snapshot,
+      status: failedAttempt ? 'error' : resumeUpdate ? 'paused' :
+        native.state === 'completed' && !newerReleaseAvailable ? 'ready' : 'outdated',
+      availability: 'ready',
+      needsUpdate: native.state === 'outdated' || newerReleaseAvailable,
+      progress: failedAttempt || resumeUpdate ? entry.progress : 1,
+      autoResume: resumeUpdate,
+      updating: resumeUpdate || (failedAttempt && entry.updating === true),
+      usableReleaseTime: release,
+      savedAt: release !== entry.usableReleaseTime && entry.usableReleaseTime !== undefined
+        ? Date.now() : entry.savedAt ?? Date.now(),
+      // Historical SDK errors do not invalidate a completed package. The last
+      // failed explicit request remains visible without hiding the old map.
+      downloadError: attemptError,
+      error: attemptError,
     });
-  } else if (native.state === 'downloading') {
-    updateCity(id, {status: 'downloading', progress, error: undefined});
-  } else if (native.state === 'paused') {
+  } else if (native.state === 'downloading' || native.state === 'paused') {
     updateCity(id, {
-      status: 'paused',
-      progress,
-      error: undefined,
+      ...snapshot,
+      status: native.state === 'downloading' ? 'downloading' : native.error || entry.downloadError ? 'error' : 'paused',
+      availability: previousReleaseUsable ? 'ready' : 'missing',
+      error: native.error ? message(native.error) : undefined,
+      downloadError: native.error ? message(native.error) : entry.downloadError,
+      updating: entry.updating || (native.state === 'downloading' && previousReleaseUsable),
+      autoResume: native.error && native.state === 'paused'
+        ? !canDownload() && entry.autoResume
+        : native.state === 'downloading' && native.downloadStarted && entry.status === 'ready'
+          ? true : entry.autoResume,
     });
-  } else if (native.state === 'outdated' || native.state === 'need_update') {
+  } else if (native.state === 'need_update') {
     updateCity(id, {
+      ...snapshot,
+      // Keep the old storage vocabulary readable by an older JS bundle.
       status: 'outdated',
-      progress,
+      availability: 'invalid',
+      needsUpdate: true,
+      usableReleaseTime: undefined,
       autoResume: false,
       error: undefined,
+    });
+  } else if (native.state === 'unsupported') {
+    updateCity(id, {
+      ...snapshot,
+      status: 'error',
+      availability: 'invalid',
+      autoResume: entry.autoResume,
+      error: native.error || 'Офлайн-карта больше не поддерживается. Скачайте её заново.',
     });
   } else if (native.state === 'available') {
     updateCity(id, {
+      ...snapshot,
       status: entry.autoResume ? 'paused' : 'available',
+      availability: 'missing',
+      needsUpdate: false,
+      usableReleaseTime: undefined,
       progress: 0,
       savedAt: undefined,
-      error: undefined,
+      error: native.error,
     });
   } else {
     throw new Error('Не удалось проверить состояние карты.');
@@ -230,8 +312,19 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
                   if (entry !== undefined) restored = false;
                   continue;
                 }
+                const restoredEntry = {...entry};
+                delete restoredEntry.startRequestedAt;
+                delete restoredEntry.downloadNotice;
                 cities[city.id] = {
-                  ...entry,
+                  ...restoredEntry,
+                  availability: 'checking',
+                  preparing: false,
+                  awaitingStart: false,
+                  downloadError: typeof entry.downloadError === 'string' ? entry.downloadError : undefined,
+                  usableReleaseTime: Number.isFinite(entry.usableReleaseTime) && entry.usableReleaseTime > 0
+                    ? entry.usableReleaseTime : undefined,
+                  needsUpdate: entry.needsUpdate === true,
+                  updating: entry.updating === true,
                   status:
                     entry.status === 'downloading' ? 'paused' : entry.status,
                   regionId:
@@ -274,8 +367,22 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
       const shouldDiscover =
         discover && canDownload() && Date.now() >= nextCatalogAttempt;
       if (shouldDiscover) nextCatalogAttempt = Date.now() + 30_000;
+      // This reads the SDK's local catalog; it never requests a network list.
+      // It recovers installed regions even if JS metadata was lost.
+      let known: NativeRegion[] = [];
+      if (typeof YamapInstance.getKnownOfflineRegions === 'function') {
+        try { known = JSON.parse(await YamapInstance.getKnownOfflineRegions()) as NativeRegion[]; }
+        catch { /* A subsequent poll can retry while the SDK starts. */ }
+      }
       for (const city of OFFLINE_MAP_CITIES) {
         try {
+          // A queued poll must not cancel a command reserved before its start.
+          const pending = get().cities[city.id];
+          if (pending?.preparing && !pending.awaitingStart) continue;
+          if (!get().cities[city.id]?.regionId) {
+            const local = known.find(item => item.name === city.name);
+            if (local) updateCity(city.id, {regionId: local.id, sizeBytes: local.sizeBytes});
+          }
           if (!get().cities[city.id]?.regionId && shouldDiscover) {
             const region = await findRegion(city.id);
             updateCity(city.id, {
@@ -287,14 +394,13 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
         } catch (error) {
           if (get().cities[city.id]?.regionId)
             updateCity(city.id, {
-              status: 'error',
+              availability: 'checking',
               error: message(error),
-              autoResume: false,
             });
         }
       }
       const downloading = OFFLINE_MAP_CITIES.find(
-        city => get().cities[city.id]?.status === 'downloading',
+        city => get().cities[city.id]?.status === 'downloading' || get().cities[city.id]?.preparing,
       );
       set({busyCityId: downloading?.id ?? null});
       await persist();
@@ -323,12 +429,17 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
       return;
     }
 
+    const retrying = get().cities[id]?.status === 'error';
     updateCity(id, {
-      status: 'downloading',
+      preparing: true,
+      awaitingStart: false,
+      availability: isOfflineCityUsable(get().cities[id]) ? 'ready' : 'missing',
       managed: true,
       autoResume: true,
       error: undefined,
-      ...(refresh ? {progress: 0, savedAt: undefined} : {}),
+      downloadError: undefined,
+      updating: refresh || get().cities[id]?.updating === true,
+      ...(refresh ? {progress: 0} : {}),
     });
     await persist();
     await serialize(async () => {
@@ -336,7 +447,7 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
         if (!(await initYaMap()))
           throw new Error('Карта не инициализировалась. Повторите попытку.');
         const entry = get().cities[id];
-        if (!entry?.regionId || refresh) {
+        if (!entry?.regionId || entry.nativeState === 'unsupported') {
           const region = await findRegion(id);
           updateCity(id, {regionId: region.id, sizeBytes: region.sizeBytes});
         }
@@ -355,20 +466,38 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
           set({busyCityId: null});
           return;
         }
-        if (status.state === 'completed' && !refresh) await readStatus(id);
-        else {
+        // Explicit Update always reaches SDK, even for a completed package.
+        if (status.state === 'completed' && !refresh && !retrying && !get().cities[id]?.updating) {
+          await readStatus(id);
+        } else {
+          const installedRelease = status.downloadedReleaseTime;
+          updateCity(id, {
+            awaitingStart: true,
+            preparing: true,
+            ...((status.state === 'completed' || status.state === 'outdated') && typeof installedRelease === 'number' &&
+                Number.isFinite(installedRelease) && installedRelease > 0
+              ? {availability: 'ready', usableReleaseTime: installedRelease} : {}),
+          });
           await YamapInstance.startOfflineRegionDownload(regionId);
           await readStatus(id);
         }
-        if (get().cities[id]?.status !== 'downloading') set({busyCityId: null});
+        if (get().cities[id]?.status !== 'downloading' && !get().cities[id]?.preparing) {
+          set({busyCityId: null});
+        }
       } catch (error) {
         updateCity(id, {
           status: canDownload() ? 'error' : 'paused',
+          preparing: false,
+          awaitingStart: false,
           error: canDownload() ? message(error) : undefined,
+          downloadError: canDownload() ? message(error) : undefined,
           autoResume: !canDownload(),
         });
         set({busyCityId: null});
       } finally {
+        if (!get().cities[id]?.awaitingStart) {
+          updateCity(id, {preparing: false});
+        }
         await persist();
       }
     });
@@ -376,7 +505,7 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
   pause: async (id, autoResume = false) => {
     const entry = get().cities[id];
     if (!entry) return;
-    updateCity(id, {status: 'paused', autoResume, managed: true});
+    updateCity(id, {status: 'paused', preparing: false, awaitingStart: false, autoResume, managed: true});
     await persist();
     await serialize(async () => {
       try {
@@ -405,6 +534,13 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
           await YamapInstance.removeOfflineRegion(entry.regionId);
         updateCity(id, {
           status: 'available',
+          availability: 'missing',
+          needsUpdate: false,
+          usableReleaseTime: undefined,
+          updating: false,
+          preparing: false,
+          awaitingStart: false,
+          downloadError: undefined,
           progress: 0,
           savedAt: undefined,
           error: undefined,
@@ -430,7 +566,7 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
         OFFLINE_MAP_CITIES.map(async city => {
           const entry = get().cities[city.id];
           if (
-            entry?.status === 'downloading' ||
+            entry?.status === 'downloading' || entry?.preparing ||
             (loggedOut && entry?.autoResume)
           ) {
             await get().pause(
@@ -449,7 +585,7 @@ export const useOfflineMapStore = create<OfflineMapState>((set, get) => ({
     if (!canDownload() || get().busyCityId || get().deletingCityId) return;
     const pending = OFFLINE_MAP_CITIES.find(city => {
       const entry = get().cities[city.id];
-      return entry?.autoResume && entry.status === 'paused';
+      return entry?.autoResume && entry.status === 'paused' && entry.availability !== 'checking';
     });
     if (pending) await get().download(pending.id);
   },

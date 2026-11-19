@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 
-import YaMap, {Animation} from 'react-native-yamap-plus';
+import YaMap, {Animation, YamapInstance} from 'react-native-yamap-plus';
 import {FontAwesomeIcon} from '@fortawesome/react-native-fontawesome';
 import {
   faLocationDot,
@@ -55,6 +55,7 @@ import {Center} from '@/components/ui/center';
 import {Spinner} from '@/components/ui/spinner';
 import {useAppTheme} from '@/shared/theme/AppThemeProvider';
 import {ConnectivityLocationIndicator} from '@/shared/ui/ConnectivityLocationIndicator';
+import {isOfflineCityUsable, getOfflineCityUnavailableReason} from '@/features/offline-map/model/offlineMapAvailability';
 import {useOfflineMapStore} from '@/features/offline-map/model/offlineMap.store';
 import {findOfflineMapCity} from '@/features/offline-map/model/offlineMapCities';
 import {OrderRecommendationSection} from '@/features/order-recommendation/ui/OrderRecommendationSection';
@@ -118,11 +119,45 @@ export function MapScreen() {
   const offlineMapsHydrated = useOfflineMapStore(state => state.hydrated);
   const offlineMapCities = useOfflineMapStore(state => state.cities);
   const offlineCity = validHome ? findOfflineMapCity(validHome) : undefined;
-  const hasReadyOfflineMap = Boolean(
-    offlineCity && offlineMapCities[offlineCity.id]?.status === 'ready',
-  );
+  const offlineEntry = offlineCity ? offlineMapCities[offlineCity.id] : undefined;
+  const hasReadyOfflineMap = isOfflineCityUsable(offlineEntry);
+  const checkingOfflineMap = isOffline &&
+    (!offlineMapsHydrated || offlineEntry?.availability === 'checking');
   const showOfflineFallback =
-    isOffline && offlineMapsHydrated && !hasReadyOfflineMap;
+    isOffline && offlineMapsHydrated && !checkingOfflineMap && !hasReadyOfflineMap;
+  const showMapControls = !showOfflineFallback && !checkingOfflineMap;
+
+  // Observe committed presentation decisions without changing store or SDK state.
+  const offlinePresentationJournal = JSON.stringify({
+    event: 'ui_state',
+    offline: isOffline,
+    hydrated: offlineMapsHydrated,
+    restoration: useOfflineMapStore.getState().restorationStatus,
+    homeReady: !!validHome,
+    ordersContextKnown: !!useOrdersStore.getState().ordersContextKey,
+    ordersChecking: useOrdersStore.getState().is_check,
+    cityId: offlineCity?.id ?? null,
+    regionId: offlineEntry?.regionId ?? null,
+    entryPresent: !!offlineEntry,
+    availability: offlineEntry?.availability ?? null,
+    nativeState: offlineEntry?.nativeState ?? null,
+    status: offlineEntry?.status ?? null,
+    installedRelease: offlineEntry?.usableReleaseTime ?? null,
+    entries: Object.fromEntries(Object.entries(offlineMapCities).map(([id, entry]) => [id, {
+      regionId: entry?.regionId ?? null,
+      availability: entry?.availability ?? null,
+      nativeState: entry?.nativeState ?? null,
+    }])),
+    surface: showOfflineFallback ? 'offline-list' : !checkingOfflineMap && shouldRenderMap && hasViewport ? 'map' : 'loading',
+    mapInitStatus,
+  });
+  useEffect(() => {
+    try {
+      YamapInstance?.logOfflineMapState?.(offlinePresentationJournal);
+    } catch {
+      // Logging unavailable on an older binary must not affect the screen.
+    }
+  }, [offlinePresentationJournal]);
   const activeRecommendationRoute = useActiveOrderRecommendationRoute(
     mapRef,
     mapInstanceKey * 1000 + mapLoadVersion,
@@ -202,7 +237,7 @@ export function MapScreen() {
         </View>
       ) : null}
       <OrderRecommendationSection surface="map" />
-      {!showOfflineFallback &&
+      {showMapControls &&
         !(is_showModalTypeDop || isOpenOrderMap) &&
         is_scaleMap == 1 && (
         <Slider
@@ -254,7 +289,7 @@ export function MapScreen() {
         </TouchableOpacity>
       ) : null}
 
-      {!showOfflineFallback ? (
+      {showMapControls ? (
         <>
           <HomeMarkerImage isDark={isDark} onImage={setHomeMarkerImage} />
           <DriverMarkerImage onImage={setDriverMarkerImage} />
@@ -276,7 +311,7 @@ export function MapScreen() {
         </>
       ) : null}
 
-      {!showOfflineFallback ? <TouchableOpacity
+      {showMapControls ? <TouchableOpacity
         accessibilityLabel={
           rotate_map
             ? 'Заблокировать поворот карты'
@@ -302,7 +337,7 @@ export function MapScreen() {
       </TouchableOpacity> : null}
 
       {/* Геолокацию показываем только при наличии интернета. */}
-      {!showOfflineFallback && !isOffline ? (
+      {showMapControls && !isOffline ? (
         <TouchableOpacity
           accessibilityLabel={
             type_location === 'none'
@@ -340,7 +375,7 @@ export function MapScreen() {
       ) : null}
 
       {/* Пробки требуют сети. */}
-      {!showOfflineFallback && !isOffline ? (
+      {showMapControls && !isOffline ? (
         <TouchableOpacity
           style={{
             backgroundColor: 'transparent',
@@ -370,7 +405,7 @@ export function MapScreen() {
       {/* Яндекс-карта */}
       {showOfflineFallback ? (
         <View style={styles1.ymap} testID="orders-map-viewport">
-          <OrdersMapOfflineList topInset={offlineBannerHeight} />
+          <OrdersMapOfflineList topInset={offlineBannerHeight} reason={getOfflineCityUnavailableReason(offlineEntry)} />
         </View>
       ) : <View
         style={styles1.ymap}
@@ -384,7 +419,7 @@ export function MapScreen() {
               : {width, height},
           );
         }}>
-        {shouldRenderMap && hasViewport ? (
+        {!checkingOfflineMap && shouldRenderMap && hasViewport ? (
           <YaMap
             key={mapInstanceKey}
             showUserPosition={false}
@@ -429,7 +464,7 @@ export function MapScreen() {
             ) : null}
           </YaMap>
         ) : (
-          <Center className="w-full h-full">
+          <Center className="w-full h-full" testID="orders-map-loading">
             {mapInitStatus === 'error' ? (
               <TouchableOpacity onPress={retryMap} style={{padding: 12}}>
                 <Text style={{fontSize: 16, color: colors.text}}>
@@ -443,7 +478,7 @@ export function MapScreen() {
         )}
       </View>}
 
-      {!showOfflineFallback && mapHintsEnabled ? (
+      {showMapControls && mapHintsEnabled ? (
         <OrdersMapCompass viewport={mapViewport} onCenter={centerOnIndicator} />
       ) : null}
 

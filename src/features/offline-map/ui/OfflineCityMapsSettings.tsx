@@ -29,6 +29,7 @@ import {useAppTheme} from '@/shared/theme/AppThemeProvider';
 import {useIsOffline} from '@/shared/lib/connectivityContext';
 import {scaleGlobalFontSize} from '@/shared/lib/fontSize';
 import {useOrdersStore, useSettingsStore} from '@/shared/store/store';
+import {isOfflineCityUsable} from '../model/offlineMapAvailability';
 import {useOfflineMapStore} from '../model/offlineMap.store';
 import {
   OFFLINE_MAP_CITIES,
@@ -75,16 +76,17 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
           managed: true,
         }
       : storedEntry;
-  const downloading = entry?.status === 'downloading';
-  const preparing = downloading && !entry.regionId;
-  const ready = entry?.status === 'ready';
+  const preparing = entry?.preparing === true;
+  const downloading = entry?.status === 'downloading' && !preparing;
+  const ready = isOfflineCityUsable(entry);
+  const needsUpdate = entry?.needsUpdate === true || entry?.nativeState === 'outdated' || entry?.nativeState === 'need_update';
   const paused = entry?.status === 'paused' || entry?.status === 'error';
   const progress = Math.floor((entry?.progress ?? 0) * 100);
   const deleting = !!state.deletingCityId;
   const blocked =
     !state.hydrated || !city || isOffline || deleting || !!state.busyCityId;
   const deleteCity = deleteCityId ? getOfflineMapCity(deleteCityId) : undefined;
-  const error = entry?.error || state.error;
+  const error = entry?.downloadError || entry?.error || state.error;
 
   useEffect(() => {
     if (!hydrated || selectedCityId) return;
@@ -198,23 +200,36 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
                 </Text>
               </View>
             ) : null}
+            {needsUpdate ? (
+              <Text style={{fontSize: metaSize, color: colors.textMuted}}>
+                {ready ? 'Есть обновление' : 'Карту нужно скачать заново'}
+              </Text>
+            ) : entry?.availability === 'checking' ? (
+              <Text style={{fontSize: metaSize, color: colors.textMuted}}>Проверяем сохранённую карту.</Text>
+            ) : null}
             {entry?.savedAt ? (
               <Text style={{fontSize: metaSize, color: colors.textMuted}}>
-                {entry.status === 'outdated' ? 'Нужно обновить' : 'Сохранена'} ·{' '}
+                Сохранена ·{' '}
                 {new Date(entry.savedAt).toLocaleDateString('ru-RU')}
               </Text>
             ) : null}
-            {downloading || paused ? (
+            {preparing ? (
+              <View style={styles.row} accessibilityLiveRegion="polite">
+                <ActivityIndicator color={colors.textMuted} />
+                <Text style={{fontSize: metaSize, color: colors.textMuted}}>
+                  Подготовка карты
+                </Text>
+              </View>
+            ) : null}
+            {!preparing && (downloading || paused) ? (
               <View style={styles.content} accessibilityLiveRegion="polite">
                 <View style={styles.progressLabel}>
                   <Text style={{fontSize: metaSize, color: colors.text}}>
-                    {preparing
-                      ? 'Подготовка карты'
-                      : downloading
-                        ? 'Скачивание'
-                        : entry?.status === 'error'
-                          ? 'Загрузка прервана'
-                          : 'На паузе'}
+                    {downloading
+                      ? 'Скачивание'
+                      : entry?.status === 'error'
+                        ? 'Загрузка прервана'
+                        : 'На паузе'}
                   </Text>
                   <Text style={{fontSize: metaSize, color: colors.text}}>
                     {progress}%
@@ -280,9 +295,9 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
           </Text>
         ) : null}
         <View style={styles.actions}>
-          {downloading
+          {downloading || preparing
             ? button(
-                'Пауза',
+                preparing ? 'Отменить' : 'Пауза',
                 () => {
                   if (city) void state.pause(city.id);
                 },
@@ -294,7 +309,7 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
             : button(
                 paused
                   ? 'Продолжить'
-                  : ready || entry?.status === 'outdated'
+                  : ready || needsUpdate
                     ? 'Обновить'
                     : 'Скачать',
                 () => {
@@ -302,14 +317,14 @@ export function OfflineCityMapsSettings({fontSize}: {fontSize: number}) {
                   if (city)
                     void state.download(
                       city.id,
-                      ready || entry?.status === 'outdated',
+                      !paused && (ready || needsUpdate),
                     );
                 },
                 blocked,
                 true,
                 paused ? (
                   <Play color="#ffffff" size={18} />
-                ) : ready || entry?.status === 'outdated' ? (
+                ) : ready || needsUpdate ? (
                   <RefreshCw color="#ffffff" size={18} />
                 ) : (
                   <Download color="#ffffff" size={18} />

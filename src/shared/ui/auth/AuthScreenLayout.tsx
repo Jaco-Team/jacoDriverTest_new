@@ -1,17 +1,18 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import {
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet,
   View,
   useWindowDimensions,
 } from 'react-native'
+import Animated from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg'
 
 import { ConnectivityLocationIndicator } from '@/shared/ui/ConnectivityLocationIndicator'
 
+import { useKeyboardScroll } from '@/shared/ui/keyboard/useKeyboardScroll'
+import { AuthKeyboardContext } from './AuthKeyboardContext'
 import { useAuthPalette } from './authPalette'
 
 interface AuthScreenLayoutProps {
@@ -44,34 +45,60 @@ function AuthBackground(): React.JSX.Element {
 export function AuthScreenLayout({ children }: AuthScreenLayoutProps): React.JSX.Element {
   const palette = useAuthPalette()
   const { width } = useWindowDimensions()
+  const {
+    rootRef, canvasRef, fieldsRef, scrollRef, canvasHeight, spacer,
+    onViewportLayout, onContentSizeChange, onScroll, onFocus, onBlur, onFieldsLayout,
+  } = useKeyboardScroll(16)
+  const keyboard = useMemo(
+    () => ({ fieldsRef, onFieldsLayout, onFocus, onBlur }),
+    [fieldsRef, onFieldsLayout, onFocus, onBlur]
+  )
 
   return (
     <View style={[styles.root, { backgroundColor: palette.backgroundTop }]} testID="auth-screen-layout">
       <AuthBackground />
       <SafeAreaView style={styles.safeArea} edges={['top', 'right', 'bottom', 'left']}>
         <ConnectivityLocationIndicator />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
+        <View ref={rootRef} style={styles.keyboardView} onLayout={onViewportLayout}>
+          <Animated.ScrollView
+            ref={scrollRef}
+            style={styles.keyboardView}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+            onContentSizeChange={onContentSizeChange}
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
             keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={false}
+            automaticallyAdjustContentInsets={false}
+            automaticallyAdjustsScrollIndicatorInsets={false}
+            contentInsetAdjustmentBehavior="never"
+            scrollsChildToFocus={false}
+            bounces={false}
+            overScrollMode="never"
             showsVerticalScrollIndicator={false}
           >
             <View
-              style={[
-                styles.card,
-                width >= 600 && styles.cardWide,
-                { backgroundColor: palette.card },
-              ]}
-              testID="auth-card"
+              ref={canvasRef}
+              collapsable={false}
+              style={[styles.canvas, { minHeight: canvasHeight }]}
+              onLayout={onFieldsLayout}
             >
-              {children}
+              <View
+                style={[
+                  styles.card,
+                  width >= 600 && styles.cardWide,
+                  { backgroundColor: palette.card },
+                ]}
+                testID="auth-card"
+              >
+                <AuthKeyboardContext.Provider value={keyboard}>
+                  {children}
+                </AuthKeyboardContext.Provider>
+              </View>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+            <View style={{ height: spacer }} pointerEvents="none" />
+          </Animated.ScrollView>
+        </View>
       </SafeAreaView>
     </View>
   )
@@ -87,8 +114,8 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
+  canvas: {
+    flexShrink: 0,
     justifyContent: 'center',
     paddingVertical: 32,
     paddingHorizontal: 16,

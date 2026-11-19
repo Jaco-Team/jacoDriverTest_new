@@ -80,12 +80,15 @@ it('shows progress and pauses the selected city', async () => {
   await fireEvent.press(screen.getByTestId('offline-city-pause'));
   expect(mockPause).toHaveBeenCalledWith('samara');
 });
-it('completed map can be updated or deleted with explicit confirmation', async () => {
+it('an outdated usable map can be updated or deleted with explicit confirmation', async () => {
   useOfflineMapStore.setState({
     cities: {
       samara: {
         regionId: 51,
-        status: 'ready',
+        status: 'outdated',
+        availability: 'ready',
+        needsUpdate: true,
+        nativeState: 'outdated',
         progress: 1,
         managed: true,
         autoResume: false,
@@ -215,4 +218,67 @@ it('uses dark theme colors for the download error alert', async () => {
     borderWidth: 0,
   });
   expect(screen.getByText('Ошибка MapKit')).toHaveStyle({color: '#DFC5C0'});
+});
+
+it.each(['downloading', 'paused', 'error'] as const)(
+  'keeps readiness visible while a usable old package has update status %s', async status => {
+    useOfflineMapStore.setState({cities: {samara: {
+      regionId: 51, status, availability: 'ready', needsUpdate: true,
+      progress: 0.2, savedAt: 123, managed: true, autoResume: false,
+    }}});
+    const screen = await render(<OfflineCityMapsSettings fontSize={16} />);
+    expect(screen.getByText('Доступна офлайн')).toBeTruthy();
+    expect(screen.getByText('Есть обновление')).toBeTruthy();
+  },
+);
+
+it('continues a paused update without starting a fresh forced download', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'paused', availability: 'ready', needsUpdate: true,
+    updating: true, progress: 0.4, managed: true, autoResume: false,
+  }}});
+  const screen = await render(<OfflineCityMapsSettings fontSize={16} />);
+  await fireEvent.press(screen.getByTestId('offline-city-download'));
+  expect(mockDownload).toHaveBeenCalledWith('samara', false);
+});
+
+it('shows the last failed update together with the usable installed map', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'error', availability: 'ready', progress: 0,
+    downloadError: 'Не удалось связаться с сервером карт Яндекса. Проверьте интернет и повторите.',
+    managed: true, autoResume: false,
+  }}});
+  const screen = await render(<OfflineCityMapsSettings fontSize={16} />);
+  expect(screen.getByText('Доступна офлайн')).toBeTruthy();
+  expect(screen.getByText('Не удалось связаться с сервером карт Яндекса. Проверьте интернет и повторите.')).toBeTruthy();
+  expect(screen.getByText('Загрузка прервана')).toBeTruthy();
+});
+
+
+it('shows preparation without a fictitious download progress or Pause button', async () => {
+  useOfflineMapStore.setState({busyCityId: 'samara', cities: {samara: {
+    regionId: 51, status: 'ready', availability: 'ready', preparing: true,
+    progress: 1, managed: true, autoResume: true,
+  }}});
+  const screen = await render(<OfflineCityMapsSettings fontSize={16} />);
+  expect(screen.getByText('Подготовка карты')).toBeTruthy();
+  expect(screen.getByText('Доступна офлайн')).toBeTruthy();
+  expect(screen.queryByTestId('offline-city-progress')).toBeNull();
+  expect(screen.queryByText('Пауза')).toBeNull();
+  await fireEvent.press(screen.getByText('Отменить'));
+  expect(mockPause).toHaveBeenCalledWith('samara');
+});
+
+it('a completed package keeps the explicit Update action', async () => {
+  useOfflineMapStore.setState({cities: {samara: {
+    regionId: 51, status: 'ready', availability: 'ready', nativeState: 'completed',
+    progress: 1, managed: true, autoResume: false,
+  }}});
+  const screen = await render(<OfflineCityMapsSettings fontSize={16} />);
+  expect(screen.getByText('Доступна офлайн')).toBeTruthy();
+  expect(screen.getByTestId('offline-city-delete')).toBeTruthy();
+  expect(screen.getByText('Обновить')).toBeTruthy();
+  await fireEvent.press(screen.getByTestId('offline-city-download'));
+  expect(mockDownload).toHaveBeenCalledWith('samara', true);
+  expect(screen.queryByTestId('offline-city-progress')).toBeNull();
 });

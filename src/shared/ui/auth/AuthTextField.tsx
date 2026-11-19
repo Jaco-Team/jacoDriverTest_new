@@ -1,5 +1,6 @@
-import React, { forwardRef, useState } from 'react'
+import React, { forwardRef, useCallback, useRef, useState } from 'react'
 import {
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -10,6 +11,7 @@ import {
 import { Eye, EyeOff } from 'lucide-react-native'
 
 import { useAuthPalette } from './authPalette'
+import { useAuthKeyboard } from './AuthKeyboardContext'
 
 interface AuthTextFieldProps extends TextInputProps {
   label: string
@@ -21,7 +23,12 @@ interface AuthTextFieldProps extends TextInputProps {
   passwordSubject?: string
 }
 
-/** Поле с подписью над ним, как на странице входа SSO. */
+/**
+ * Поле с подписью над ним, как на странице входа SSO.
+ * На Android при фокусе меняется только рамка, как в jaco-cook-app.
+ * На iOS тень постоянно задана, меняется только её прозрачность:
+ * фокус не должен менять нативного родителя TextInput.
+ */
 export const AuthTextField = forwardRef<
   React.ElementRef<typeof TextInput>,
   AuthTextFieldProps
@@ -37,11 +44,19 @@ export const AuthTextField = forwardRef<
     editable = true,
     onFocus,
     onBlur,
+    keyboardType,
     ...inputProps
   },
   ref
 ) {
   const palette = useAuthPalette()
+  const keyboard = useAuthKeyboard()
+  const inputRef = useRef<React.ElementRef<typeof TextInput>>(null)
+  const setInputRef = useCallback((input: React.ElementRef<typeof TextInput> | null) => {
+    inputRef.current = input
+    if (typeof ref === 'function') ref(input)
+    else if (ref) ref.current = input
+  }, [ref])
   const [isFocused, setIsFocused] = useState(false)
   const borderColor = invalid ? palette.error : isFocused ? palette.crimson : palette.border
 
@@ -52,14 +67,21 @@ export const AuthTextField = forwardRef<
         style={[
           styles.field,
           { borderColor, backgroundColor: palette.field },
-          isFocused && { shadowColor: palette.crimson, ...styles.fieldFocused },
+          Platform.OS === 'ios' && {
+            ...styles.fieldFocused,
+            shadowColor: palette.crimson,
+            shadowOpacity: isFocused ? styles.fieldFocused.shadowOpacity : 0,
+          },
           !editable && styles.fieldDisabled,
         ]}
         testID={`${testID}-container`}
       >
         <TextInput
-          ref={ref}
+          ref={setInputRef}
           {...inputProps}
+          keyboardType={Platform.OS === 'ios' && keyboardType === 'phone-pad'
+            ? 'numbers-and-punctuation'
+            : keyboardType}
           value={value}
           editable={editable}
           style={[styles.input, onTogglePassword ? styles.inputWithToggle : null, { color: palette.ink }]}
@@ -69,10 +91,12 @@ export const AuthTextField = forwardRef<
           testID={testID}
           onFocus={(event) => {
             setIsFocused(true)
+            keyboard?.onFocus(testID, inputRef.current)
             onFocus?.(event)
           }}
           onBlur={(event) => {
             setIsFocused(false)
+            keyboard?.onBlur(testID)
             onBlur?.(event)
           }}
         />

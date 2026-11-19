@@ -419,6 +419,9 @@ jest.mock('@react-native-firebase/messaging', () => {
   };
 });
 
+// Use the same official runtime mocks as jaco-cook-app. Jest has no native Worklets runtime.
+jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
+
 jest.mock('react-native-reanimated', () => {
   const Reanimated = require('react-native-reanimated/mock');
 
@@ -505,6 +508,7 @@ jest.mock('react-native-yamap-plus', () => {
   const YamapInstance = {
     init: jest.fn(() => Promise.resolve()),
     setLocale: jest.fn(() => Promise.resolve()),
+    getKnownOfflineRegions: jest.fn(async () => '[]'),
     getOfflineRegionsAtPoint: jest.fn(async () =>
       JSON.stringify([{id: 1, name: 'Тестовый регион', sizeBytes: 1000}]),
     ),

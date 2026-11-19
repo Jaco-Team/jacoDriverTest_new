@@ -4,6 +4,7 @@ import { StyleSheet, TextInput, View } from 'react-native'
 import { useAuthLogic } from '../model/useAuthLogic'
 import { AuthSmartCaptcha } from '@/shared/ui/auth/AuthSmartCaptcha'
 import { AuthScreenLayout } from '@/shared/ui/auth/AuthScreenLayout'
+import { AuthFieldGroup } from '@/shared/ui/auth/AuthKeyboardContext'
 import {
   AuthHeading,
   AuthLinkButton,
@@ -50,39 +51,44 @@ export function AuthScreen(): React.JSX.Element {
         onLogoLongPress={openCodePushDebug}
       />
 
-      <AuthTextField
-        autoCapitalize="none"
-        autoComplete="tel"
-        autoCorrect={false}
-        keyboardType="phone-pad"
-        label="Номер телефона"
-        placeholder="+7 (999) 123-45-67"
-        returnKeyType="next"
-        testID="auth-login-input"
-        value={myLogin}
-        onChangeText={handleLoginChange}
-        onSubmitEditing={() => passwordRef.current?.focus()}
-      />
-
-      <View style={styles.gap}>
+      <AuthFieldGroup>
         <AuthTextField
-          ref={passwordRef}
           autoCapitalize="none"
-          autoComplete="current-password"
+          autoComplete="tel"
+          textContentType="telephoneNumber"
           autoCorrect={false}
-          keyboardType="default"
-          label="Пароль"
-          passwordVisible={showPassword}
-          returnKeyType="done"
-          secureTextEntry={!showPassword}
-          spellCheck={false}
-          testID="auth-password-input"
-          value={myPWD}
-          onChangeText={handlePasswordChange}
-          onSubmitEditing={() => void LogIn(myLogin, myPWD)}
-          onTogglePassword={handleTogglePassword}
+          keyboardType="phone-pad"
+          label="Номер телефона"
+          placeholder="+7 (999) 123-45-67"
+          returnKeyType="next"
+          submitBehavior="submit"
+          testID="auth-login-input"
+          value={myLogin}
+          onChangeText={handleLoginChange}
+          onSubmitEditing={() => passwordRef.current?.focus()}
         />
-      </View>
+
+        <View style={styles.gap}>
+          <AuthTextField
+            ref={passwordRef}
+            autoCapitalize="none"
+            autoComplete="current-password"
+            textContentType="password"
+            autoCorrect={false}
+            keyboardType="default"
+            label="Пароль"
+            passwordVisible={showPassword}
+            returnKeyType="done"
+            secureTextEntry={!showPassword}
+            spellCheck={false}
+            testID="auth-password-input"
+            value={myPWD}
+            onChangeText={handlePasswordChange}
+            onSubmitEditing={() => void LogIn(myLogin, myPWD)}
+            onTogglePassword={handleTogglePassword}
+          />
+        </View>
+      </AuthFieldGroup>
 
       {captchaRequired ? (
         <View style={styles.captcha}>

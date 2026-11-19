@@ -1,6 +1,7 @@
 /** @type {import('jest').Config} */
 module.exports = {
   preset: '@react-native/jest-preset',
+  resolver: 'react-native-reanimated/jest/resolver',
   testEnvironment: 'node',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   roots: ['<rootDir>'],
@@ -9,7 +10,7 @@ module.exports = {
   testMatch: ['**/?(*.)+(spec|test).[tj]s?(x)'],
 
   transformIgnorePatterns: [
-    'node_modules/(?!(?:@react-native|react-native|@react-navigation|@react-navigation/elements|@react-navigation/drawer|@react-navigation/native|@react-navigation/native-stack|@react-navigation/routers|react-native-drawer-layout|@react-native-firebase|@notifee|@gluestack-ui|@gorhom|react-native-yamap-plus|react-native-reanimated|react-native-gesture-handler|react-native-vector-icons|nativewind|react-native-css-interop|@legendapp/motion|@expo/html-elements|react-native-wheel-color-picker|@fortawesome/react-native-fontawesome|@fortawesome/free-solid-svg-icons|@fortawesome/fontawesome-svg-core|react-native-modal-datetime-picker|@react-native-community/datetimepicker|react-native-image-viewing|react-native-image-picker)/)',
+    'node_modules/(?!(?:@react-native|react-native|@react-navigation|@react-navigation/elements|@react-navigation/drawer|@react-navigation/native|@react-navigation/native-stack|@react-navigation/routers|react-native-drawer-layout|@react-native-firebase|@notifee|@gluestack-ui|@gorhom|react-native-yamap-plus|react-native-reanimated|react-native-worklets|react-native-gesture-handler|react-native-vector-icons|nativewind|react-native-css-interop|@legendapp/motion|@expo/html-elements|react-native-wheel-color-picker|@fortawesome/react-native-fontawesome|@fortawesome/free-solid-svg-icons|@fortawesome/fontawesome-svg-core|react-native-modal-datetime-picker|@react-native-community/datetimepicker|react-native-image-viewing|react-native-image-picker)/)',
   ],
 
   moduleNameMapper: {
@@ -56,7 +57,7 @@ module.exports = {
   // только наш setup — RN мок подменится до любых импортов
   //setupFiles: ['<rootDir>/jest.setup.ts'],
 
-  transform: { '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest' },
+  transform: { '^.+\\.[cm]?[jt]sx?$': 'babel-jest' },
   verbose: true,
 
   // по желанию:

@@ -13,6 +13,7 @@ import {
 import { ArrowLeft, Check, CircleCheck, type LucideIcon } from 'lucide-react-native'
 
 import { useAuthPalette } from './authPalette'
+import { useAuthKeyboard } from './AuthKeyboardContext'
 
 // Части экранов входа и восстановления пароля. Размеры и цвета взяты со страницы
 // входа SSO (laravel-api-driver, resources/views/idp/partials/styles.blade.php):
@@ -318,6 +319,7 @@ export function AuthCodeCells({
   testID,
 }: AuthCodeCellsProps): React.JSX.Element {
   const palette = useAuthPalette()
+  const keyboard = useAuthKeyboard()
   const input = useRef<React.ElementRef<typeof TextInput>>(null)
   const [focused, setFocused] = useState(false)
   const activeIndex = Math.min(value.length, AUTH_CODE_LENGTH - 1)
@@ -360,9 +362,15 @@ export function AuthCodeCells({
         testID={testID}
         textContentType="oneTimeCode"
         value={value}
-        onBlur={() => setFocused(false)}
+        onBlur={() => {
+          setFocused(false)
+          keyboard?.onBlur(testID)
+        }}
         onChangeText={text => onChange(text.replace(/\D/g, '').slice(0, AUTH_CODE_LENGTH))}
-        onFocus={() => setFocused(true)}
+        onFocus={() => {
+          setFocused(true)
+          keyboard?.onFocus(testID, input.current)
+        }}
       />
     </Pressable>
   )
