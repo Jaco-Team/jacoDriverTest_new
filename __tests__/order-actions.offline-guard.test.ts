@@ -12,7 +12,7 @@ describe('действия с заказом без интернета', () => {
     jest.restoreAllMocks()
   })
 
-  it.each([1, 2, 3])('не запускает действие %i, геолокацию и API', type => {
+  it.each([1, 2])('не запускает действие %i, геолокацию и API', type => {
     const checkPos = jest.fn()
     const checkPosFake = jest.fn()
     const setSpinner = jest.fn()
@@ -40,7 +40,7 @@ describe('действия с заказом без интернета', () => {
     expect(useOrdersStore.getState().isClick).toBe(false)
   })
 
-  it('показывает сообщение сразу, не открывая подтверждение', () => {
+  it('разрешает подтверждение завершения без интернета', () => {
     const showModalText = jest.fn()
     useGlobalStore.setState({ showModalText })
     useOrdersStore.setState({ is_modalConfirm: false, isClick: false })
@@ -48,8 +48,8 @@ describe('действия с заказом без интернета', () => {
 
     useOrdersStore.getState().setActiveConfirm(true, 910002, 'finish', false)
 
-    expect(useOrdersStore.getState().is_modalConfirm).toBe(false)
-    expect(showModalText).toHaveBeenCalledWith(true, OFFLINE_ORDER_ACTION_MESSAGE)
+    expect(useOrdersStore.getState().is_modalConfirm).toBe(true)
+    expect(showModalText).not.toHaveBeenCalled()
   })
 
   it('останавливает запрос, если связь пропала после проверки геолокации', async () => {

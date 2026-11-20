@@ -10,6 +10,18 @@ import { act, waitFor } from '@testing-library/react-native';
 import * as Store from '@/shared/store/store';
 import * as ApiMod from '@/shared/store/api';
 
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const values = new Map<string, string>();
+  return {
+    __esModule: true,
+    default: {
+      getItem: jest.fn(async (key: string) => values.get(key) ?? null),
+      setItem: jest.fn(async (key: string, value: string) => {values.set(key, value);}),
+      removeItem: jest.fn(async (key: string) => {values.delete(key);}),
+    },
+  };
+});
+
 describe('Кнопка "Завершить" — ветки GPS и карта', () => {
   beforeEach(async () => {
     jest.resetModules();
@@ -32,6 +44,13 @@ describe('Кнопка "Завершить" — ветки GPS и карта', (
     const { useOrdersStore, useGEOStore, useGlobalStore } =
       require('@/shared/store/store') as typeof Store;
     const api = require('@/shared/store/api') as typeof ApiMod;
+
+    const {useLoginStore} = require('@/shared/store/loginStore');
+    const {useSettingsStore} = require('@/shared/store/settingsStore');
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.removeItem('jaco_driver_pending_finishes_v1');
+    useLoginStore.setState({currentUser: {user_id: 7, login: 'driver'}});
+    useSettingsStore.setState({point_id: 10});
 
     // --- GEO моки
     const check_pos = jest.fn((cb: any, payload: any) =>
@@ -110,7 +129,7 @@ describe('Кнопка "Завершить" — ветки GPS и карта', (
     } else {
       expect(showOrdersMap).not.toHaveBeenCalled();
     }
-    expect(getOrders).toHaveBeenCalled();
+    await waitFor(() => expect(getOrders).toHaveBeenCalled());
 
     // Спиннер погашен
     await waitFor(() => {

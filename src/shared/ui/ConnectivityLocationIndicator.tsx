@@ -1,3 +1,4 @@
+import {pendingFinishes} from '@/shared/store/pendingFinishes';
 import React, {useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import NetInfo, {type NetInfoState} from '@react-native-community/netinfo';
@@ -30,6 +31,13 @@ export function ConnectivityProvider({
   const recoveryPendingRef = useRef(false);
 
   useEffect(() => {
+    const sync = () => {void pendingFinishes.flush().catch(() => undefined);};
+    sync();
+    const timer = setInterval(sync, 15000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     let isMounted = true;
 
     const applyNetworkState = (state: NetInfoState) => {
@@ -48,6 +56,7 @@ export function ConnectivityProvider({
         const wasOffline = previousOfflineRef.current;
         previousOfflineRef.current = nextIsOffline;
         setAppOffline(nextIsOffline);
+        if (wasOffline && !nextIsOffline) void pendingFinishes.flush().catch(() => undefined);
         setIsOffline(nextIsOffline);
 
         if (nextIsOffline) {

@@ -175,8 +175,11 @@ describe('Анти-дребезг actionButtonOrder', () => {
       isClick: false,
     });
 
+    const confirmedAt = new Date().toISOString();
     useOrdersStore.getState().actionButtonOrder(3, 555);
-    expect(check_pos).toHaveBeenCalledWith(expect.any(Function), { order_id: 555, type: 3 }, true, expect.any(Function), true);
+    expect(check_pos).toHaveBeenCalledWith(expect.any(Function), {
+      order_id: 555, type: 3, completedAt: confirmedAt, owner: null, pointId: null,
+    }, true, expect.any(Function), true);
     expect(useGlobalStore.getState().loadSpinner).toBe(true);
 
     jest.advanceTimersByTime(30000);

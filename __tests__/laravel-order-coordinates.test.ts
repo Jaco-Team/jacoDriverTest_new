@@ -5,7 +5,7 @@ jest.mock('@/shared/api/laravel/connector', () => ({
   bearerHeaders: (token: string) => ({ Authorization: `Bearer ${token}` }),
 }))
 jest.mock('@/shared/api/laravel/config', () => ({
-  laravelApiConfig: { mode: 'production' },
+  laravelApiConfig: { mode: 'production', timeoutMs: 15000 },
 }))
 jest.mock('@/shared/lib/laravelAuthTokenStorage', () => ({
   getLaravelAuthToken: jest.fn().mockResolvedValue('test-token'),
@@ -34,7 +34,7 @@ describe('Laravel order coordinate contract', () => {
     expect(mockPost).toHaveBeenCalledWith(
       laravelApiRoutes.orders.actionOrder,
       { ...input, latitude: '53.5123456789', longitude: '49.4123456789' },
-      { headers: { Authorization: 'Bearer test-token' } },
+      { headers: { Authorization: 'Bearer test-token' }, ...(typeAction === 3 ? {timeout: 15000} : {}) },
     )
     expect(input.latitude).toBe(53.5123456789)
     expect(input.longitude).toBe(49.4123456789)

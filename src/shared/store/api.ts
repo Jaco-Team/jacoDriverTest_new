@@ -1,3 +1,4 @@
+import {useLoginStore} from './loginStore'
 import { isAxiosError, type AxiosRequestConfig } from 'axios'
 
 import { bearerHeaders, laravelHttp } from '@/shared/api/laravel/connector'
@@ -55,7 +56,7 @@ function filterOrdersPayload(payload: any): any {
 }
 
 function withoutInternalFields(data: Record<string, any>): Record<string, any> {
-  const { token: _token, type: _type, ...payload } = data
+  const { token: _token, type: _type, expected_owner: _owner, ...payload } = data
   return payload
 }
 
@@ -149,7 +150,7 @@ function resolveLaravelRequest(module: string, data: Record<string, any>): Larav
   }
 
   if (module === 'orders' && type === 'actionOrder') {
-    return { method: 'post', path: laravelApiRoutes.orders.actionOrder, payload: { ...serializeOrderCoordinates(payload), type } }
+    return { method: 'post', path: laravelApiRoutes.orders.actionOrder, timeoutMs: data.type_action === 3 ? laravelApiConfig.timeoutMs : undefined, payload: { ...serializeOrderCoordinates(payload), type } }
   }
 
   if (module === 'orders' && type === 'checkFakeOrder') {
@@ -226,6 +227,8 @@ export async function api<T>(
   module: string = '',
   data: Record<string, any> = {},
 ): Promise<ApiResponse<T>> {
+  const isQueuedCompletion = module === 'orders' && data.type === 'actionOrder'
+    && data.type_action === 3 && typeof data.completed_at === 'string'
   if (actionsModeOn(module)) {
     const type = data?.type
 
@@ -255,8 +258,13 @@ export async function api<T>(
 
   try {
     const request = resolveLaravelRequest(module, data)
+    const ownerBeforeToken = useLoginStore.getState().currentUser
     const token = await getLaravelAuthToken()
 
+    const user = useLoginStore.getState().currentUser
+    if (data.expected_owner && (String(user?.user_id ?? user?.login ?? '') !== data.expected_owner || String(ownerBeforeToken?.user_id ?? ownerBeforeToken?.login ?? '') !== data.expected_owner)) {
+      return {st: false, text: 'Сессия истекла. Войдите снова.', retryable: true}
+    }
     if (!token) {
       return { st: false, text: 'Сессия истекла. Войдите снова.' }
     }
@@ -276,7 +284,7 @@ export async function api<T>(
     const st = response.data?.st ?? response.data?.success ?? true
     const responseText = String(response.data?.text ?? response.data?.message ?? '')
 
-    return { st, text: responseText, data: payload as T, ...getLaravelRecoveryMetadata(response.data) }
+    return { st, text: responseText, data: payload as T, ...(typeof response.data?.retryable === 'boolean' ? {retryable: response.data.retryable} : {}), ...getLaravelRecoveryMetadata(response.data) }
   } catch (error) {
     const info = getLaravelApiErrorInfo(error)
     if (info.status === 401) {
@@ -291,7 +299,7 @@ export async function api<T>(
       ...getLaravelRecoveryMetadata(errorPayload),
       ...(info.retryAfter ? { retry_after: info.retryAfter } : {}),
       ...(info.status === 429 ? { locked: true } : {}),
-      retryable: (info.status !== null && info.status >= 500) || (info.status === null && isAxiosError(error)),
+      retryable: (isQueuedCompletion && (info.status === 401 || info.status === 429)) || (info.status !== null && info.status >= 500) || (info.status === null && isAxiosError(error)),
     }
   }
 }

@@ -1,3 +1,4 @@
+import {finishOwner, pendingFinishes} from './pendingFinishes';
 import {create} from 'zustand';
 import {api} from './api';
 import {isAppOffline} from '@/shared/lib/connectivityState';
@@ -81,6 +82,37 @@ function getOrdersForCurrentScope(
   }
 
   return [...uniqueOrders.values()];
+}
+
+// A request may finish after another section has confirmed completion.
+// Preserve only transitions that happened while this request was waiting.
+function preserveNewlyCompletedOrders(
+  orders: Order[],
+  before: Record<string, Array<Order>>,
+  current: Record<string, Array<Order>>,
+  scopePrefix: string,
+): Order[] {
+  const completedIn = (cache: Record<string, Array<Order>>) =>
+    Object.entries(cache)
+      .filter(([key]) => key.startsWith(scopePrefix))
+      .flatMap(([, rows]) =>
+        rows.filter(order => Number(order.status_order) === 6),
+      );
+  const alreadyCompleted = new Set(completedIn(before).map(order => order.id));
+  const newlyCompleted = new Map(
+    completedIn(current)
+      .filter(order => !alreadyCompleted.has(order.id))
+      .map(order => [order.id, order]),
+  );
+  if (newlyCompleted.size === 0) return orders;
+  const reconciled = orders.map(order =>
+    Number(order.status_order) === 6
+      ? order
+      : (newlyCompleted.get(order.id) ?? order),
+  );
+  return reconciled.some((order, index) => order !== orders[index])
+    ? reconciled
+    : orders;
 }
 
 export function getVisibleOrders(
@@ -210,7 +242,9 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
     const types_dop = get().types_dop;
     const type = get().type;
     const selectedPointId = useSettingsStore.getState().point_id;
+    const requestOwner = finishOwner();
     const cacheKey = getOrdersCacheKey(type.id, selectedPointId);
+    const scopePrefix = `${getOrdersCacheScopeKey(selectedPointId).slice(0, -1)},`;
     const cachedOrders = get().ordersCache[cacheKey];
 
     if (get().ordersContextKey !== cacheKey) {
@@ -288,6 +322,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
       ...(selectedPointId ? {point_id: selectedPointId} : {}),
     };
 
+    const cacheBeforeRequest = get().ordersCache;
     try {
       const json = await api<GetOrdersResponse>('orders', data);
 
@@ -318,7 +353,21 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
       }
 
       if (json.data?.orders) {
-        const responseOrders = json.data.orders;
+        const responseOrders = preserveNewlyCompletedOrders(
+          json.data.orders, cacheBeforeRequest, get().ordersCache, scopePrefix,
+        );
+        const completed = new Map(
+          responseOrders
+            .filter(
+              order =>
+                finishOwner() === requestOwner &&
+                Number(order.status_order) === 6 &&
+                pendingFinishes.find(requestOwner, selectedPointId, order.id)
+                  ?.acknowledged,
+            )
+            .map(order => [order.id, order]),
+        );
+
         const currentState = get();
         const orders = getVisibleOrders(
           responseOrders,
@@ -327,8 +376,20 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
           currentState.types_dop,
           currentState.typeToStatus,
         );
+        const reconciledCache = Object.fromEntries(
+          Object.entries(get().ordersCache).map(([key, cached]) => [
+            key,
+            key.startsWith(scopePrefix) &&
+            cached.some(
+              order => completed.has(order.id) && completed.get(order.id) !== order,
+            )
+              ? cached.map(order => completed.get(order.id) ?? order)
+              : cached,
+          ]),
+        );
+
         const ordersCache = {
-          ...get().ordersCache,
+          ...reconciledCache,
           [cacheKey]: responseOrders,
         };
         const isCurrentContext = getOrdersCacheKey(get().type.id) === cacheKey;
@@ -346,6 +407,17 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
         set({
           ordersCache,
+          ...(completed.size > 0 &&
+          `${getOrdersCacheScopeKey().slice(0, -1)},` === scopePrefix
+            ? {
+                orders: currentState.orders.map(
+                  order => completed.get(order.id) ?? order,
+                ),
+                showOrders: currentState.showOrders.map(
+                  order => completed.get(order.id) ?? order,
+                ),
+              }
+            : {}),
           ...(isCurrentContext
             ? {
                 orders,
@@ -358,7 +430,10 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
                 home: effectiveHome,
                 del_orders: Array.isArray(json.data?.arr_del_list)
                   ? json.data.arr_del_list
-                      .map(item => ({id: Number(item?.id), addr: String(item?.addr ?? '')}))
+                      .map(item => ({
+                        id: Number(item?.id),
+                        addr: String(item?.addr ?? ''),
+                      }))
                       .filter(item => Number.isInteger(item.id) && item.id > 0)
                   : [],
                 //driver_pay: json?.driver_pay,
@@ -366,7 +441,17 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
             : {}),
         });
 
-        void persistDriverOfflineState().catch(() => undefined);
+        const confirmedFinishIds = [...completed.keys()];
+        if (confirmedFinishIds.length > 0 && finishOwner() === requestOwner) {
+          // Persist the fresh card before removing its durable action guard.
+          // Failed refreshes or cache writes must not restore the old buttons.
+          await persistDriverOfflineState();
+          if (finishOwner() === requestOwner) {
+            await pendingFinishes.confirmAcknowledged(requestOwner, selectedPointId, confirmedFinishIds);
+          }
+        } else {
+          void persistDriverOfflineState().catch(() => undefined);
+        }
         if (isCurrentContext) {
           if (nextHome && !homeUnchanged) {
             get().requestMapHomeCenter(true);
@@ -417,6 +502,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
 
     const pointId = useSettingsStore.getState().point_id;
     const scopeKey = getOrdersCacheScopeKey(pointId);
+    const scopePrefix = `${scopeKey.slice(0, -1)},`;
     const currentTypeId = get().type.id;
     const backgroundPriority = [1, 2, 5, 3, 6];
     const backgroundTypes = get()
@@ -442,6 +528,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
         const cacheKey = getOrdersCacheKey(backgroundType.id, pointId);
         const requestId = ++ordersRequestSequence;
         latestOrdersRequestByContext.set(cacheKey, requestId);
+        const cacheBeforeRequest = get().ordersCache;
         const json = await api<GetOrdersResponse>('orders', {
           type: 'get_orders',
           type_orders: backgroundType.id,
@@ -465,7 +552,9 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
           break;
         }
 
-        const responseOrders = json.data.orders;
+        const responseOrders = preserveNewlyCompletedOrders(
+          json.data.orders, cacheBeforeRequest, get().ordersCache, scopePrefix,
+        );
         const ordersCache = {
           ...get().ordersCache,
           [cacheKey]: responseOrders,
@@ -641,8 +730,10 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
     if (get().isClick) {
       return;
     }
+    const pendingFinish = pendingFinishes.find(finishOwner(), useSettingsStore.getState().point_id, order_id);
+    if (pendingFinish && (type !== 3 || pendingFinish.acknowledged)) return;
 
-    if (isAppOffline()) {
+    if (type !== 3 && isAppOffline()) {
       if (get().is_modalConfirm) get().setActiveConfirm(false);
       useGlobalStore.getState().showModalText(true, OFFLINE_ORDER_ACTION_MESSAGE);
       return;
@@ -669,6 +760,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
     // isClick снимает finally запроса. Если запрос так и не стартовал
     // (геопозиция не получена), блокировку снимаем здесь, но только для
     // этого же нажатия, чтобы не разблокировать уже следующее действие.
+    const finishData = type === 3 ? {completedAt: new Date().toISOString(), owner: finishOwner(), pointId: useSettingsStore.getState().point_id} : {};
     const actionId = ++orderActionSequence;
     let requestStarted = false;
     const releaseIfNotStarted = () => {
@@ -706,7 +798,7 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
       }
     } else {
       // type === 2/3 — отмена/завершение: нужна обычная гео-проверка
-      callWithGeo(get().actionOrder, {order_id, type});
+      callWithGeo(get().actionOrder, {order_id, type, ...finishData});
     }
 
     // Геолокация без ответа не должна навсегда блокировать кнопки заказа.
@@ -714,10 +806,33 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
   },
 
   actionOrder: async ({
-    data: {order_id, type},
+    data: {order_id, type, completedAt, owner, pointId},
     latitude = '',
     longitude = '',
   }) => {
+    if (type === 3) {
+      try {
+        const actionOwner = owner ?? finishOwner();
+        const actionPoint = pointId ?? useSettingsStore.getState().point_id;
+        if (!actionOwner || !actionPoint) throw new Error('Не удалось определить курьера и кафе.');
+        if (finishOwner() !== actionOwner || useSettingsStore.getState().point_id !== actionPoint) return;
+        await pendingFinishes.put({owner: actionOwner, pointId: actionPoint, orderId: order_id,
+          completedAt: completedAt ?? new Date().toISOString(), latitude: String(latitude), longitude: String(longitude)});
+        if (finishOwner() !== actionOwner || useSettingsStore.getState().point_id !== actionPoint) return;
+        get().setActiveConfirm(false);
+        if (get().isOpenOrderMap) get().showOrdersMap(-1);
+        await pendingFinishes.flush().catch(() => undefined);
+        const pending = pendingFinishes.find(actionOwner, actionPoint, order_id);
+        if (pending && !pending.acknowledged) useGlobalStore.getState().showModalText(true, pending.error || 'Завершение сохранено. Ожидает отправки.');
+        if (!pending && !isAppOffline()) void get().getOrders();
+      } catch (error) {
+        useGlobalStore.getState().showModalText(true, error instanceof Error ? error.message : 'Не удалось сохранить завершение заказа.');
+      } finally {
+        useGlobalStore.getState().setSpinner(false);
+        set({isClick: false});
+      }
+      return;
+    }
     if (isAppOffline()) {
       useGlobalStore.getState().setSpinner(false);
       set({isClick: false});
@@ -849,7 +964,9 @@ export const useOrdersStore = create<OrdersStore>()((set, get) => ({
     type_confirm,
     order_confirm_is_delete,
   ) => {
-    if (active && isAppOffline()) {
+    if (active && order_id != null &&
+      pendingFinishes.find(finishOwner(), useSettingsStore.getState().point_id, order_id)?.acknowledged) return;
+    if (active && type_confirm !== 'finish' && isAppOffline()) {
       useGlobalStore.getState().showModalText(true, OFFLINE_ORDER_ACTION_MESSAGE);
       return;
     }

@@ -1,3 +1,5 @@
+import {usePendingFinish} from '@/shared/store/pendingFinishes'
+import {useSettingsStore} from '@/shared/store/settingsStore'
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { TriangleAlert } from 'lucide-react-native'
@@ -14,6 +16,7 @@ import { CardTag } from './CardTag'
 import { CommentText } from './CommentText'
 import { PdEtKv } from './PdEtKv'
 import { OrderActions } from './OrderActions'
+import { FinishStatus } from './FinishStatus'
 
 export const ORDER_CARD_DELETED_BG = '#D95030'
 
@@ -26,6 +29,8 @@ export const CardOrderComponent: React.FC<CardOrderProps> = ({
   actionButtonOrder,
   setActiveConfirm,
 }) => {
+  const pointId = useSettingsStore(state => state.point_id)
+  const pendingFinish = usePendingFinish(pointId, item.id)
   const { colors } = useAppTheme()
   const isDeleted = toOrderInt(item.is_delete) === 1
   const statusOrder = toOrderInt(item.status_order)
@@ -218,13 +223,18 @@ export const CardOrderComponent: React.FC<CardOrderProps> = ({
         </Text>
       ) : null}
 
-      <OrderActions
+      {pendingFinish && statusOrder !== 6 ? (
+        <FinishStatus
+          globalFontSize={globalFontSize}
+          acknowledged={pendingFinish.acknowledged}
+        />
+      ) : <OrderActions
         item={item}
         dialCall={dialCall}
         setActiveConfirm={setActiveConfirm}
         actionButtonOrder={actionButtonOrder}
         globalFontSize={globalFontSize}
-      />
+      />}
     </View>
   )
 }

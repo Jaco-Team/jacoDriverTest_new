@@ -48,6 +48,37 @@ describe('Laravel API compatibility routing', () => {
     expect(result.st).toBe(true)
   })
 
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it.each([
+    {mode: 'local' as const, timeout: 45_000 as const},
+    {mode: 'production' as const, timeout: 15_000 as const},
+  ])('keeps the original completion retryable with the $mode request budget', async ({mode, timeout}) => {
+    jest.replaceProperty(laravelApiConfig, 'mode', mode)
+    jest.replaceProperty(laravelApiConfig, 'timeoutMs', timeout)
+    const command = {
+      type: 'actionOrder', id: 937369, type_action: 3, point_id: 1,
+      completed_at: '2026-11-20T08:12:02.948Z', latitude: '', longitude: '',
+    }
+    mockPost
+      .mockRejectedValueOnce({isAxiosError: true, code: 'ECONNABORTED', message: 'timeout exceeded'})
+      .mockResolvedValueOnce({data: {st: true}})
+
+    const first = await api('orders', command)
+    const second = await api('orders', command)
+
+    expect(first.st).toBe(false)
+    expect(first.retryable).toBe(true)
+    expect(second.st).toBe(true)
+    for (const call of [1, 2]) {
+      expect(mockPost).toHaveBeenNthCalledWith(call, '/api/v1/orders/action_order', command, {
+        headers: {Authorization: 'Bearer secure-token'}, timeout,
+      })
+    }
+  })
+
   it('normalizes settings response and cancelled-order period', async () => {
     mockGet.mockResolvedValueOnce({
       data: {
@@ -146,6 +177,19 @@ describe('Laravel API compatibility routing', () => {
     expect(result).toEqual({ st: false, text: 'Unauthenticated.', retryable: false })
     expect(mockClearLaravelAuthToken).toHaveBeenCalledTimes(1)
   })
+  it.each([401, 429])('retains a saved completion after HTTP %s without changing ordinary request behavior', async status => {
+    mockPost.mockRejectedValueOnce({
+      response: {status, data: {message: status === 401 ? 'Unauthenticated.' : 'Too Many Attempts.'}},
+    })
+    const result = await api('orders', {
+      type: 'actionOrder', type_action: 3, id: 123, point_id: 10,
+      completed_at: '2026-11-20T10:00:00.000Z', latitude: '53.5', longitude: '49.4',
+    })
+    expect(result.st).toBe(false)
+    expect(result.retryable).toBe(true)
+    expect(mockClearLaravelAuthToken).toHaveBeenCalledTimes(status === 401 ? 1 : 0)
+  })
+
   it('сохраняет ожидание из ответа сервера: 200 с блокировкой и транспортный 429', async () => {
     mockPost.mockResolvedValueOnce({ data: { st: false, text: 'Подождите.', locked: true, retry_after: 60 } })
     expect(await api('orders', { type: 'get_orders', type_orders: 1 }))

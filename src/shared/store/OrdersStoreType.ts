@@ -149,7 +149,10 @@ export type Order = {
 
 export type actionOrderData = {
   order_id: number,
-  type: number
+  type: number,
+  completedAt?: string,
+  owner?: string | null,
+  pointId?: number | null,
 }
 
 export interface actionOrderType {
