@@ -4,6 +4,7 @@ export const RU_SCREEN_NAMES: Record<string, string> = {
   ResetPwd: 'Восстановление пароля',
   List_orders: 'Список заказов',
   Map: 'Карта заказов',
+  Cabinet: 'Личный кабинет',
   Price: 'Расчет',
   Graph: 'График работы',
   Statistics: 'Статистика',

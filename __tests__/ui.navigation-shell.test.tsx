@@ -66,7 +66,7 @@ function drawerProps(activeRoute = 'List_orders'): any {
       type: 'drawer',
       key: 'drawer-test',
       index: 0,
-      routeNames: [activeRoute],
+      routeNames: [activeRoute, 'Cabinet'],
       routes: [{ key: `${activeRoute}-key`, name: activeRoute }],
       history: [],
       default: 'closed',
@@ -115,6 +115,7 @@ describe('боковое меню', () => {
     })
     expect(screen.queryByTestId('drawer-route-Statistics')).toBeNull()
     expect(screen.getByTestId('drawer-route-OrdersUiPreview')).toBeTruthy()
+    expect(screen.getByTestId('drawer-route-Cabinet')).toBeTruthy()
     expect(screen.getByText('+7 (900) 123-45-67')).toBeTruthy()
     expect(screen.getByTestId('drawer-contact-Директор')).toHaveStyle({
       minHeight: 60,
@@ -124,6 +125,14 @@ describe('боковое меню', () => {
       backgroundColor: '#FFFFFF',
     })
     expect(screen.queryByTestId('drawer-contact-Контакт-центр')).toBeNull()
+  })
+
+  it('открывает ЛК из бокового меню', async () => {
+    const view = await render(<CustomDrawerContent {...drawerProps('List_orders')} />)
+
+    await fireEvent.press(view.getByTestId('drawer-route-Cabinet'))
+    expect(mockNavigate).toHaveBeenCalledWith('Cabinet')
+    expect(mockCloseDrawer).toHaveBeenCalled()
   })
 
   it('показывает статистику только при разрешении API', async () => {

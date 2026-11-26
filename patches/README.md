@@ -9,22 +9,37 @@
 
 | Пакеты | Причина патча |
 | --- | --- |
-| AsyncStorage 3.1.1, Firebase app/messaging 27.1.0, WebView 14.0.1, Keychain 10.0.0 | Не применять внешний Kotlin-плагин, если Kotlin уже предоставлен AGP. |
-| DateTimePicker 9.2.2 | Перенести JVM 17 из `android.kotlinOptions` в `kotlin.compilerOptions`. |
-| Firebase app 27.1.0, Permissions 5.6.3, EdgeToEdge 1.8.2 | Явно включить дополнительные Kotlin-каталоги; новые правила AGP не берут Kotlin из произвольных `java.srcDirs`. |
-| Yamap Plus 6.12.0 | Условный Kotlin-плагин, новый compiler DSL с JVM 17, Kotlin-каталоги full/lite. Прежние 17 файлов патча карты сохранены. |
-| Sentry 8.33.0, DeviceInfo 15.0.2, ImagePicker 8.3.0, InAppBrowser 3.7.1, SafeAreaContext 5.11.1, Screens 4.30.1 | Удалить app-only `versionCode/versionName` из `LibraryDefaultConfig`. Версия самого приложения не меняется. |
+| AsyncStorage 3.1.1, Firebase app/messaging 27.2.0, WebView 14.0.1 | Не применять внешний Kotlin-плагин, если Kotlin уже предоставлен AGP. |
+| DateTimePicker 9.3.0 | Перенести JVM 17 из `android.kotlinOptions` в `kotlin.compilerOptions`. |
+| Firebase app 27.2.0, Permissions 5.7.0, EdgeToEdge 1.8.2 | Явно включить дополнительные Kotlin-каталоги; новые правила AGP не берут Kotlin из произвольных `java.srcDirs`. |
+| Yamap Plus 6.13.1 | Условный Kotlin-плагин, новый compiler DSL с JVM 17, Kotlin-каталоги full/lite. Патч включает 18 файлов, в том числе исправления маркеров обеих платформ. |
+| Sentry 8.36.0, DeviceInfo 15.0.2, ImagePicker 8.3.0, InAppBrowser 3.7.1, SafeAreaContext 5.11.1, Screens 4.30.1 | Удалить app-only `versionCode/versionName` из `LibraryDefaultConfig`. Версия самого приложения не меняется. |
 
 В затронутых AsyncStorage, Firebase, Permissions и EdgeToEdge также заменён
 алиас `lintOptions` на `lint` с теми же опциями. В остальных библиотеках
 поддерживаемые алиасы не переписывались. Реализация SDK, API заказов, хранилище
 и бизнес-логика этими Gradle-патчами не меняются.
 
+Keychain 11.0.0 проверяет наличие Kotlin самостоятельно, поэтому
+патч для 10.0.0 удалён.
+
 Шрифты vector-icons не патчатся: локальная
 [задача assets](../android/gradle/vector-icon-fonts.gradle) копирует прежний
 MaterialIcons через публичный variant API с явной зависимостью задач.
 Kotlin `2.4.21` и `AsyncStorage_kspVersion=2.3.12` нужны и после удаления
 внешнего Kotlin-плагина; их нельзя удалять вместе с ним.
+
+## Маркеры Yamap Plus 6.13.1
+
+На Android отложенный результат изображения проверяется по запросу,
+источнику и текущему объекту MapKit. Повторная привязка к тому же объекту
+сохраняет активный запрос и один обработчик нажатия. На iOS до получения
+координат Fabric геометрия остаётся пустой. При удалении или переиспользовании
+элемента очищаются обработчик, привязка к окну карты и ожидание картинки.
+Геометрия и стиль повторно применяются после получения props.
+
+Сохранены локальные правки роутинга, офлайн-карты, трафика, темы и
+границ нажатия. MapKit 4.42.0-full используется на Android и iOS.
 
 ## Сохранённый патч iOS
 

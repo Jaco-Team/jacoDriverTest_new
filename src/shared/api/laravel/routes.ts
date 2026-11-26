@@ -17,6 +17,7 @@ export const laravelApiRoutes = {
     savePosition: '/api/v1/settings/save-position',
     save: '/api/v1/settings/save',
   },
+  cabinet: '/api/v1/cabinet',
   feedback: {
     getFeedbacks: '/api/v1/feedback/get_feedbacks',
     saveFeedbacks: '/api/v1/feedback/save_feedbacks',

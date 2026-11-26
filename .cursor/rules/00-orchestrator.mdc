@@ -47,7 +47,7 @@ alwaysApply: true
 
 ## UI Migration
 
-Перенос UI курьерского сайта вести по [docs/driver-site-ui-migration-plan.md](docs/driver-site-ui-migration-plan.md) в ветке `new_architecture`.
+Новые этапы переноса UI курьерского сайта вести на `main` по [docs/driver-site-ui-migration-plan.md](docs/driver-site-ui-migration-plan.md).
 
 - Эталон: текущее состояние `jaco_driver_site` в ветке `api-laravel`, как указано в плане; не отдельный исторический коммит.
 - Один экран или связанный блок = один согласованный этап.

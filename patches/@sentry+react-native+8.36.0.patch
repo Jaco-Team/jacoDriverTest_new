@@ -1,5 +1,5 @@
 diff --git a/node_modules/@sentry/react-native/android/build.gradle b/node_modules/@sentry/react-native/android/build.gradle
-index b884104..d98357f 100644
+index 84c1a60..95437ea 100644
 --- a/node_modules/@sentry/react-native/android/build.gradle
 +++ b/node_modules/@sentry/react-native/android/build.gradle
 @@ -151,8 +151,6 @@ android {

@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
 const mockSystemBars = jest.fn();
+const mockDrawerScreens = jest.fn();
 
 let mockDrawerStatus: 'open' | 'closed' = 'closed';
 let mockDrawerNavigatorProps: any;
@@ -61,7 +62,7 @@ jest.mock('@react-navigation/drawer', () => {
           children,
         );
       },
-      Screen: () => null,
+      Screen: ({name}: {name: string}) => {mockDrawerScreens(name); return null;},
     }),
   };
 });
@@ -118,6 +119,13 @@ jest.mock('@/shared/lib/useUserLocationUpdater', () => ({
   useUserLocationUpdater: jest.fn(),
 }));
 
+jest.mock('@/shared/api/laravel/config', () => {
+  const actual = jest.requireActual('@/shared/api/laravel/config');
+  return {...actual, laravelApiConfig: {...actual.laravelApiConfig, mode: 'production'}};
+});
+jest.mock('@/features/cabinet/ui/CabinetScreen', () => ({
+  CabinetScreen: () => null,
+}));
 jest.mock('@/features/settings/ui/SettingsScreen', () => ({
   SettingsScreen: () => null,
 }));
@@ -153,6 +161,10 @@ import { MainDrawerNavigator } from '@/app/navigation/MainDrawerNavigator';
 import {ConnectivityContext} from '@/shared/lib/connectivityContext';
 import {useOrderRecommendationStore} from '@/features/order-recommendation/model/orderRecommendation.store';
 
+const mockApiConfig = jest.requireMock('@/shared/api/laravel/config').laravelApiConfig as {
+  mode: 'local' | 'production';
+};
+
 function setPlatform(os: 'android' | 'ios'): void {
   Object.defineProperty(Platform, 'OS', {
     configurable: true,
@@ -170,6 +182,7 @@ describe('системные области бокового меню', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockDrawerStatus = 'closed';
+    mockApiConfig.mode = 'production';
     mockDrawerNavigatorProps = undefined;
     mockOrdersState.type = { id: 1, text: 'Активные' };
     mockOrdersState.types_dop = [];
@@ -184,6 +197,13 @@ describe('системные области бокового меню', () => {
 
   afterAll(() => {
     setPlatform(originalPlatform as 'android' | 'ios');
+  });
+
+  it.each(['production', 'local'] as const)('регистрирует ЛК в режиме API %s', async mode => {
+    mockApiConfig.mode = mode;
+
+    await render(<MainDrawerNavigator />);
+    expect(mockDrawerScreens).toHaveBeenCalledWith('Cabinet');
   });
 
   it('на Android скрывает Status Bar только при открытом drawer', async () => {

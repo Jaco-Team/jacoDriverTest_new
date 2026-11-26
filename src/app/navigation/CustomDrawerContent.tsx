@@ -21,6 +21,7 @@ import {
   faMap,
   faReceipt,
   faRightFromBracket,
+  faUser,
 } from '@fortawesome/free-solid-svg-icons'
 import { Clock3 } from 'lucide-react-native'
 import { useShallow } from 'zustand/react/shallow'
@@ -37,6 +38,7 @@ import { scaleGlobalFontSize } from '@/shared/lib/fontSize'
 type DrawerRouteName =
   | 'List_orders'
   | 'Map'
+  | 'Cabinet'
   | 'Price'
   | 'Graph'
   | 'Statistics'
@@ -61,6 +63,7 @@ interface ContactItem {
 const NAVIGATION_ITEMS: NavigationItem[] = [
   { route: 'List_orders', label: 'Список заказов', icon: faReceipt },
   { route: 'Map', label: 'Карта заказов', icon: faMap },
+  { route: 'Cabinet', label: 'Личный кабинет', icon: faUser },
   { route: 'Price', label: 'Расчет', icon: faCalculator },
   { route: 'Graph', label: 'График работы', icon: faChartLine },
   { route: 'Statistics', label: 'Статистика', icon: faChartSimple },
@@ -217,9 +220,9 @@ export const CustomDrawerContent = memo(function CustomDrawerContent(
   const averageValueFontSize = scaleGlobalFontSize(22, globalFontSize)
   const sectionTitleFontSize = scaleGlobalFontSize(13, globalFontSize, 12)
 
-  const navigationItems = isNeedPageStat
-    ? NAVIGATION_ITEMS
-    : NAVIGATION_ITEMS.filter((item) => item.route !== 'Statistics')
+  const navigationItems = NAVIGATION_ITEMS.filter(
+    ({ route }) => route !== 'Statistics' || isNeedPageStat,
+  )
 
   const contactItems: ContactItem[] = [
     ...(phones?.phone_upr

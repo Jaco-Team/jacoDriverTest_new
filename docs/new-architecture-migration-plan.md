@@ -1,5 +1,46 @@
 # План миграции на React Native / Fabric
 
+## Обновление зависимостей — 25.11.2026
+
+| Пакет | Версия |
+| --- | --- |
+| Clipboard, DateTimePicker | 1.17.1, 9.3.0 |
+| RNFirebase App и Messaging | 27.2.0 |
+| React Navigation Native, Drawer и Native Stack | 7.5.2, 7.14.5, 7.21.1 |
+| Sentry | 8.36.0 |
+| Gesture Handler, Permissions и SVG | 3.5.0, 5.7.0, 15.16.1 |
+| Reanimated и Worklets | 4.8.0, 0.14.0 |
+| Keychain | 11.0.0 |
+| Yamap Plus | 6.13.1 |
+| Lucide, React Hook Form и Resolvers | 1.80.0, 7.92.0, 7.0.9 |
+| TypeScript ESLint и ESLint | 8.74.0, 10.15.0 |
+
+Reanimated 4.8.0 и Worklets 0.14.0 обновлены парой. Метаданные релизов
+допускают React Native 0.88.1. Firebase App и Messaging используют одинаковую
+версию. Firebase iOS SDK остаётся на 13.1.1, Android BoM обновлён до 35.2.0.
+Патчи Android перенесены на новые DateTimePicker, Firebase, Sentry и
+Permissions. Патч Yamap Plus перенесён на 6.13.1. На Android сохранены
+привязка ответа загрузчика к текущей метке и настройкам и снятие обработчика
+со старого объекта. На iOS координаты применяются после получения props,
+а при переиспользовании очищаются привязка и ожидающий запрос картинки.
+Сохранено отложенное связывание кластеров из версии 6.13.1. Версия
+Yandex MapKit на обеих платформах остаётся 4.42.0-full.
+
+Keychain 11 поддерживает React Native 0.88, встроенный Kotlin,
+iOS 15.1 и Android API 26. В пакет вошла проверка встроенного Kotlin,
+поэтому прежний патч снят. Методы работы с ключами Laravel и SSO
+и имена записей сохранены. Сохранение сессии при установке поверх
+предыдущей сборки проверяется вручную на Android и iOS.
+
+Обновлены совместимые пакеты Babel 7, типы React, Prettier и
+baseline-browser-mapping. NativeWind 4 работает с Tailwind 3, а
+TypeScript ESLint 8 заявляет поддержку TypeScript ниже 6.1.
+
+CocoaPods синхронизировал `Podfile.lock` с обновлёнными пакетами.
+Интеграция Firebase SPM добавляет очистку подписи GoogleAppMeasurement
+для симулятора. Пины SwiftPM остались прежними.
+Порядок проверок приведён в [журнале](testing/testing-progress.md).
+
 ## Точечное обновление зависимостей — 03.11.2026
 
 Обновлены пакеты из актуального отчёта npm:

@@ -131,7 +131,8 @@ using namespace facebook::react;
 @end
 @interface YMKPlacemarkMapObject : NSObject
 @property BOOL valid;
-@property YMKPoint *geometry;
+@property (nonatomic) YMKPoint *geometry;
+@property NSUInteger geometryWrites;
 @property float zIndex;
 @property YMKIconStyle *appliedStyle;
 @property UIImage *image;
@@ -144,6 +145,8 @@ using namespace facebook::react;
 - (void)setViewWithView:(YRTViewProvider*)view style:(YMKIconStyle*)style;
 @end
 @implementation YMKPlacemarkMapObject
+@synthesize geometry = _geometry;
+- (void)setGeometry:(YMKPoint *)geometry { _geometry = geometry; ++_geometryWrites; }
 - (instancetype)init { if(self=[super init]) _valid=YES; return self; }
 - (BOOL)isValid { return _valid; }
 - (void)removeTapListenerWithTapListener:(id)listener {}
@@ -230,6 +233,19 @@ static MarkerView *mount(const char *source) {
 static void deliver(ImageRequest *request, NSString *tag) { request.completion(tag ? image(tag) : nil); }
 int main() {
 @autoreleasepool {
+    [[ImageCacheManager instance] clear];
+    auto waiting=[MarkerView new];
+    auto waitingObject=[YMKPlacemarkMapObject new];
+    [waiting setMapObject:waitingObject];
+    check(waitingObject.geometryWrites==0,"mount before props does not set unknown geometry");
+    change(waiting,"A");
+    check(waitingObject.geometryWrites==1 && waitingObject.geometry.latitude==53.51 &&
+          waitingObject.geometry.longitude==49.42,"first props apply known coordinates");
+    [waiting prepareForRecycle];
+    auto recycledObject=[YMKPlacemarkMapObject new];
+    [waiting setMapObject:recycledObject];
+    check(recycledObject.geometryWrites==0,"recycled view waits for new coordinates");
+
     // Reported lock: A loaded, B pending, A again. Old B finishes while A is
     // current, then a later B must request again instead of being suppressed.
     auto m=mount("A"); deliver(latest(),@"A");

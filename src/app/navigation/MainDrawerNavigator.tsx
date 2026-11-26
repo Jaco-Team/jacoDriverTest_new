@@ -11,6 +11,7 @@ import {
 } from '@react-navigation/drawer';
 import type { DrawerContentComponentProps } from '@react-navigation/drawer'
 
+import { CabinetScreen } from '@/features/cabinet/ui/CabinetScreen';
 import { SettingsScreen } from '@/features/settings/ui/SettingsScreen';
 import { PriceScreen } from '@/features/salary/ui/PriceScreen';
 import { AuthScreen } from '@/features/auth/ui/AuthScreen';
@@ -346,6 +347,17 @@ export function MainDrawerNavigator() {
 
 
 
+
+      <Drawer.Screen
+        name="Cabinet"
+        component={CabinetScreen}
+        options={{
+          title: 'Личный кабинет',
+          headerShown: true,
+          swipeEnabled: true,
+          headerRight: () => null,
+        }}
+      />
 
       <Drawer.Screen
         name="Price"

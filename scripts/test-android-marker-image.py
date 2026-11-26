@@ -220,6 +220,8 @@ fun main() {
 
     // Identical prop/style changes must deduplicate the current in-flight request.
     val (props, propsObj) = mounted("A")
+    props.setMarkerMapObject(propsObj)
+    verify(propsObj.tapListeners == 1 && ImageCacheManager.requests.size == 1, "rebind to same placemark preserves listener and request")
     props.setIconSource("A")
     props.setScale(1.8f)
     props.setZIndex(8f)

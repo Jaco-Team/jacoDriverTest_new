@@ -37,6 +37,9 @@ production/release-проверки, собраны в
 
 ### Общие документы
 
+[Личный кабинет](./personal-cabinet.md) — перенос с сайта, локальный запуск
+и сценарии Android/iPhone.
+
 [docs/testing/codepush-checks.md](./testing/codepush-checks.md)
 
 Единая документация CodePush: устройство, подготовка и публикация обновлений,
